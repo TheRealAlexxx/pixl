@@ -461,9 +461,62 @@ const Pixl = (() => {
     setTimeout(() => runTour(steps), 700);
   }
 
+  /* ─────────────────── custom confirm dialog ───────────────────
+   * Drop-in async replacement for the browser's native confirm(). Returns a
+   * Promise<boolean>. Usage: if (!(await Pixl.confirm({ title, body, danger }))) return;
+   */
+  function injectDialogCSS() {
+    if (document.getElementById("pixl-dialog-css")) return;
+    const s = document.createElement("style");
+    s.id = "pixl-dialog-css";
+    s.textContent = `
+      .pxl-dialog{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--sans,sans-serif)}
+      .pxl-dialog .pxl-veil{position:absolute;inset:0;background:rgba(10,10,14,.66);backdrop-filter:blur(2px)}
+      .pxl-dialog .pxl-box{position:relative;width:100%;max-width:400px;background:var(--panel,#1b1b24);color:var(--ink,#f4f4f5);border:2px solid var(--stroke,#2a2a35);border-radius:14px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.55);animation:pxl-pop .16s ease}
+      @keyframes pxl-pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+      .pxl-dialog .pxl-t{font-family:var(--pixel,var(--sans));font-size:17px;color:var(--gold,#f4b942);margin-bottom:8px;letter-spacing:.5px}
+      .pxl-dialog .pxl-b{font-size:14px;line-height:1.55;color:var(--dim,#cfcfd6)}
+      .pxl-dialog .pxl-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+      .pxl-dialog button{border-radius:8px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;border:1px solid var(--stroke,#2a2a35);background:none;color:var(--dim,#cfcfd6)}
+      .pxl-dialog .pxl-ok{background:var(--gold,#f4b942);color:var(--btn-ink,#241710);border-color:transparent}
+      .pxl-dialog .pxl-ok.danger{background:var(--bad,#a02a2a);color:#fff}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function confirmDialog(opts = {}) {
+    const { title = "Are you sure?", body = "", confirmText = "Confirm", cancelText = "Cancel", danger = false } = opts;
+    injectDialogCSS();
+    return new Promise((resolve) => {
+      const root = document.createElement("div");
+      root.className = "pxl-dialog";
+      root.tabIndex = -1;
+      root.innerHTML = `
+        <div class="pxl-veil"></div>
+        <div class="pxl-box" role="dialog" aria-modal="true">
+          <div class="pxl-t">${esc(title)}</div>
+          ${body ? `<div class="pxl-b">${esc(body)}</div>` : ""}
+          <div class="pxl-acts">
+            <button class="pxl-cancel">${esc(cancelText)}</button>
+            <button class="pxl-ok ${danger ? "danger" : ""}">${esc(confirmText)}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(root);
+      const done = (v) => { root.remove(); resolve(v); };
+      root.querySelector(".pxl-veil").onclick = () => done(false);
+      root.querySelector(".pxl-cancel").onclick = () => done(false);
+      root.querySelector(".pxl-ok").onclick = () => done(true);
+      root.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") done(false);
+        if (e.key === "Enter") done(true);
+      });
+      root.querySelector(".pxl-ok").focus();
+    });
+  }
+
   if (!token) {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS };
+  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog };
 })();

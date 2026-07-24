@@ -1303,9 +1303,11 @@
 
       async function unship(p) {
         if (
-          !confirm(
-            "Unship this project? It leaves the review queue and goes back to a draft so you can edit it. You'll need to ship it again.",
-          )
+          !(await Pixl.confirm({
+            title: "Unship this project?",
+            body: "It leaves the review queue and goes back to a draft so you can edit it. You'll need to ship it again.",
+            confirmText: "Unship",
+          }))
         )
           return;
         $("s-unship").disabled = true;
@@ -1538,7 +1540,7 @@
                 .join("");
         list.querySelectorAll(".jdel").forEach((b) =>
           b.addEventListener("click", async () => {
-            if (!confirm("Delete this journal entry?")) return;
+            if (!(await Pixl.confirm({ title: "Delete this journal entry?", confirmText: "Delete", danger: true }))) return;
             const r = await Pixl.send(
               "DELETE",
               `/api/projects/${id}/journal/${b.dataset.id}`,
@@ -1577,12 +1579,23 @@
 
       async function deleteProject(p) {
         if (
-          !confirm(
-            `Delete "${p.name}" and all its journal entries? This can't be undone.`,
-          )
+          !(await Pixl.confirm({
+            title: "Delete this project?",
+            body: `Delete "${p.name}" and all its journal entries? This can't be undone.`,
+            confirmText: "Delete",
+            danger: true,
+          }))
         )
           return;
-        if (!confirm("Really sure? Gone means gone.")) return;
+        if (
+          !(await Pixl.confirm({
+            title: "Really sure?",
+            body: "Gone means gone.",
+            confirmText: "Delete forever",
+            danger: true,
+          }))
+        )
+          return;
         const r = await Pixl.send("DELETE", `/api/projects/${p.id}`);
         if (!r.ok) return Pixl.toast(err(r.error), true);
         Pixl.toast("Project deleted.");
