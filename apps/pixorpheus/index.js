@@ -23,11 +23,10 @@ function db() { return supabase; }
 async function aiCall(body) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (!openrouterKey) { const err = new Error('no credits'); err.code = NO_CREDITS; throw err; }
-  // Persona chat / roasts / classification model. Defaults to Claude Opus 4.8
-  // (a big step up from gemini-flash-lite); override with PIXO_MODEL, e.g.
-  // "anthropic/claude-haiku-4.5" or "anthropic/claude-sonnet-4.6" if you want
-  // cheaper/faster on this high-volume bot.
-  const orBody = { ...body, model: process.env.PIXO_MODEL || 'anthropic/claude-opus-4.8' };
+  // Persona chat / roasts / classification model. Haiku 4.5 by default , cheap
+  // and fast for this high-volume bot, still miles better than gemini-flash-lite.
+  // Bump to "anthropic/claude-sonnet-4.6" via PIXO_MODEL if you want more punch.
+  const orBody = { ...body, model: process.env.PIXO_MODEL || 'anthropic/claude-haiku-4.5' };
   try {
     const res = await axios.post(OPENROUTER_URL, orBody, {
       headers: { Authorization: `Bearer ${openrouterKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pixorpheus.app', 'X-Title': 'Pixorpheus' },
