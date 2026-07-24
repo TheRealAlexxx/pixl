@@ -189,7 +189,9 @@ async function autoCloseOldTickets() {
 }
 
 function ticketBlocks(ticket) {
-  const { description, title, opened_by_slack_id, status, claimed_by_slack_id, closed_by_slack_id, ticket_number, permalink, msg_ts } = ticket;
+  const { description, title, opened_by_slack_id, status, claimed_by_slack_id, closed_by_slack_id, ticket_number, permalink } = ticket;
+  // Slack requires button `value` to be a string; DB may hand back msg_ts as a number.
+  const msg_ts = ticket.msg_ts == null ? '' : String(ticket.msg_ts);
   const displayTitle = title || (description.length > 80 ? description.substring(0, 80) + '...' : description);
 
   let statusText;
