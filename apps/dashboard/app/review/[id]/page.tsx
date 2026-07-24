@@ -11,7 +11,7 @@ import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
 import { banProject, setProjectLevel } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
-import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
+import { LevelBadge, TypeBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { slackHandle } from "@/lib/slack";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -189,6 +189,7 @@ export default async function ReviewDetail({
             <div className="flex items-center gap-2 flex-wrap mb-3">
               <StatusBadge status={p.status} />
               <LevelBadge level={p.level} />
+              <TypeBadge type={p.project_type} />
               <ShipBadges project={p} />
               <span className="text-xs text-muted-foreground font-mono ml-auto">#{p.id}</span>
             </div>

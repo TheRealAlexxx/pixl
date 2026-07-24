@@ -946,6 +946,29 @@
         </div>
       </div>
       <div class="form-row">
+        <label>TYPE (helps reviewers know how to run it)</label>
+        <select class="field" id="f-type">
+          ${[
+            ["web", "Web Playable"],
+            ["windows", "Windows Playable"],
+            ["mac", "Mac Playable"],
+            ["linux", "Linux Playable"],
+            ["cross_platform", "Cross Platform Compatible"],
+            ["python", "Python"],
+            ["android", "Android Playable"],
+            ["ios", "iOS Playable"],
+            ["hardware", "Hardware"],
+            ["cad", "CAD Models"],
+            ["other", "Other / Not Sure"],
+          ]
+            .map(
+              ([v, l]) =>
+                `<option value="${v}" ${(p.project_type || "other") === v ? "selected" : ""}>${l}</option>`,
+            )
+            .join("")}
+        </select>
+      </div>
+      <div class="form-row">
         <label>HACKATIME PROJECTS (proof of hours)</label>
         <div class="ht-pick">${htOpts}</div>
       </div>
@@ -1057,6 +1080,7 @@
           level: form.level,
           usedAi: $("f-ai").checked,
           aiNotes: $("f-ai-notes").value.trim(),
+          projectType: $("f-type") ? $("f-type").value : "other",
           hackatimeProjects: [
             ...document.querySelectorAll('input[name="ht"]:checked'),
           ].map((c) => c.value),

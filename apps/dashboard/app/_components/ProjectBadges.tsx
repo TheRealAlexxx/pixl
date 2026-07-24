@@ -50,6 +50,26 @@ export function LevelBadge({ level }: { level: number }) {
   );
 }
 
+const TYPE_LABELS: Record<string, string> = {
+  web: "Web playable",
+  windows: "Windows",
+  mac: "Mac",
+  linux: "Linux",
+  cross_platform: "Cross-platform",
+  python: "Python",
+  android: "Android",
+  ios: "iOS",
+  hardware: "Hardware",
+  cad: "CAD models",
+  other: "Other / not sure",
+};
+
+// The kind of thing the maker shipped, so a reviewer knows how to run/judge it.
+export function TypeBadge({ type }: { type?: string | null }) {
+  if (!type) return null;
+  return <Badge tone="gray">{TYPE_LABELS[type] ?? type}</Badge>;
+}
+
 export function ShipBadges({
   project,
 }: {

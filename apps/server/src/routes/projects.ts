@@ -7,6 +7,23 @@ import { fetchHackatimeStats } from "../hackatime/api.js";
 
 const router = Router();
 
+// What kind of thing the player shipped , shown to reviewers so they know how
+// to judge it (a web game vs a hardware build vs a CAD model are graded
+// differently). Kept in sync with the dropdown in apps/game/web/projects.
+const PROJECT_TYPES = [
+  "web",
+  "windows",
+  "mac",
+  "linux",
+  "cross_platform",
+  "python",
+  "android",
+  "ios",
+  "hardware",
+  "cad",
+  "other",
+];
+
 // List the logged-in user's projects, newest first.
 router.get("/api/projects", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
@@ -112,6 +129,7 @@ interface ProjectFields {
   demo_url: string;
   image_url: string;
   level: number;
+  project_type: string;
   used_ai: boolean;
   ai_notes: string;
   hackatime_projects: string[];
@@ -132,6 +150,9 @@ function parseProjectBody(
   const aiNotes = String(body?.aiNotes ?? "").trim().slice(0, 500);
   if (usedAi && aiNotes.length < 10) return { error: "ai_notes_required" };
   const level = Number(body?.level ?? 1);
+  const projectType = PROJECT_TYPES.includes(String(body?.projectType))
+    ? String(body?.projectType)
+    : "other";
   return {
     fields: {
       name,
@@ -140,6 +161,7 @@ function parseProjectBody(
       demo_url: demo.url,
       image_url: String(body?.imageUrl ?? "").trim().slice(0, 500),
       level: Number.isInteger(level) && level >= 1 && level <= 4 ? level : 1,
+      project_type: projectType,
       used_ai: usedAi,
       ai_notes: usedAi ? aiNotes : "",
       hackatime_projects: Array.isArray(body?.hackatimeProjects)

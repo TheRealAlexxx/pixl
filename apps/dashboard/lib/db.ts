@@ -72,6 +72,7 @@ export interface ProjectRow {
   approved_hours: number | null;
   image_url: string;
   level: number;
+  project_type: string | null;
   used_ai: boolean;
   ai_notes: string;
   is_update: boolean;
