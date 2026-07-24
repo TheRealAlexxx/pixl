@@ -125,6 +125,8 @@ const Pixl = (() => {
         <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
         <nav class="nav">${nav}</nav>
         <div class="topbar-right">
+          <button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
+            style="background:none;border:2px solid var(--stroke);color:var(--gold);width:32px;height:32px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0">?</button>
           <div class="wallet-chip" id="pixl-wallet" title="Your pixels">
             <img src="/img/pixel.png" alt="px">
             <span class="px">—</span>
@@ -133,6 +135,10 @@ const Pixl = (() => {
           <a class="btn dark" href="${GAME}">BACK TO GAME</a>
         </div>
       </header>`);
+    const help = document.getElementById("pixl-help-btn");
+    if (help) help.onclick = () => runTour();
+    // Auto-run the walkthrough once, on whichever dash page a newcomer lands on.
+    maybeOnboard();
   }
 
   async function loadWallet() {
@@ -318,41 +324,42 @@ const Pixl = (() => {
   const ONBOARDING_STEPS = [
     {
       title: "Welcome to Pixl 👋",
-      body: "New here? Take 30 seconds and we'll show you the ropes. You can skip anytime.",
+      body: "Build something real, ship it, get rewarded for it. Take a 30-second tour , you can skip anytime.",
       // video: "/img/onboarding/welcome.mp4",
     },
     {
-      title: "What's Hack Club?",
-      body: "Hack Club is a worldwide community of teenage hackers, makers and builders. You learn by shipping real things , and they send real prizes and grants for what you make.",
-      // video: "/img/onboarding/hackclub.mp4",
-    },
-    {
-      title: "So what's Pixl?",
-      body: "Pixl is a pixel-art world you actually build. Ship real projects for the characters inside it, repair the world, and earn <b>pixels</b> , the in-game currency , plus real-world rewards.",
+      title: "What even is this?",
+      body: "Pixl is a pixel world called <b>Origin</b> that you help rebuild. Take a sidequest (or make your own thing), ship real projects, and earn <b>pixels</b> plus real prizes. You don't need the lore , just build stuff.",
+      // video: "/img/onboarding/intro.mp4",
     },
     {
       target: ".nav",
       title: "Getting around",
-      body: "Jump between the shop, explore, your projects and more from up here.",
+      body: "Jump between the shop, explore, your projects and the docs from up here.",
+    },
+    {
+      target: ".nav a[href=\"/docs/\"]",
+      title: "New to all this?",
+      body: "The <b>DOCS</b> have the full guide , what Pixl is, how to build, how to ship, and how rewards work. Start there if you're lost.",
     },
     {
       target: "#pixl-wallet",
       title: "Your pixels",
-      body: "This is your wallet. Earn pixels by shipping projects, then spend them in the shop on real rewards.",
+      body: "This is your wallet. 1 hour of shipped work = <b>50 pixels</b>. Spend them in the shop on real prizes, from stickers up to a MacBook Air.",
     },
     {
       target: "#new-btn",
       title: "Start a project",
-      body: "Tap here to create your first project. Give it a name, link a GitHub repo and a demo, and log your time with Hackatime.",
+      body: "Create your first project here. Name it, link a repo + a demo, and track your time with Hackatime.",
     },
     {
       target: "#s-ship",
       title: "Ship it for review",
-      body: "When your project is ready, ship it. A reviewer checks it out and credits you pixels + a prize for the work.",
+      body: "When it's ready, ship it. A reviewer checks it out and credits you pixels + a prize. That's the whole loop.",
     },
     {
       title: "That's it , go build 🚀",
-      body: "Pick a sidequest or make your own thing. Stuck? Ask in <b>#pixl-help</b> on the Hack Club Slack.",
+      body: "Pick a sidequest or make your own thing. Full guide is in <b>DOCS</b>, and <b>#pixl</b> on Slack has your back if you're stuck.",
     },
   ];
 
