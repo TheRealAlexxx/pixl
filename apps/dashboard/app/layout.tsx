@@ -43,6 +43,7 @@ export default async function RootLayout({
   const helper = await isHelper();
   const nav = access
     ? {
+        overview: access.isSuper,
         players: canView(access, ["warn", "ban"]),
         projects: canView(access, ["review", "warn", "ban"]),
         review: canView(access, ["review"]),

@@ -160,11 +160,11 @@ async function insertReviewAudit(
   if (error) console.error("review audit insert failed", error.message);
 }
 
-// Every review earns $0.50 = 5 pixels, paid into the reviewer's game account.
-// Rushed reviews are cut 30% (50% if doubly rushed); a first pass that the
-// final reviewer overturns is cut 50%, and one whose hours get slashed is cut
-// 30%. First-pass payouts stay pending until the final verdict settles them.
-const PAYOUT_PIXELS = 5;
+// Every review earns 7 pixels (~$0.49 at 7¢/pixel), paid into the reviewer's
+// game account. Rushed reviews are cut 30% (50% if doubly rushed); a first pass
+// that the final reviewer overturns is cut 50%, and one whose hours get slashed
+// is cut 30%. First-pass payouts stay pending until the final verdict settles.
+const PAYOUT_PIXELS = 7;
 
 function payoutFlagCut(formData: FormData, verdict: string): { pct: number; reason: string } {
   const total = readSeconds(formData.get("totalSeconds"));

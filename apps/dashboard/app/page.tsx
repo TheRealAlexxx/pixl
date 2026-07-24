@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireAdmin, canView } from "@/lib/guard";
 import {
   getStats,
@@ -34,6 +35,9 @@ export default async function Overview({
   searchParams: Promise<{ range?: string }>;
 }) {
   const access = await requireAdmin();
+  // Reviewers / sub-admins don't get the owner Overview; their home is their own
+  // reviewer stats. Only owners (isSuper) see the full dashboard overview.
+  if (!access.isSuper && access.perms.has("review")) redirect("/review/stats");
   const showModeration = canView(access, ["warn", "ban"]);
   const { range } = await searchParams;
   const days = RANGES.includes(Number(range)) ? Number(range) : 30;

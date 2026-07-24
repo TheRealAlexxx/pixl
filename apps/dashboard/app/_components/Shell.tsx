@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 
 export interface NavFlags {
+  overview: boolean;
   players: boolean;
   projects: boolean;
   review: boolean;
@@ -110,7 +111,7 @@ export function Shell({
     {
       label: null,
       items: [
-        { href: "/", label: "Overview", icon: "overview", show: true },
+        { href: "/", label: "Overview", icon: "overview", show: nav.overview },
         {
           href: "/review",
           label: "Needs review",
