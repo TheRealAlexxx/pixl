@@ -25,7 +25,7 @@ const ITEM_IMAGES = [
   "/shop/blahaj.png",
   "/shop/wacom.png",
   "/shop/retro-handheld.png",
-  "/shop/keyboard-f75-pro.png",
+  "/shop/keyboard-s75-pro.png",
   "/shop/gamemaker.png",
   "/shop/monitor-4k.png",
   "/shop/rpi.png",

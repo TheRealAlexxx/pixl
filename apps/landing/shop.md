@@ -26,33 +26,33 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `tamagotchi-kit` | Pixl Tamagotchi DIY Kit | 8 h | 400 | Parts ~$30 (PCB + screen + components via JLC, cheaper in batch on LCSC/JLCPCB) + reshipping ~$10 ≈ $40. Huge in-house hacker value. **Waiting on mangoman for exact price/hours** | `/shop/tamagotchi.png` |
 | `indie-game` | Indie Game of Your Choice | 8 h | 400 | Selection from the jame gam prize pool ($15–30 games), pay as if $25. Steam gift / Humble Bundle link, no shipping, no fraud | `/shop/indie-game.png` |
 | `esp32-kit` | ESP32 Starter Kit | 10 h | 500 | ~$20 AliExpress / ~$30 Amazon US-EU, avg ~$25 + ~$8 shipping ≈ $33 | `/shop/esp32.png` |
-| `furycube` | FURYCUBE 68% | 10 h | 500 | $35 Amazon US, cheap hot-swap keyboard | `/shop/furycube.png` (pending) |
+| `furycube` | FURYCUBE 68% | 10 h | 500 | $35 Amazon US, cheap hot-swap keyboard | `/shop/furycube.png` |
 | `godot-plush` | Godot Plush (Limited Edition) | 13 h | 650 | ~$30 + ~$10–15 small packet shipping ≈ $45 on Makeship, no reship needed | `/shop/godot-plush.png` |
 | `pixl-hoodie` | PIXL Hoodie | 14 h | 700 | Print-on-demand (Printful type): they handle worldwide shipping and sizes, ~$35–45 shipped, global avg ~$50 | `/shop/hoodie.png` |
 | `blahaj-plush` | Blahaj Plush | 14 h | 700 | $30 plush + $10 shipping = $40. HQ needs orders of at least 2 at a time, then reship. **This is the plush toy — distinct from the 3D-printed Blahaj, which is the trophy, not a shop item** | `/shop/blahaj.png` |
 | `wacom-intuos` | Wacom Intuos (Small) | 15 h | 750 | ~$50–80, varies a lot by region (THE per-region problem item) + ~$10 shipping, global avg ~$50 | `/shop/wacom.png` |
 | `retro-handheld` | Retro Handheld (Miyoo Mini+ / RG35XX) | 20 h | 1000 | ~$60–70 shipped from AliExpress, ships worldwide cheap (PK, IN, BR no problem) | `/shop/retro-handheld.png` |
-| `keyboard-f75-pro` | Epomaker x Aula F75 Pro | 20 h | 1000 | $72 Amazon US. Hot-swap, has a little screen. Color chosen via order note. **Replaces both the old F75 and the TH80 V2 Pro (removed)** | `/shop/keyboard-f75-pro.png` (pending — new image replacing the old F75 photo) |
+| `keyboard-s75-pro` | Epomaker x Aula S75 Pro | 20 h | 1000 | $72 Amazon US. Hot-swap, has a little screen. Color chosen via order note. **Replaces both the old F75 and the TH80 V2 Pro (removed). Corrected from "F75 Pro" — the real model is S75 Pro** | `/shop/keyboard-s75-pro.png` |
 | `gamemaker` | GameMaker Pro | 29 h | 1450 | $99.99 one-time license, key, no shipping, no fraud | `/shop/gamemaker.png` |
 | `monitor-grant` | Monitor Grant (Stackable) | 30 h | 1500 | **$100** stackable grant. Fraudable | `/shop/monitor-4k.png` |
 | `raspberry-pi-5` | Raspberry Pi 5 | 40 h (4GB) / 63 h (8GB) | 2000 (4GB) / 3150 (8GB) | Board $130 (4GB) / $200 (8GB) + shipping ~$10–20. One card on the site, 8GB price mentioned in the description | `/shop/rpi.png` |
-| `sony-ch720n` | Sony WH-CH720N | 43 h | 2150 | $150 Amazon US, cheap noise cancelling. **Not added to the shop before this batch** | `/shop/sony-ch720n.png` (pending) |
-| `ender3-v3` | Creality Ender 3 V3 | 55 h | 2750 | $190 Amazon US, easily shippable, order in user's regional store | `/shop/ender3-v3.png` (pending) |
-| `airpods-pro-3` | AirPods Pro 3 | 58 h | 2900 | $200 Amazon US, cool hacker value | `/shop/airpods-pro-3.png` (pending) |
+| `sony-ch720n` | Sony WH-CH720N | 43 h | 2150 | $150 Amazon US, cheap noise cancelling. **Not added to the shop before this batch** | `/shop/sony-ch720n.png` |
+| `ender3-v3` | Creality Ender 3 V3 | 55 h | 2750 | $190 Amazon US, easily shippable, order in user's regional store | `/shop/ender3-v3.png` |
+| `airpods-pro-3` | AirPods Pro 3 | 58 h | 2900 | $200 Amazon US, cool hacker value | `/shop/airpods-pro-3.png` |
 | `a1-mini` | Bambu Lab A1 Mini | 67 h | 3350 | $235 Amazon US, sometimes $220 on Bambu Lab site. Order in user's regional store | `/shop/a1-mini.png` |
-| `samsung-t7-ssd` | Samsung T7 External SSD (1TB) | 67 h | 3350 | $230 Amazon US, cool hacker value | `/shop/samsung-t7-ssd.png` (pending) |
+| `samsung-t7-ssd` | Samsung T7 External SSD (1TB) | 67 h | 3350 | $230 Amazon US, cool hacker value | `/shop/samsung-t7-ssd.png` |
 | `sony-xm5` | Sony WH-1000XM5 | 72 h | 3600 | $250 Amazon US, easily shippable | `/shop/sony-headphones.png` |
-| `sparkx-i7` | Creality Sparkx i7 | 75 h | 3750 | $260 Amazon US, easily shippable, order in user's regional store | `/shop/sparkx-i7.png` (pending) |
+| `sparkx-i7` | Creality Sparkx i7 | 75 h | 3750 | $260 Amazon US, easily shippable, order in user's regional store | `/shop/sparkx-i7.png` |
 | `bambu-a1` | Bambu Lab A1 | 85 h | 4250 | $300 Amazon US, easily shippable, order in user's regional store | `/shop/bambu-a1.png` |
 | `centauri-carbon` | Centauri Carbon | 100 h | 5000 | $360 Amazon US, easily shippable, order in user's regional store | `/shop/centauri-carbon.png` (pending) |
 | `ipad` | iPad (11th gen) | 115 h | 5750 | $400 US but 509€ EU and more in expensive regions; priced on US $400 | `/shop/ipad.png` |
 | `bambu-a1-combo` | Bambu Lab A1 Combo | 115 h | 5750 | $400 Amazon US (A1 + AMS Lite), easily shippable, order in user's regional store | `/shop/bambu-a1-combo.png` |
-| `samsung-s24` | Samsung Galaxy S24 | 115 h | 5750 | $400 US, easily orderable, cool phone | `/shop/samsung-s24.png` (pending) |
+| `samsung-s24` | Samsung Galaxy S24 | 115 h | 5750 | $400 US, easily orderable, cool phone | `/shop/samsung-s24.png` |
 | `airpods-max` | AirPods Max 2 | 129 h | 6450 | $450 Amazon US, easily shippable | `/shop/airpods-max.png` |
-| `nothing-phone` | Nothing Phone (4a) Pro | 143 h | 7150 | $499.99 US, easily orderable, cool phone | `/shop/nothing-phone.png` (pending) |
+| `nothing-phone` | Nothing Phone (4a) Pro | 143 h | 7150 | $499.99 US, easily orderable, cool phone | `/shop/nothing-phone.png` |
 | `macbook-neo` | MacBook Neo | 200 h (256GB) / 230 h (512GB) | 10000 (256GB) / 11500 (512GB) | Can't check Apple US pricing, ~$700 (256GB) / ~$800 (512GB) on Amazon. Easily shippable. One card on the site, 512GB price mentioned in the description, picked via order note | `/shop/macbook-neo.png` (pending) |
 | `macbook-air-m5` | MacBook Air M5 | 343 h (16GB/512GB) / 485 h (24GB/1TB) | 17150 (16GB/512GB) / 24250 (24GB/1TB) | Can't check Apple US pricing, ~$1200 (16GB/512GB) / ~$1700 (24GB/1TB) on Amazon. Easily shippable. One card on the site, 24GB/1TB price mentioned in the description, picked via order note | `/shop/macbook-air.png` (pending) |
-| `mac-mini` | Mac Mini (24GB/512GB) | 450 h | 22500 | $1570 Amazon US, easily shippable, order in user's regional store | `/shop/mac-mini.png` (pending) |
+| `mac-mini` | Mac Mini (24GB/512GB) | 450 h | 22500 | $1570 Amazon US, easily shippable, order in user's regional store | `/shop/mac-mini.png` |
 
 ## Sidequest Rewards (not buyable — earned by completing sidequests)
 
@@ -73,7 +73,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 ## Removed vs previous shop
 
 - **Blahaj Plush** → new shop item (700 px / 14 h), a purchased plush toy. **Not the same as the 3D Printed Blahaj**, which is a separate object (the trophy, not in the shop)
-- **Epomaker TH80 V2 Pro** → removed; **Epomaker x Aula F75** renamed to **Epomaker x Aula F75 Pro** (now has the little screen), consolidating what used to be two competing keyboard options into one
+- **Epomaker TH80 V2 Pro** → removed; **Epomaker x Aula F75** renamed to **Epomaker x Aula S75 Pro** (now has the little screen), consolidating what used to be two competing keyboard options into one
 - **Nintendo Switch Online (1 year)** → dropped from the new list (image kept)
 - **GitHub Pro (1 year)** → dropped from the new list (image kept)
 - **Sony WH-1000XM4** → replaced by the XM5
@@ -83,7 +83,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 ## Placeholder / pending images
 
 - `signed-photo.svg`, `mystery-box.svg` are quick pixel-art SVG placeholders — swap them for real PNGs when available.
-- `centauri-carbon.png`, `macbook-neo.png`, `macbook-air.png`, `airpods-pro-3.png`, `samsung-t7-ssd.png`, `samsung-s24.png`, `nothing-phone.png`, `furycube.png`, `keyboard-f75-pro.png`, `sony-ch720n.png`, `ender3-v3.png`, `sparkx-i7.png`, `mac-mini.png` are referenced in `Shop.tsx` but the files don't exist yet (Gabin is sourcing them) — the site will show a broken image for these until added to `public/shop/`.
+- `centauri-carbon.png`, `macbook-neo.png`, `macbook-air.png` are referenced in `Shop.tsx` but the files don't exist yet (Gabin is sourcing them) — the site will show a broken image for these until added to `public/shop/`.
 
 ## Where to edit items
 
