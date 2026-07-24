@@ -377,6 +377,14 @@
         "answer": "Yes! Each of your projects will be funded, and the event itself is 100% free."
       },
       {
+        "question": "How much can I earn?",
+        "answer": "You earn pixels for every hour of shipped work — 1 hour = 50 pixels, about $3.50 to start. As your Restoration Energy levels up, your rate climbs, up to about $6/hr. Spend your pixels in the shop on real prizes, from stickers to a MacBook Air."
+      },
+      {
+        "question": "What's Restoration Energy?",
+        "answer": "It's your XP. Every ship earns Restoration Energy based on how many hours you put in AND how complex the project is, so bigger, harder builds earn more. Every 10 levels bumps your pixel multiplier (starting around 50 px/hr and climbing toward ~79 px/hr, exact rates TBD). The whole community's Restoration Energy also unlocks community goals, like new skins for your in-game house."
+      },
+      {
         "question": "Who is running Pixl?",
         "answer": "A big team of friends!"
       },

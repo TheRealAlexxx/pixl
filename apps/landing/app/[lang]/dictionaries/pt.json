@@ -377,6 +377,14 @@
         "answer": "Sim! Cada um dos seus projetos será financiado, e o evento em si é 100% grátis."
       },
       {
+        "question": "Quanto posso ganhar?",
+        "answer": "Você ganha pixels por cada hora de trabalho entregue , 1 hora = 50 pixels, cerca de US$ 3,50 no começo. À medida que sua Energia de Restauração sobe de nível, sua taxa aumenta, até cerca de US$ 6/h. Gaste seus pixels na loja em prêmios reais, de adesivos a um MacBook Air."
+      },
+      {
+        "question": "O que é Energia de Restauração?",
+        "answer": "É o seu XP. Cada entrega ganha Energia de Restauração com base em quantas horas você dedica E em quão complexo é o projeto , então projetos maiores e mais difíceis ganham mais. A cada 10 níveis seu multiplicador de pixels sobe (começando em cerca de 50 px/h e subindo para ~79 px/h, taxas exatas a definir). A Energia de Restauração de toda a comunidade também desbloqueia metas da comunidade, como novas skins para a sua casa no jogo."
+      },
+      {
         "question": "Quem organiza o Pixl?",
         "answer": "Uma grande equipe de amigos!"
       },
