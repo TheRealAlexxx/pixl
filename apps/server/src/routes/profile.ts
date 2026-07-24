@@ -151,6 +151,58 @@ router.post("/api/profile/card-image", async (req, res) => {
   res.json({ ok: true });
 });
 
+// Cross-app onboarding progress — a single forward-only counter shared by the
+// in-game first-run guide (apps/game/scripts/guide_hud.gd) and the web dashboard
+// tour (apps/game/web/pixl.js) so they hand off to each other rather than
+// running as two separate walkthroughs. 0 = new, 1 = game intro done (dashboard
+// tour pending), 2 = fully onboarded.
+const ONBOARDING_DONE = 2;
+
+router.get("/api/profile/onboarding", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("onboarding_step")
+    .eq("id", session.userId)
+    .maybeSingle();
+  // Before the 0046 migration is applied the column doesn't exist — treat that
+  // as "brand new" rather than failing the request.
+  const step = error ? 0 : Math.max(0, Number(data?.onboarding_step) || 0);
+  res.json({ ok: true, step, done: step >= ONBOARDING_DONE });
+});
+
+router.post("/api/profile/onboarding", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const raw = Number(req.body?.step);
+  if (!Number.isFinite(raw)) return res.status(400).json({ ok: false, error: "bad_step" });
+  const want = Math.max(0, Math.min(ONBOARDING_DONE, Math.round(raw)));
+
+  // Forward-only: a stale client (older tab, a replay) must never rewind a
+  // player who's already further along.
+  const { data: cur } = await supabase
+    .from("users")
+    .select("onboarding_step")
+    .eq("id", session.userId)
+    .maybeSingle();
+  const step = Math.max(Math.max(0, Number(cur?.onboarding_step) || 0), want);
+
+  const { error } = await supabase
+    .from("users")
+    .update({ onboarding_step: step })
+    .eq("id", session.userId);
+  if (error) {
+    console.error("[profile] onboarding update failed", error.message);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, step, done: step >= ONBOARDING_DONE });
+});
+
 router.post("/api/profile/card-pixelate", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;

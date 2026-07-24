@@ -332,7 +332,7 @@ const Pixl = (() => {
     },
     {
       title: "What even is this?",
-      body: "Pixl is a pixel world called <b>Origin</b> that you help rebuild. Take a sidequest (or make your own thing), ship real projects, and earn <b>pixels</b> plus real prizes. You don't need the lore , just build stuff.",
+      body: "Long ago a world called <b>Origin</b> shattered into pixelated islands — now you're one of the <b>Builders</b> helping rebuild it as <b>Pixl</b>. You ship real projects, and the work you do repairs the world. You don't need the lore to play , just build stuff.",
       // video: "/img/onboarding/intro.mp4",
     },
     {
@@ -361,8 +361,8 @@ const Pixl = (() => {
       body: "When it's ready, ship it. A reviewer checks it out and credits you pixels + a prize. That's the whole loop.",
     },
     {
-      title: "That's it , go build 🚀",
-      body: "Pick a sidequest or make your own thing. Full guide is in <b>DOCS</b>, and <b>#pixl</b> on Slack has your back if you're stuck.",
+      title: "That's it , head back in 🚀",
+      body: "Now hop back into the game (the <b>BACK TO GAME</b> button up top) and start building. Full guide is in <b>DOCS</b>, and <b>#pixl</b> on Slack has your back if you're stuck.",
     },
   ];
 
@@ -395,7 +395,21 @@ const Pixl = (() => {
     try { localStorage.setItem("pixl_onboarded", "1"); } catch {}
   }
 
-  function runTour(steps = ONBOARDING_STEPS, startAt = 0) {
+  // Shared cross-app onboarding counter (see apps/server .../profile.ts and
+  // apps/game/scripts/guide_hud.gd). 0 = new, 1 = game intro done / dash pending,
+  // 2 = fully onboarded.
+  async function getOnboarding() {
+    try { return await api("/api/profile/onboarding"); } catch { return null; }
+  }
+  function setOnboarding(step) {
+    // Fire-and-forget; the counter is forward-only server-side so this is safe.
+    send("POST", "/api/profile/onboarding", { step }).catch(() => {});
+  }
+
+  // `sync` marks the shared onboarding as complete when the tour ends — used for
+  // the auto-run (the dashboard leg of the game→dash journey), not the manual
+  // "?" replay.
+  function runTour(steps = ONBOARDING_STEPS, startAt = 0, sync = false) {
     injectTourCSS();
     document.getElementById("pixl-tour")?.remove();
     const root = document.createElement("div");
@@ -407,7 +421,11 @@ const Pixl = (() => {
     const card = root.querySelector(".pt-card");
     let i = Math.max(0, Math.min(startAt, steps.length - 1));
 
-    function close() { root.remove(); markOnboarded(); }
+    function close() {
+      root.remove();
+      markOnboarded();
+      if (sync) setOnboarding(2); // dashboard leg done → fully onboarded
+    }
 
     function media(step) {
       if (step.video) return `<video class="pt-media" src="${esc(step.video)}" autoplay muted loop playsinline></video>`;
@@ -464,12 +482,24 @@ const Pixl = (() => {
     render();
   }
 
-  // Run the tour once, the first time a signed-in newcomer opens the dash.
-  function maybeOnboard(steps = ONBOARDING_STEPS) {
+  // Auto-run the dashboard leg of onboarding. When signed in, the server's
+  // shared counter is authoritative so the tour resumes across the game↔dash
+  // hop and doesn't replay once finished on another device. Falls back to the
+  // per-device localStorage guard when there's no account/server to ask.
+  async function maybeOnboard(steps = ONBOARDING_STEPS) {
+    if (!token) return; // signed-out (public docs) never auto-runs
+    const ob = await getOnboarding();
+    if (ob && ob.ok) {
+      if (ob.done) { markOnboarded(); return; }
+      // step 0 (arrived here first) or 1 (handed off from the in-game guide) —
+      // either way the dashboard tour is what's pending. Sync completion back.
+      setTimeout(() => runTour(steps, 0, true), 700);
+      return;
+    }
+    // Server unreachable / pre-migration — fall back to the local guard.
     let done = true;
     try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch {}
-    if (done || !token) return;
-    setTimeout(() => runTour(steps), 700);
+    if (!done) setTimeout(() => runTour(steps, 0, true), 700);
   }
 
   /* ─────────────────── custom confirm dialog ───────────────────
