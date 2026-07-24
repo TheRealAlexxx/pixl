@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 /* ── reset ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;-webkit-text-size-adjust:100%}
@@ -9,8 +9,11 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
   --gold:#f4b942;--gold-soft:#fad68a;--teal:#127c74;
   --good:#08804a;--bad:#a02a2a;--stroke:#2a2a35;
   --btn-ink:#241710;
-  --sans:'PT Root',system-ui,-apple-system,sans-serif;
-  --pixel:'Pixelify Sans',monospace;
+  /* Web surfaces (dash + docs) have their own identity — Space Grotesk for
+     display/headings, Rubik for body. The pixel font lives in the game only.
+     --pixel is kept as the var name for the display font (used widely). */
+  --sans:'Rubik',system-ui,-apple-system,sans-serif;
+  --pixel:'Space Grotesk',system-ui,-apple-system,sans-serif;
   --drop:0 5px 0 rgba(0,0,0,.44);
 }
 
@@ -31,7 +34,7 @@ img{display:block}
 .nav{display:flex;gap:5px;flex-wrap:wrap;flex:1}
 .nav a{
   display:inline-block;padding:5px 12px 4px;
-  font-family:var(--pixel);font-size:12px;letter-spacing:1.5px;
+  font-family:var(--pixel);font-size:12px;letter-spacing:1.5px;font-weight:500;
   color:var(--faint);border:2px solid transparent;
 }
 .nav a:hover{color:var(--gold);border-color:var(--stroke)}
@@ -52,7 +55,7 @@ img{display:block}
   display:inline-flex;align-items:center;gap:7px;
   cursor:pointer;border:3px solid var(--stroke);
   background:var(--gold);color:var(--btn-ink);
-  font-family:var(--pixel);font-size:14px;letter-spacing:1px;
+  font-family:var(--pixel);font-size:14px;letter-spacing:.5px;font-weight:600;
   padding:10px 18px 8px;box-shadow:var(--drop);
   transition:none;text-decoration:none;white-space:nowrap;
 }
@@ -68,7 +71,7 @@ img{display:block}
 .btn.teal:hover{background:#15968c;color:var(--ink)}
 
 .chip{
-  display:inline-block;font-family:var(--pixel);font-size:12px;letter-spacing:1px;
+  display:inline-block;font-family:var(--pixel);font-size:12px;letter-spacing:.5px;font-weight:600;
   padding:5px 10px 4px;border:2px solid var(--stroke);background:var(--panel-deep);color:var(--dim);
 }
 .chip.gold{background:var(--gold);color:var(--btn-ink)}
