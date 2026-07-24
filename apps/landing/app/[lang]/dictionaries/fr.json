@@ -1,195 +1,195 @@
 {
   "menu": {
-    "testTheGame": "Test the game!",
-    "stillInDev": "still in dev!"
+    "testTheGame": "Teste le jeu !",
+    "stillInDev": "encore en dev !"
   },
   "hero": {
-    "youShip": "You ship",
-    "projectsInside": "projects inside a story-driven game,",
-    "weShip": "we ship",
-    "realPrizes": "real prizes to your door.",
-    "placeholder": "your@email.com",
+    "youShip": "Tu livres",
+    "projectsInside": "des projets dans un jeu narratif,",
+    "weShip": "on t'envoie",
+    "realPrizes": "de vrais prix à ta porte.",
+    "placeholder": "ton@email.com",
     "rsvp": "RSVP",
-    "alreadyIn": "you\u2019re already in",
-    "viewYourRsvp": "view your RSVP",
-    "errorNoEmail": "yo, drop your email first \ud83d\udc40",
-    "errorInvalidEmail": "that doesn't look like a real email lol"
+    "alreadyIn": "tu es déjà inscrit",
+    "viewYourRsvp": "voir ton RSVP",
+    "errorNoEmail": "eh, mets ton email d'abord 👀",
+    "errorInvalidEmail": "ça ne ressemble pas à un vrai email mdr"
   },
   "description": {
-    "title": "What is Pixl?",
-    "body": "Centuries ago, Origin was the greatest digital civilization ever built, until the Great Static shattered it into islands lost in the Void. Its people crossed universes and found Hack Clubbers, who helped rebuild it under a new name: Pixl. A pixel-themed YSWS where every real project you ship repairs the world and unlocks real-world rewards.",
+    "title": "C'est quoi Pixl ?",
+    "body": "Il y a des siècles, Origin était la plus grande civilisation numérique jamais construite, jusqu'à ce que le Grand Static la brise en îles perdues dans le Néant. Son peuple a traversé les univers et a trouvé les Hack Clubbers, qui l'ont aidé à la reconstruire sous un nouveau nom : Pixl. Un YSWS sur le thème du pixel où chaque vrai projet que tu livres répare le monde et débloque de vraies récompenses.",
     "steps": [
       {
-        "title": "Join the World",
-        "description": "Enter Pixl, create your character and join others in a retro 2D open world"
+        "title": "Rejoins le monde",
+        "description": "Entre dans Pixl, crée ton personnage et rejoins les autres dans un monde ouvert rétro en 2D"
       },
       {
-        "title": "Explore Regions",
-        "description": "Discover cyberpunk cities, underwater zones & more"
+        "title": "Explore les régions",
+        "description": "Découvre des villes cyberpunk, des zones sous-marines et plus encore"
       },
       {
-        "title": "Accept Sidequests",
-        "description": "Build apps, websites & hardware for in-game characters"
+        "title": "Accepte des quêtes annexes",
+        "description": "Crée des apps, des sites et du hardware pour les personnages du jeu"
       },
       {
-        "title": "Get Rewarded",
-        "description": "NPCs reward you for your work with real prizes and pixels, the in-game currency you can spend in shops"
+        "title": "Sois récompensé",
+        "description": "Les PNJ te récompensent pour ton travail avec de vrais prix et des pixels, la monnaie du jeu que tu peux dépenser en boutique"
       },
       {
-        "title": "Spend your Pixels",
-        "description": "Take your pixels to merchants and spend them on items, upgrades and real-world rewards"
+        "title": "Dépense tes pixels",
+        "description": "Apporte tes pixels aux marchands et dépense-les en objets, améliorations et récompenses réelles"
       }
     ],
-    "youRepair": "You Repair",
-    "youRepairDesc": "Ship real hardware & software sidequests for NPCs. Every project becomes Restoration Energy that rebuilds a broken piece of Pixl",
-    "theCorePays": "The Core Pays",
-    "theCorePaysDesc": "The Core is a vault of old Pixelian tech. As you repair it, it gives its treasures back: real prizes and grants matched to what you built",
-    "comingSoon": "Coming Soon"
+    "youRepair": "Tu répares",
+    "youRepairDesc": "Livre de vraies quêtes hardware et software pour les PNJ. Chaque projet devient de l'Énergie de Restauration qui reconstruit un morceau brisé de Pixl",
+    "theCorePays": "Le Cœur paie",
+    "theCorePaysDesc": "Le Cœur est un coffre de vieille technologie pixelienne. À mesure que tu le répares, il rend ses trésors : de vrais prix et des bourses adaptés à ce que tu as construit",
+    "comingSoon": "Bientôt disponible"
   },
   "story": {
-    "badge": "The Restoration",
-    "title": "How it works",
-    "subtitle": "Pixl runs as a story in seasons: chapters move the world forward, and everything you ship repairs it.",
+    "badge": "La Restauration",
+    "title": "Comment ça marche",
+    "subtitle": "Pixl se déroule comme une histoire en saisons : les chapitres font avancer le monde, et tout ce que tu livres le répare.",
     "paths": [
       {
-        "title": "Take a sidequest",
-        "text": "The Core already knows about these: known problems NPCs across unlocked regions need solved. Pick one and ship it."
+        "title": "Prends une quête annexe",
+        "text": "Le Cœur les connaît déjà : des problèmes que les PNJ des régions débloquées ont besoin de résoudre. Choisis-en une et livre-la."
       },
       {
-        "title": "Build your own thing",
-        "text": "The Core can't predict every invention. Ship something original it never asked for, and it still counts as Restoration Energy."
+        "title": "Crée ton propre truc",
+        "text": "Le Cœur ne peut pas prévoir chaque invention. Livre quelque chose d'original qu'il n'a jamais demandé, et ça compte quand même comme de l'Énergie de Restauration."
       }
     ],
-    "andOr": "and/or",
+    "andOr": "et/ou",
     "rhythm": [
       {
-        "title": "Chapters (~3 weeks)",
-        "text": "The story moves forward in chapters. Each chapter is a push to repair a part of the world: you take sidequests from the regions already unlocked, ship real projects, and your work counts toward the chapter's restoration goal. When the community hits it, the story advances: a new region opens, new NPCs return, new sidequests appear."
+        "title": "Chapitres (~3 semaines)",
+        "text": "L'histoire avance par chapitres. Chaque chapitre est un effort pour réparer une partie du monde : tu prends des quêtes dans les régions déjà débloquées, tu livres de vrais projets, et ton travail compte pour l'objectif de restauration du chapitre. Quand la communauté l'atteint, l'histoire progresse : une nouvelle région s'ouvre, de nouveaux PNJ reviennent, de nouvelles quêtes apparaissent."
       },
       {
-        "title": "Operations (~1 week)",
-        "text": "Between chapters, short themed events: a game jam, a hackathon, a tool-building week. One week, one theme, one piece of the world brought back online. Perfect if you want something intense with a clear deadline."
+        "title": "Opérations (~1 semaine)",
+        "text": "Entre les chapitres, de courts événements à thème : une game jam, un hackathon, une semaine de création d'outils. Une semaine, un thème, un morceau du monde remis en ligne. Parfait si tu veux quelque chose d'intense avec une échéance claire."
       },
       {
-        "title": "Joining late? All good",
-        "text": "Unlocked regions never close. Whenever you arrive, you can pick any available sidequest, ship it, and earn your prizes and pixels like everyone else. Chapters only decide what unlocks next, never what you're allowed to build."
+        "title": "Tu arrives en retard ? Pas de souci",
+        "text": "Les régions débloquées ne ferment jamais. Quand tu arrives, tu peux choisir n'importe quelle quête disponible, la livrer et gagner tes prix et pixels comme tout le monde. Les chapitres décident seulement de ce qui se débloque ensuite, jamais de ce que tu as le droit de construire."
       }
     ],
     "mechanics": [
       {
-        "title": "You always win",
-        "text": "Every shipped project earns you its prize and pixels, no matter what the rest of the community does."
+        "title": "Tu gagnes toujours",
+        "text": "Chaque projet livré te rapporte son prix et ses pixels, peu importe ce que fait le reste de la communauté."
       },
       {
-        "title": "Restoration Energy",
-        "text": "Hours of shipped work convert into Restoration Energy. Keep shipping and it stacks into multipliers on what you earn."
+        "title": "Énergie de Restauration",
+        "text": "Les heures de travail livré se convertissent en Énergie de Restauration. Continue de livrer et elle s'accumule en multiplicateurs sur ce que tu gagnes."
       },
       {
-        "title": "Community goals",
-        "text": "All Restoration Energy also repairs the world itself. At big milestones, new regions unlock, NPCs return and the Core gives back more of what it holds."
+        "title": "Objectifs communautaires",
+        "text": "Toute l'Énergie de Restauration répare aussi le monde lui-même. Aux grandes étapes, de nouvelles régions se débloquent, les PNJ reviennent et le Cœur rend davantage de ce qu'il détient."
       }
     ],
-    "ctaTitle": "Want to know more about the story?",
-    "ctaText": "The rest of the lore drops when Pixl launches.",
-    "liveNow": "Pixl is live!",
-    "days": "days",
-    "hours": "hours",
+    "ctaTitle": "Envie d'en savoir plus sur l'histoire ?",
+    "ctaText": "Le reste du lore arrive au lancement de Pixl.",
+    "liveNow": "Pixl est en ligne !",
+    "days": "jours",
+    "hours": "heures",
     "min": "min",
     "sec": "sec"
   },
   "sidequests": {
-    "badge": "Examples",
-    "title": "Sidequests and Rewards",
-    "description": "These are only examples and might change over the weeks.",
-    "howRewardsWork": "How rewards work",
-    "howRewardsWorkDesc": "You get the base prize for each sidequest you complete. The more hours you put in, the more currency you earn to spend in the shop. Don't want the listed prize or already have it? No problem, swap it for anything of equivalent value.",
-    "seeFullExample": "See a full example submission",
-    "seeFullExampleDesc": "Not sure what a complete submission looks like? Check out this example that hits every deadline.",
-    "sidequestLabel": "Sidequest",
-    "prizeLabel": "Prize",
+    "badge": "Exemples",
+    "title": "Quêtes annexes et récompenses",
+    "description": "Ce ne sont que des exemples qui peuvent changer au fil des semaines.",
+    "howRewardsWork": "Comment fonctionnent les récompenses",
+    "howRewardsWorkDesc": "Tu reçois le prix de base pour chaque quête que tu termines. Plus tu y passes d'heures, plus tu gagnes de monnaie à dépenser en boutique. Tu ne veux pas le prix indiqué ou tu l'as déjà ? Pas de problème, échange-le contre n'importe quoi de valeur équivalente.",
+    "seeFullExample": "Voir un exemple complet de soumission",
+    "seeFullExampleDesc": "Tu ne sais pas à quoi ressemble une soumission complète ? Regarde cet exemple qui respecte chaque échéance.",
+    "sidequestLabel": "Quête",
+    "prizeLabel": "Prix",
     "levels": [
       {
-        "level": "Beginner",
-        "hours": "min 7h of work",
+        "level": "Débutant",
+        "hours": "min 7h de travail",
         "quest": {
-          "title": "Build a merchant's storefront",
-          "description": "Zara the cloth merchant needs a simple website to showcase her wares. Build her a clean landing page with item listings and a contact form."
+          "title": "Crée la boutique d'une marchande",
+          "description": "Zara, la marchande de tissus, a besoin d'un site simple pour présenter ses articles. Construis-lui une page d'accueil propre avec une liste d'articles et un formulaire de contact."
         },
         "prize": {
-          "title": "Domain + Sticker Pack",
-          "description": "A custom domain of your choice (.com, .dev, .xyz\u2026) + a Hack Club sticker pack shipped to your door."
+          "title": "Domaine + pack de stickers",
+          "description": "Un domaine personnalisé de ton choix (.com, .dev, .xyz…) + un pack de stickers Hack Club livré à ta porte."
         }
       },
       {
-        "level": "Intermediate",
-        "hours": "min 30h of work",
+        "level": "Intermédiaire",
+        "hours": "min 30h de travail",
         "quest": {
-          "title": "Ship a mobile app for the Traveler",
-          "description": "Marco the traveling merchant needs a mobile app to track his routes, log his inventory on the go, and send notifications when he arrives at a new region."
+          "title": "Livre une app mobile pour le Voyageur",
+          "description": "Marco, le marchand itinérant, a besoin d'une app mobile pour suivre ses itinéraires, noter son inventaire en déplacement et envoyer des notifications quand il arrive dans une nouvelle région."
         },
         "prize": {
-          "title": "Apple Developer Account",
-          "description": "A 1-year Apple Developer Program membership ($99). Publish your app on the App Store under your own name."
+          "title": "Compte Apple Developer",
+          "description": "Une adhésion d'un an au Apple Developer Program (99 $). Publie ton app sur l'App Store à ton nom."
         }
       },
       {
         "level": "Expert",
-        "hours": "min 55h of work",
+        "hours": "min 55h de travail",
         "quest": {
-          "title": "Secure the Cyberpunk City network",
-          "description": "GHOST, a rogue hacker NPC, needs a network intrusion detection system that monitors traffic, flags anomalies, and sends real-time alerts to a dashboard."
+          "title": "Sécurise le réseau de la Cité Cyberpunk",
+          "description": "GHOST, un PNJ hacker rebelle, a besoin d'un système de détection d'intrusion qui surveille le trafic, signale les anomalies et envoie des alertes en temps réel à un tableau de bord."
         },
         "prize": {
           "title": "Flipper Zero",
-          "description": "A Flipper Zero shipped to you. The multi-tool for hardware hackers. Sub-GHz, NFC, infrared, GPIO and more."
+          "description": "Un Flipper Zero livré chez toi. Le multi-outil des hackers hardware. Sub-GHz, NFC, infrarouge, GPIO et plus."
         }
       },
       {
-        "level": "Beginner",
-        "hours": "min 7h of work",
+        "level": "Débutant",
+        "hours": "min 7h de travail",
         "quest": {
-          "title": "Make me a Roblox game!!",
-          "description": "Tim, a 9-year-old NPC from the village, really wants a Roblox game where you collect coins. Build it in Roblox Studio and publish it so he can play with his friends."
+          "title": "Fais-moi un jeu Roblox !!",
+          "description": "Tim, un PNJ de 9 ans du village, veut vraiment un jeu Roblox où on collecte des pièces. Construis-le dans Roblox Studio et publie-le pour qu'il puisse jouer avec ses amis."
         },
         "prize": {
           "title": "2000 Robux",
-          "description": "A grant of 2000 Robux to spend on the Roblox platform, items, avatar upgrades or whatever you want."
+          "description": "Une bourse de 2000 Robux à dépenser sur la plateforme Roblox : objets, améliorations d'avatar ou ce que tu veux."
         }
       },
       {
-        "level": "Intermediate",
-        "hours": "min 20h of work",
+        "level": "Intermédiaire",
+        "hours": "min 20h de travail",
         "quest": {
-          "title": "Design your own region",
-          "description": "Create a new region for the Pixl world: map, NPCs, assets and sidequests. Then code it into a playable demo, it's not just an art quest. If it's polished enough, it gets added to the real game."
+          "title": "Conçois ta propre région",
+          "description": "Crée une nouvelle région pour le monde de Pixl : carte, PNJ, assets et quêtes. Puis code-la en démo jouable, ce n'est pas qu'une quête artistique. Si elle est assez soignée, elle est ajoutée au vrai jeu."
         },
         "prize": {
-          "title": "Graphics Tablet",
-          "description": "A graphics tablet to keep drawing regions, character sprites and UI assets, whether your region ships or not."
+          "title": "Tablette graphique",
+          "description": "Une tablette graphique pour continuer à dessiner des régions, des sprites de personnages et des assets d'UI, que ta région soit retenue ou non."
         }
       },
       {
-        "level": "Beginner",
-        "hours": "min 8.5h of work",
+        "level": "Débutant",
+        "hours": "min 8.5h de travail",
         "quest": {
-          "title": "Draw sprites for the Item Shop",
-          "description": "Loot, the item shop NPC, needs a pack of pixel art icons: potions, weapons, tools and collectibles. Build a website to showcase them, art can be at most 50% of your submitted time. The best ones get added to the real game."
+          "title": "Dessine des sprites pour la boutique d'objets",
+          "description": "Loot, le PNJ de la boutique d'objets, a besoin d'un pack d'icônes en pixel art : potions, armes, outils et objets à collectionner. Construis un site pour les présenter, l'art peut représenter au plus 50 % du temps soumis. Les meilleurs sont ajoutés au vrai jeu."
         },
         "prize": {
-          "title": "Sticker Pack + Poster",
-          "description": "A Hack Club sticker pack and a printed poster of your sprite sheet shipped to you."
+          "title": "Pack de stickers + poster",
+          "description": "Un pack de stickers Hack Club et un poster imprimé de ta feuille de sprites livrés chez toi."
         }
       },
       {
         "level": "Expert",
-        "hours": "~65h of work",
+        "hours": "~65h de travail",
         "quest": {
-          "title": "Build a robot arm for the Factory",
-          "description": "ARIA, the automation NPC at the Industrial District, needs a working 3-axis robot arm controlled via a custom web interface, with live position feedback and programmable sequences."
+          "title": "Construis un bras robotisé pour l'Usine",
+          "description": "ARIA, le PNJ d'automatisation du District Industriel, a besoin d'un bras robotisé 3 axes fonctionnel, contrôlé via une interface web personnalisée, avec retour de position en direct et séquences programmables."
         },
         "prize": {
-          "title": "Full PCB Manufacturing Run",
-          "description": "Budget for a full PCB manufacturing run. Boards, components and shipping covered. Build the real thing."
+          "title": "Fabrication complète de PCB",
+          "description": "Un budget pour une fabrication complète de PCB. Cartes, composants et livraison couverts. Construis le vrai truc."
         }
       }
     ],
@@ -198,220 +198,220 @@
       "web": "Web",
       "reactNative": "React Native",
       "mobile": "Mobile",
-      "networking": "Networking",
-      "security": "Security",
+      "networking": "Réseau",
+      "security": "Sécurité",
       "backend": "Backend",
       "roblox": "Roblox",
       "lua": "Lua",
-      "gameDev": "Game Dev",
+      "gameDev": "Dév de jeux",
       "pixelArt": "Pixel Art",
       "design": "Design",
       "code": "Code",
-      "robotics": "Robotics",
+      "robotics": "Robotique",
       "firmware": "Firmware",
       "hardware": "Hardware"
     }
   },
   "shop": {
-    "badge": "Spend your pixels",
-    "title": "The Shop",
-    "description": "1 hour of work = 50 pixels.",
-    "moreComing": "...and even more coming!",
+    "badge": "Dépense tes pixels",
+    "title": "La boutique",
+    "description": "1 heure de travail = 50 pixels.",
+    "moreComing": "...et encore plus à venir !",
     "items": [
       {
-        "name": "Signed Org Photo",
-        "description": "A signed photo of one of the org members, shipped to your door."
+        "name": "Photo signée de l'orga",
+        "description": "Une photo signée d'un membre de l'orga, livrée à ta porte."
       },
       {
-        "name": "Game Assets Grant",
-        "description": "A stackable $10 grant to buy tilesets, sprites, music and sounds for your game."
+        "name": "Bourse assets de jeu",
+        "description": "Une bourse cumulable de 10 $ pour acheter des tilesets, sprites, musiques et sons pour ton jeu."
       },
       {
-        "name": "Hack Club Sticker Pack",
-        "description": "An envelope of Hack Club and Pixl stickers."
+        "name": "Pack de stickers Hack Club",
+        "description": "Une enveloppe de stickers Hack Club et Pixl."
       },
       {
-        "name": "AI Credits",
-        "description": "A $10 grant for AI credits for the provider of your choice."
+        "name": "Crédits IA",
+        "description": "Une bourse de 10 $ de crédits IA chez le fournisseur de ton choix."
       },
       {
-        "name": "Music Grant",
-        "description": "A stackable $10 grant to spend on instruments, plugins, samples or any music gear you want. Don't use it for subscription to spotify/apple music etc"
+        "name": "Bourse musique",
+        "description": "Une bourse cumulable de 10 $ à dépenser en instruments, plugins, samples ou tout matériel musical. À ne pas utiliser pour un abonnement Spotify/Apple Music etc."
       },
       {
-        "name": "Random Desk Object",
-        "description": "A random object from our desks: a PCB, a sticker stash, anything. Comes with a signed letter. Only a few in stock!"
+        "name": "Objet de bureau aléatoire",
+        "description": "Un objet au hasard de nos bureaux : un PCB, une réserve de stickers, n'importe quoi. Livré avec une lettre signée. Quelques exemplaires seulement !"
       },
       {
-        "name": "Art Supply Grant",
-        "description": "A stackable $10 grant to spend on paints, pens, canvases or any art supplies you want."
+        "name": "Bourse fournitures d'art",
+        "description": "Une bourse cumulable de 10 $ à dépenser en peintures, stylos, toiles ou toutes fournitures d'art."
       },
       {
-        "name": "Pixel Composer License",
-        "description": "VFX compositor for pixel art. Effects and animations for your sprites."
+        "name": "Licence Pixel Composer",
+        "description": "Compositeur VFX pour le pixel art. Effets et animations pour tes sprites."
       },
       {
-        "name": "PICO-8 License",
-        "description": "The fantasy console. Code, draw and compose tiny games in one tool."
+        "name": "Licence PICO-8",
+        "description": "La console fantastique. Code, dessine et compose de petits jeux dans un seul outil."
       },
       {
-        "name": "PIXL Poster",
-        "description": "A $20 print grant for the PIXL poster or any poster you want. Everyone loves posters."
+        "name": "Poster PIXL",
+        "description": "Une bourse d'impression de 20 $ pour le poster PIXL ou n'importe quel poster. Tout le monde adore les posters."
       },
       {
-        "name": "Aseprite License",
-        "description": "The pixel art editor. Animated sprites, tilesets and more."
+        "name": "Licence Aseprite",
+        "description": "L'éditeur de pixel art. Sprites animés, tilesets et plus."
       },
       {
-        "name": "Pixl Tamagotchi DIY Kit",
-        "description": "Solder and code your own pocket pet, designed by mangoman."
+        "name": "Kit DIY Tamagotchi Pixl",
+        "description": "Soude et code ton propre compagnon de poche, conçu par mangoman."
       },
       {
-        "name": "Indie Game of Your Choice",
-        "description": "Pick from our selection of cool indie games. Sent as a gift link on Steam or Humble Bundle."
+        "name": "Jeu indé de ton choix",
+        "description": "Choisis parmi notre sélection de jeux indé sympas. Envoyé en lien cadeau sur Steam ou Humble Bundle."
       },
       {
-        "name": "ESP32 Starter Kit",
-        "description": "ESP32 dev board with a breadboard and components to start hacking."
+        "name": "Kit de démarrage ESP32",
+        "description": "Carte de dev ESP32 avec une breadboard et des composants pour commencer à bidouiller."
       },
       {
-        "name": "Godot Plush (Limited Edition)",
-        "description": "The official Godot robot plushie. Emotional support for game jams."
+        "name": "Peluche Godot (édition limitée)",
+        "description": "La peluche officielle du robot Godot. Soutien émotionnel pour les game jams."
       },
       {
-        "name": "PIXL Hoodie",
-        "description": "Limited PIXL hoodie with the logo on the chest."
+        "name": "Hoodie PIXL",
+        "description": "Hoodie PIXL en édition limitée avec le logo sur la poitrine."
       },
       {
         "name": "Wacom Intuos (Small)",
-        "description": "A Wacom drawing tablet, the classic for digital art."
+        "description": "Une tablette à dessin Wacom, la classique de l'art numérique."
       },
       {
-        "name": "Retro Handheld (Miyoo Mini+ / RG35XX)",
-        "description": "A retro handheld to play your builds and the classics on the go."
+        "name": "Console rétro (Miyoo Mini+ / RG35XX)",
+        "description": "Une console portable rétro pour jouer à tes créations et aux classiques en déplacement."
       },
       {
         "name": "Epomaker TH80 V2 Pro",
-        "description": "Hot-swap mechanical keyboard with a little screen. Add a note to pick your color."
+        "description": "Clavier mécanique hot-swap avec un petit écran. Ajoute une note pour choisir ta couleur."
       },
       {
         "name": "Epomaker x Aula F75",
-        "description": "75% hot-swap mechanical keyboard. Add a note to pick your color."
+        "description": "Clavier mécanique hot-swap 75 %. Ajoute une note pour choisir ta couleur."
       },
       {
         "name": "GameMaker Pro",
-        "description": "GameMaker Professional license to export your games everywhere."
+        "description": "Licence GameMaker Professional pour exporter tes jeux partout."
       },
       {
-        "name": "Monitor Grant (Stackable)",
-        "description": "A stackable $100 grant towards the monitor of your choice. Your pixels deserve more pixels."
+        "name": "Bourse écran (cumulable)",
+        "description": "Une bourse cumulable de 100 $ pour l'écran de ton choix. Tes pixels méritent plus de pixels."
       },
       {
         "name": "Raspberry Pi 5",
-        "description": "A Raspberry Pi 5 (4GB) to run your servers, emulators and experiments. 8GB version for 3150 px."
+        "description": "Un Raspberry Pi 5 (4 Go) pour faire tourner tes serveurs, émulateurs et expériences. Version 8 Go pour 3150 px."
       },
       {
         "name": "Bambu Lab A1 Mini",
-        "description": "A fast, quiet 3D printer. Print your own game props and cases."
+        "description": "Une imprimante 3D rapide et silencieuse. Imprime tes propres accessoires et boîtiers de jeu."
       },
       {
         "name": "Sony WH-1000XM5",
-        "description": "Noise cancelling headphones to get in the zone."
+        "description": "Casque à réduction de bruit pour entrer dans la zone."
       },
       {
         "name": "Bambu Lab A1",
-        "description": "A reliable, well-rounded 3D printer for props, cases and prototypes."
+        "description": "Une imprimante 3D fiable et polyvalente pour accessoires, boîtiers et prototypes."
       },
       {
         "name": "Centauri Carbon",
-        "description": "A fast, enclosed 3D printer built for tougher, higher-temp filaments."
+        "description": "Une imprimante 3D rapide et fermée, conçue pour les filaments plus résistants et à haute température."
       },
       {
-        "name": "iPad (11th gen)",
-        "description": "An iPad with pencil support for drawing and playtesting."
+        "name": "iPad (11e gén)",
+        "description": "Un iPad compatible avec le stylet pour dessiner et tester tes jeux."
       },
       {
         "name": "Bambu Lab A1 Combo",
-        "description": "The A1 bundled with the AMS Lite for multi-color prints out of the box."
+        "description": "La A1 avec l'AMS Lite pour des impressions multicolores dès la sortie de la boîte."
       },
       {
         "name": "AirPods Max 2",
-        "description": "Apple's over-ear noise cancelling headphones. The endgame flex."
+        "description": "Le casque circum-auriculaire à réduction de bruit d'Apple. Le flex ultime."
       },
       {
         "name": "MacBook Neo",
-        "description": "A light, portable MacBook for code, art and everything in between. 256GB shown, add a note to pick 512GB for 11500 px."
+        "description": "Un MacBook léger et portable pour le code, l'art et tout le reste. 256 Go affiché, ajoute une note pour choisir 512 Go pour 11500 px."
       },
       {
         "name": "MacBook Air M5",
-        "description": "Apple's air laptop, 16GB/512GB shown, add a note to pick 24GB/1TB for 24250 px."
+        "description": "Le portable Air d'Apple, 16 Go/512 Go affiché, ajoute une note pour choisir 24 Go/1 To pour 24250 px."
       }
     ]
   },
   "faq": {
     "badge": "FAQ",
-    "title": "Quick answers",
+    "title": "Réponses rapides",
     "items": [
       {
-        "question": "Who can join?",
-        "answer": "Teen hackers, first-time builders, designers, coders, and curious friends who want to make something real."
+        "question": "Qui peut participer ?",
+        "answer": "Les hackers ados, les débutants, les designers, les codeurs et les curieux qui veulent créer quelque chose de réel."
       },
       {
-        "question": "Wait, why is it called Pixl?",
-        "answer": "The world was originally called Origin, until its Core got overloaded with every invention ever made and broke apart into pixelated islands. Its survivors crossed universes looking for the only people they figured could actually help rebuild it: Hack Clubbers. Together they're now the Pixelians, and they renamed the place Pixl."
+        "question": "Attends, pourquoi ça s'appelle Pixl ?",
+        "answer": "Le monde s'appelait à l'origine Origin, jusqu'à ce que son Cœur, surchargé par toutes les inventions jamais créées, se brise en îles pixelisées. Ses survivants ont traversé les univers à la recherche des seules personnes capables de vraiment aider à le reconstruire : les Hack Clubbers. Ensemble, ils sont désormais les Pixeliens, et ils ont rebaptisé l'endroit Pixl."
       },
       {
-        "question": "Do I need a team?",
-        "answer": "No. Come solo or with friends."
+        "question": "J'ai besoin d'une équipe ?",
+        "answer": "Non. Viens seul ou avec des amis."
       },
       {
-        "question": "Is this only for expert coders?",
-        "answer": "Nope. Bring curiosity. Mentors will help with ideas, debugging, demos, and shipping."
+        "question": "C'est réservé aux codeurs experts ?",
+        "answer": "Non. Apporte ta curiosité. Des mentors t'aideront avec les idées, le débogage, les démos et la livraison."
       },
       {
-        "question": "When is Pixl starting?",
-        "answer": "Pixl launches August 18th, 2026, there's a live countdown ticking down to it further up the page. Stay tuned!"
+        "question": "Quand commence Pixl ?",
+        "answer": "Pixl est lancé le 18 août 2026, il y a un compte à rebours en direct plus haut sur la page. Reste à l'affût !"
       },
       {
-        "question": "Is this free?",
-        "answer": "Yes! Each of your projects will be funded, and the event itself is 100% free."
+        "question": "C'est gratuit ?",
+        "answer": "Oui ! Chacun de tes projets sera financé, et l'événement lui-même est 100 % gratuit."
       },
       {
-        "question": "Who is running Pixl?",
-        "answer": "A big team of friends!"
+        "question": "Qui organise Pixl ?",
+        "answer": "Une grande équipe d'amis !"
       },
       {
-        "question": "I have more questions!",
-        "answer": "Ask us in #pixl-help on the Hack Club Slack."
+        "question": "J'ai d'autres questions !",
+        "answer": "Demande-nous dans #pixl-help sur le Slack Hack Club."
       }
     ],
-    "meetTheTeam": "Meet the whole team here."
+    "meetTheTeam": "Rencontre toute l'équipe ici."
   },
   "footer": {
-    "aProjectBy": "A project by",
+    "aProjectBy": "Un projet de",
     "teens": "Teens",
-    "hackClubDesc1": "Hack Club is a 501(c)(3) nonprofit and network of 60k+ technical high schoolers. We believe you learn best by building, so we\u2019re creating community and providing grants so you can make awesome projects. In the past few years, we\u2019ve",
-    "partneredWithGithub": "partnered with GitHub to run Summer of Making",
-    "hostedWorldsLongest": "hosted the world\u2019s longest hackathon on land",
-    "ranCanadasLargest": "ran Canada\u2019s largest high school hackathon",
-    "hackClubMotto": "At Hack Club, students aren\u2019t just learning, they\u2019re shipping.",
+    "hackClubDesc1": "Hack Club est une association à but non lucratif 501(c)(3) et un réseau de plus de 60 000 lycéens techos. On croit qu'on apprend mieux en construisant, alors on crée une communauté et on offre des bourses pour que tu puisses réaliser des projets géniaux. Ces dernières années, on a",
+    "partneredWithGithub": "collaboré avec GitHub pour organiser Summer of Making",
+    "hostedWorldsLongest": "organisé le plus long hackathon du monde sur terre",
+    "ranCanadasLargest": "mené le plus grand hackathon lycéen du Canada",
+    "hackClubMotto": "Chez Hack Club, les élèves n'apprennent pas juste, ils livrent.",
     "pixl": "Pixl",
-    "whatIsPixl": "What is Pixl",
-    "howItWorks": "How it works",
+    "whatIsPixl": "C'est quoi Pixl",
+    "howItWorks": "Comment ça marche",
     "faq": "FAQ",
     "docs": "Docs",
-    "resources": "Resources",
-    "joinOurSlack": "Join our Slack",
-    "communityEvents": "Community Events",
-    "workshops": "Workshops",
-    "codeOfConduct": "Code of Conduct",
+    "resources": "Ressources",
+    "joinOurSlack": "Rejoins notre Slack",
+    "communityEvents": "Événements communautaires",
+    "workshops": "Ateliers",
+    "codeOfConduct": "Code de conduite",
     "hackClub": "Hack Club",
-    "philosophy": "Philosophy",
-    "ourTeamAndBoard": "Our Team & Board",
-    "branding": "Branding",
-    "donate": "Donate",
-    "madeWithLove": "Pixl is made with \u2665 by teenagers for teenagers",
-    "addSomething": "want to add something ? Make a PR on",
+    "philosophy": "Philosophie",
+    "ourTeamAndBoard": "Notre équipe & conseil",
+    "branding": "Charte graphique",
+    "donate": "Faire un don",
+    "madeWithLove": "Pixl est fait avec ♥ par des ados pour des ados",
+    "addSomething": "envie d'ajouter quelque chose ? Fais une PR sur",
     "github": "GitHub"
   }
 }

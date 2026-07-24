@@ -2,7 +2,22 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { locales, defaultLocale } from "./app/[lang]/dictionaries";
 
+// Rough country -> language guess so first-time visitors land in their own
+// tongue. Vercel injects x-vercel-ip-country from the edge. Only maps to the
+// locales we actually ship; anything else falls through to Accept-Language.
+const COUNTRY_LOCALE: Record<string, string> = {
+  FR: "fr",
+  ES: "es", MX: "es", AR: "es", CO: "es", CL: "es", PE: "es", VE: "es",
+  EC: "es", GT: "es", CU: "es", BO: "es", DO: "es", HN: "es", PY: "es",
+  SV: "es", NI: "es", CR: "es", PA: "es", UY: "es", PR: "es",
+  PT: "pt", BR: "pt", AO: "pt", MZ: "pt",
+};
+
 function getLocale(request: NextRequest): string {
+  const country = request.headers.get("x-vercel-ip-country")?.toUpperCase();
+  const byCountry = country ? COUNTRY_LOCALE[country] : undefined;
+  if (byCountry && (locales as string[]).includes(byCountry)) return byCountry;
+
   const acceptLang = request.headers.get("accept-language");
   if (!acceptLang) return defaultLocale;
 
