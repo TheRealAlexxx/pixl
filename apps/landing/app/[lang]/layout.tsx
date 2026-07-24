@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { SmoothScroll } from "../_components/SmoothScroll";
+import { EasterEgg } from "../_components/EasterEgg";
 import { locales } from "./dictionaries";
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default async function RootLayout({
     >
       <body className="flex flex-col">
         <SmoothScroll>{children}</SmoothScroll>
+        <EasterEgg />
       </body>
     </html>
   );
