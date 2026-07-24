@@ -103,9 +103,11 @@ const Pixl = (() => {
 
   const PAGES = [
     ["shop", "SHOP"],
-    ["vault", "VAULT"],
+    // VAULT and QUESTS are hidden from the dash for now — not ready for players.
+    // Re-enable when they are.
+    // ["vault", "VAULT"],
     ["explore", "EXPLORE"],
-    ["quests", "QUESTS"],
+    // ["quests", "QUESTS"],
     // STORY (The Chronicle) is disabled in the dash for now — the storyline is
     // surfaced through community goals instead. Re-enable when it's ready.
     // ["timeline", "STORY"],
