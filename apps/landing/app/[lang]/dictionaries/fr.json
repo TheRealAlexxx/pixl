@@ -239,6 +239,18 @@
         "description": "Une bourse cumulable de 10 $ à dépenser en instruments, plugins, samples ou tout matériel musical. À ne pas utiliser pour un abonnement Spotify/Apple Music etc."
       },
       {
+        "name": "Bourse matériel",
+        "description": "Une bourse cumulable de 10$ à dépenser sur du matériel pour vos projets."
+      },
+      {
+        "name": "Bourse nom de domaine",
+        "description": "Une bourse cumulable de 12$ pour réserver un nom de domaine pour votre projet."
+      },
+      {
+        "name": "Bourse hébergement",
+        "description": "Une bourse cumulable de 10$ pour de l'hébergement, comme Railway ou toute autre plateforme cloud."
+      },
+      {
         "name": "Objet de bureau aléatoire",
         "description": "Un objet au hasard de nos bureaux : un PCB, une réserve de stickers, n'importe quoi. Livré avec une lettre signée. Quelques exemplaires seulement !"
       },
@@ -265,6 +277,10 @@
       {
         "name": "Licence Aseprite",
         "description": "L'éditeur de pixel art. Sprites animés, tilesets et plus."
+      },
+      {
+        "name": "Licence développeur Google Play",
+        "description": "Une bourse de 25$ pour votre licence développeur Google Play."
       },
       {
         "name": "Kit DIY Tamagotchi Pixl",
@@ -295,6 +311,18 @@
         "description": "Une peluche requin Blahaj livrée chez toi."
       },
       {
+        "name": "Bourse CPU",
+        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de CPU."
+      },
+      {
+        "name": "Bourse GPU",
+        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de GPU."
+      },
+      {
+        "name": "Bourse RAM",
+        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de RAM."
+      },
+      {
         "name": "Wacom Intuos (Small)",
         "description": "Une tablette à dessin Wacom, la classique de l'art numérique."
       },
@@ -311,8 +339,20 @@
         "description": "Licence GameMaker Professional pour exporter tes jeux partout."
       },
       {
+        "name": "Licence Steam",
+        "description": "Une bourse de 100$ pour Steam, les jeux ne pouvant pas toujours être offerts directement."
+      },
+      {
+        "name": "Licence développeur Apple",
+        "description": "Une bourse de 100$ pour votre abonnement au programme développeur Apple."
+      },
+      {
         "name": "Bourse écran (cumulable)",
         "description": "Une bourse cumulable de 100 $ pour l'écran de ton choix. Tes pixels méritent plus de pixels."
+      },
+      {
+        "name": "Apple Pencil Pro",
+        "description": "L'Apple Pencil Pro, parfait avec notre iPad pour dessiner et faire du pixel art."
       },
       {
         "name": "Raspberry Pi 5",
@@ -377,6 +417,10 @@
       {
         "name": "MacBook Neo",
         "description": "Un MacBook léger et portable pour le code, l'art et tout le reste. 256 Go affiché, ajoute une note pour choisir 512 Go pour 11500 px."
+      },
+      {
+        "name": "iPad Air (M4, 128 Go)",
+        "description": "Un iPad plus rapide et plus spacieux avec la puce M4. Compatible stylet pour dessiner et tester votre jeu."
       },
       {
         "name": "MacBook Air M5",

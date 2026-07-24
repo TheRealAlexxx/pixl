@@ -239,6 +239,18 @@
         "description": "Una beca acumulable de 10 $ para gastar en instrumentos, plugins, samples o cualquier equipo musical. No la uses para suscripciones a Spotify/Apple Music etc."
       },
       {
+        "name": "Beca de hardware",
+        "description": "Una beca acumulable de $10 para gastar en hardware para tus proyectos."
+      },
+      {
+        "name": "Beca de dominio",
+        "description": "Una beca acumulable de $12 para registrar un dominio para tu proyecto."
+      },
+      {
+        "name": "Beca de hosting",
+        "description": "Una beca acumulable de $10 para hosting, como Railway o cualquier plataforma en la nube."
+      },
+      {
         "name": "Objeto de escritorio aleatorio",
         "description": "Un objeto al azar de nuestros escritorios: un PCB, un alijo de pegatinas, lo que sea. Viene con una carta firmada. ¡Solo quedan unos pocos!"
       },
@@ -265,6 +277,10 @@
       {
         "name": "Licencia de Aseprite",
         "description": "El editor de pixel art. Sprites animados, tilesets y más."
+      },
+      {
+        "name": "Licencia de desarrollador de Google Play",
+        "description": "Una beca de $25 para tu licencia de desarrollador de Google Play."
       },
       {
         "name": "Kit DIY Tamagotchi Pixl",
@@ -295,6 +311,18 @@
         "description": "Un peluche tiburón Blahaj enviado a tu casa."
       },
       {
+        "name": "Beca de CPU",
+        "description": "Una beca acumulable de $50 exclusiva para mejoras de CPU."
+      },
+      {
+        "name": "Beca de GPU",
+        "description": "Una beca acumulable de $50 exclusiva para mejoras de GPU."
+      },
+      {
+        "name": "Beca de RAM",
+        "description": "Una beca acumulable de $50 exclusiva para mejoras de RAM."
+      },
+      {
         "name": "Wacom Intuos (Small)",
         "description": "Una tableta de dibujo Wacom, la clásica del arte digital."
       },
@@ -311,8 +339,20 @@
         "description": "Licencia de GameMaker Professional para exportar tus juegos a todas partes."
       },
       {
+        "name": "Licencia de Steam",
+        "description": "Una beca de $100 para Steam, ya que los juegos no siempre se pueden regalar directamente."
+      },
+      {
+        "name": "Licencia de desarrollador de Apple",
+        "description": "Una beca de $100 para tu membresía del programa de desarrolladores de Apple."
+      },
+      {
         "name": "Beca de monitor (acumulable)",
         "description": "Una beca acumulable de 100 $ para el monitor de tu elección. Tus píxeles se merecen más píxeles."
+      },
+      {
+        "name": "Apple Pencil Pro",
+        "description": "El Apple Pencil Pro, perfecto con nuestro iPad para dibujar y hacer pixel art."
       },
       {
         "name": "Raspberry Pi 5",
@@ -377,6 +417,10 @@
       {
         "name": "MacBook Neo",
         "description": "Un MacBook ligero y portátil para código, arte y todo lo demás. Se muestra 256GB; añade una nota para elegir 512GB por 11500 px."
+      },
+      {
+        "name": "iPad Air (M4, 128GB)",
+        "description": "Un iPad más rápido y con más espacio con el chip M4. Compatible con lápiz para dibujar y probar tu juego."
       },
       {
         "name": "MacBook Air M5",

@@ -17,6 +17,9 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `hc-stickers` | Hack Club Sticker Pack | 3 h | 150 | Cheap if HQ stock; new custom stickers = big order (up to $500). Envelope ~$3 worldwide, ~$10 per pack total | `/shop/hc-stickers.png` |
 | `api-credits` | AI Credits | 3 h | 150 | **$10** HCB grant, no shipping. Fraudable like every grant | `/shop/api.png` |
 | `music-grant` | Music Grant | 3 h | 150 | **$10** stackable grant, instruments/plugins/samples/any music gear. Fraudable like every grant | `/shop/music-grant.png` (generated pixel-art icon: boombox) |
+| `hardware-grant` | Hardware Grant | 3.5 h | 175 | **$10** stackable grant, any hardware for your projects | `/shop/hardware-grant.png` (generated pixel-art icon: CPU chip) |
+| `domain-grant` | Domain Grant | 3.5 h | 175 | **$12** stackable grant, registering a domain. Already exists as a Sidequest too | `/shop/domain-grant.png` (generated pixel-art icon: globe) |
+| `hosting-grant` | Hosting Grant | 3.5 h | 175 | **$10** stackable grant, hosting (Railway, any cloud platform) | `/shop/hosting-grant.png` (generated pixel-art icon: cloud + server) |
 | `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.svg` (placeholder) |
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
 | `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. Description has a small nod to sponsor Barnav ("our resident cookie muncher"). ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
@@ -24,6 +27,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `pico8` | PICO-8 License | 5 h | 250 | $15, gift code, no fraud, in theme asf | `/shop/pico8.png` |
 | `pixl-poster` | PIXL Poster | 6 h | 300 | **$20** print grant (general poster or print grant at a local shop). Design by Ricky or community bounty? **//not sure** | `/shop/poster.png` |
 | `aseprite` | Aseprite License | 7 h | 350 | $22, no shipping, easy gift. High hacker value | `/shop/aseprite.png` |
+| `google-play` | Google Play Developer License | 7 h | 350 | **$25** grant for the one-time Google Play developer registration fee | `/shop/google-play.png` (generated pixel-art icon: play badge) |
 | `tamagotchi-kit` | Pixl Tamagotchi DIY Kit | 8 h | 400 | Parts ~$30 (PCB + screen + components via JLC, cheaper in batch on LCSC/JLCPCB) + reshipping ~$10 ≈ $40. Huge in-house hacker value. **Waiting on mangoman for exact price/hours** | `/shop/tamagotchi.png` |
 | `indie-game` | Indie Game of Your Choice | 8 h | 400 | Selection from the jame gam prize pool ($15–30 games), pay as if $25. Steam gift / Humble Bundle link, no shipping, no fraud | `/shop/indie-game.png` |
 | `esp32-kit` | ESP32 Starter Kit | 10 h | 500 | ~$20 AliExpress / ~$30 Amazon US-EU, avg ~$25 + ~$8 shipping ≈ $33 | `/shop/esp32.png` |
@@ -31,11 +35,17 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `godot-plush` | Godot Plush (Limited Edition) | 13 h | 650 | ~$30 + ~$10–15 small packet shipping ≈ $45 on Makeship, no reship needed | `/shop/godot-plush.png` |
 | `pixl-hoodie` | PIXL Hoodie | 14 h | 700 | Print-on-demand (Printful type): they handle worldwide shipping and sizes, ~$35–45 shipped, global avg ~$50 | `/shop/hoodie.png` |
 | `blahaj-plush` | Blahaj Plush | 14 h | 700 | $30 plush + $10 shipping = $40. HQ needs orders of at least 2 at a time, then reship. **This is the plush toy — distinct from the 3D-printed Blahaj, which is the trophy, not a shop item** | `/shop/blahaj.png` |
+| `cpu-grant` | CPU Grant | 14 h | 700 | **$50** stackable grant, CPU upgrades only | `/shop/cpu-grant.png` (generated pixel-art icon: CPU chip) |
+| `gpu-grant` | GPU Grant | 14 h | 700 | **$50** stackable grant, GPU upgrades only | `/shop/gpu-grant.png` (generated pixel-art icon: graphics card) |
+| `ram-grant` | RAM Grant | 14 h | 700 | **$50** stackable grant, RAM upgrades only | `/shop/ram-grant.png` (generated pixel-art icon: memory stick) |
 | `wacom-intuos` | Wacom Intuos (Small) | 15 h | 750 | ~$50–80, varies a lot by region (THE per-region problem item) + ~$10 shipping, global avg ~$50 | `/shop/wacom.png` |
 | `retro-handheld` | Retro Handheld (Miyoo Mini+ / RG35XX) | 20 h | 1000 | ~$60–70 shipped from AliExpress, ships worldwide cheap (PK, IN, BR no problem) | `/shop/retro-handheld.png` |
 | `keyboard-s75-pro` | Epomaker x Aula S75 Pro | 20 h | 1000 | $72 Amazon US. Hot-swap, has a little screen. Color chosen via order note. **Replaces both the old F75 and the TH80 V2 Pro (removed). Corrected from "F75 Pro" — the real model is S75 Pro** | `/shop/keyboard-s75-pro.png` |
 | `gamemaker` | GameMaker Pro | 29 h | 1450 | $99.99 one-time license, key, no shipping, no fraud | `/shop/gamemaker.png` |
+| `steam-license` | Steam License | 29 h | 1450 | **$100** grant for Steam (games can't be sent as a direct gift) | `/shop/steam-license.png` (generated pixel-art icon: controller) |
+| `apple-dev` | Apple Developer License | 29 h | 1450 | **$100** grant for the Apple Developer Program membership. Now also in the shop (was quest-only before) | `/shop/apple-dev.png` (generated pixel-art icon: apple + dev badge) |
 | `monitor-grant` | Monitor Grant (Stackable) | 30 h | 1500 | **$100** stackable grant. Fraudable | `/shop/monitor-4k.png` |
+| `pencil-pro` | Apple Pencil Pro | 37 h | 1850 | $130, pairs with our iPad | `/shop/pencil-pro.png` |
 | `raspberry-pi-5` | Raspberry Pi 5 | 40 h (4GB) / 63 h (8GB) | 2000 (4GB) / 3150 (8GB) | Board $130 (4GB) / $200 (8GB) + shipping ~$10–20. One card on the site, 8GB price mentioned in the description | `/shop/rpi.png` |
 | `sony-ch720n` | Sony WH-CH720N | 43 h | 2150 | $150 Amazon US, cheap noise cancelling. **Not added to the shop before this batch** | `/shop/sony-ch720n.png` |
 | `ender3-v3` | Creality Ender 3 V3 | 55 h | 2750 | $190 Amazon US, easily shippable, order in user's regional store | `/shop/ender3-v3.png` |
@@ -52,6 +62,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `airpods-max` | AirPods Max 2 | 129 h | 6450 | $450 Amazon US, easily shippable | `/shop/airpods-max.png` |
 | `nothing-phone` | Nothing Phone (4a) Pro | 143 h | 7150 | $499.99 US, easily orderable, cool phone | `/shop/nothing-phone.png` |
 | `macbook-neo` | MacBook Neo | 200 h (256GB) / 230 h (512GB) | 10000 (256GB) / 11500 (512GB) | Can't check Apple US pricing, ~$700 (256GB) / ~$800 (512GB) on Amazon. Easily shippable. One card on the site, 512GB price mentioned in the description, picked via order note | `/shop/macbook-neo.png` |
+| `ipad-air-m4` | iPad Air (M4, 128GB) | 200 h | 10000 | $700, better than the base iPad, nice upgrade | `/shop/ipad-air-m4.png` |
 | `macbook-air-m5` | MacBook Air M5 | 343 h (16GB/512GB) / 485 h (24GB/1TB) | 17150 (16GB/512GB) / 24250 (24GB/1TB) | Can't check Apple US pricing, ~$1200 (16GB/512GB) / ~$1700 (24GB/1TB) on Amazon. Easily shippable. One card on the site, 24GB/1TB price mentioned in the description, picked via order note | `/shop/macbook-air.png` |
 | `framework-13` | Framework 13 DIY | 343 h | 17150 | $1200 Amazon US, good/repairable, DIY edition | `/shop/framework-13.png` |
 | `framework-16` | Framework 16 DIY | 358 h | 17900 | $1250, high hacker value, "people love it etc" | `/shop/framework-16.png` |
@@ -85,8 +96,8 @@ Below the Shop carousel, the site shows "...and even more coming!".
 
 ## Placeholder / pending images
 
-- `signed-photo.svg`, `mystery-box.svg` are quick pixel-art SVG placeholders — swap them for real PNGs when available.
-- All shop item images are now in place — no more missing/pending images as of this update.
+- `signed-photo.svg`, `mystery-box.svg` are quick pixel-art SVG placeholders — swap them for real product photos when available.
+- All other images (including the 9 new grant/license icons — `hardware-grant`, `domain-grant`, `hosting-grant`, `cpu-grant`, `gpu-grant`, `ram-grant`, `google-play`, `steam-license`, `apple-dev` — and the real photos for `pencil-pro` and `ipad-air-m4`) are in place, no longer pending.
 
 ## Where to edit items
 

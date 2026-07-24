@@ -239,6 +239,18 @@
         "description": "Uma bolsa acumulável de US$ 10 para gastar em instrumentos, plugins, samples ou qualquer equipamento musical. Não use para assinatura de Spotify/Apple Music etc."
       },
       {
+        "name": "Bolsa de hardware",
+        "description": "Uma bolsa acumulável de $10 para gastar em hardware para seus projetos."
+      },
+      {
+        "name": "Bolsa de domínio",
+        "description": "Uma bolsa acumulável de $12 para registrar um domínio para seu projeto."
+      },
+      {
+        "name": "Bolsa de hospedagem",
+        "description": "Uma bolsa acumulável de $10 para hospedagem, como Railway ou qualquer plataforma em nuvem."
+      },
+      {
         "name": "Objeto de mesa aleatório",
         "description": "Um objeto aleatório das nossas mesas: uma PCB, um estoque de adesivos, qualquer coisa. Vem com uma carta assinada. Só restam alguns!"
       },
@@ -265,6 +277,10 @@
       {
         "name": "Licença do Aseprite",
         "description": "O editor de pixel art. Sprites animados, tilesets e mais."
+      },
+      {
+        "name": "Licença de desenvolvedor Google Play",
+        "description": "Uma bolsa de $25 para sua licença de desenvolvedor Google Play."
       },
       {
         "name": "Kit DIY Tamagotchi Pixl",
@@ -295,6 +311,18 @@
         "description": "Uma pelúcia tubarão Blahaj enviada para sua casa."
       },
       {
+        "name": "Bolsa de CPU",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de CPU."
+      },
+      {
+        "name": "Bolsa de GPU",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de GPU."
+      },
+      {
+        "name": "Bolsa de RAM",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de RAM."
+      },
+      {
         "name": "Wacom Intuos (Small)",
         "description": "Uma mesa digitalizadora Wacom, a clássica da arte digital."
       },
@@ -311,8 +339,20 @@
         "description": "Licença do GameMaker Professional para exportar seus jogos para todo lugar."
       },
       {
+        "name": "Licença Steam",
+        "description": "Uma bolsa de $100 para Steam, já que os jogos nem sempre podem ser enviados como presente direto."
+      },
+      {
+        "name": "Licença de desenvolvedor Apple",
+        "description": "Uma bolsa de $100 para sua assinatura do programa de desenvolvedor Apple."
+      },
+      {
         "name": "Bolsa de monitor (acumulável)",
         "description": "Uma bolsa acumulável de US$ 100 para o monitor da sua escolha. Seus pixels merecem mais pixels."
+      },
+      {
+        "name": "Apple Pencil Pro",
+        "description": "O Apple Pencil Pro, perfeito com nosso iPad para desenhar e fazer pixel art."
       },
       {
         "name": "Raspberry Pi 5",
@@ -377,6 +417,10 @@
       {
         "name": "MacBook Neo",
         "description": "Um MacBook leve e portátil para código, arte e tudo mais. 256GB mostrado; adicione uma nota para escolher 512GB por 11500 px."
+      },
+      {
+        "name": "iPad Air (M4, 128GB)",
+        "description": "Um iPad mais rápido e espaçoso com o chip M4. Compatível com caneta para desenhar e testar seu jogo."
       },
       {
         "name": "MacBook Air M5",

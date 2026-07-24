@@ -239,6 +239,18 @@
         "description": "A stackable $10 grant to spend on instruments, plugins, samples or any music gear you want. Don't use it for subscription to spotify/apple music etc"
       },
       {
+        "name": "Hardware Grant",
+        "description": "A stackable $10 grant to spend on any hardware for your projects."
+      },
+      {
+        "name": "Domain Grant",
+        "description": "A stackable $12 grant to register a domain for your project."
+      },
+      {
+        "name": "Hosting Grant",
+        "description": "A stackable $10 grant for hosting, like Railway or any cloud platform."
+      },
+      {
         "name": "Random Desk Object",
         "description": "A random object from our desks: a PCB, a sticker stash, anything. Comes with a signed letter. Only a few in stock!"
       },
@@ -265,6 +277,10 @@
       {
         "name": "Aseprite License",
         "description": "The pixel art editor. Animated sprites, tilesets and more."
+      },
+      {
+        "name": "Google Play Developer License",
+        "description": "A $25 grant for your Google Play developer license."
       },
       {
         "name": "Pixl Tamagotchi DIY Kit",
@@ -295,6 +311,18 @@
         "description": "A plush Blahaj shark shipped to your door."
       },
       {
+        "name": "CPU Grant",
+        "description": "A stackable $50 grant for CPU upgrades only."
+      },
+      {
+        "name": "GPU Grant",
+        "description": "A stackable $50 grant for GPU upgrades only."
+      },
+      {
+        "name": "RAM Grant",
+        "description": "A stackable $50 grant for RAM upgrades only."
+      },
+      {
         "name": "Wacom Intuos (Small)",
         "description": "A Wacom drawing tablet, the classic for digital art."
       },
@@ -311,8 +339,20 @@
         "description": "GameMaker Professional license to export your games everywhere."
       },
       {
+        "name": "Steam License",
+        "description": "A $100 grant for Steam, since games can't always be sent as a direct gift."
+      },
+      {
+        "name": "Apple Developer License",
+        "description": "A $100 grant for your Apple Developer Program membership."
+      },
+      {
         "name": "Monitor Grant (Stackable)",
         "description": "A stackable $100 grant towards the monitor of your choice. Your pixels deserve more pixels."
+      },
+      {
+        "name": "Apple Pencil Pro",
+        "description": "Apple's Pencil Pro, works great with our iPad for sketching and pixel art."
       },
       {
         "name": "Raspberry Pi 5",
@@ -377,6 +417,10 @@
       {
         "name": "MacBook Neo",
         "description": "A light, portable MacBook for code, art and everything in between. 256GB shown, add a note to pick 512GB for 11500 px."
+      },
+      {
+        "name": "iPad Air (M4, 128GB)",
+        "description": "A faster, roomier iPad with the M4 chip. Comes with pencil support for drawing and playtesting."
       },
       {
         "name": "MacBook Air M5",
