@@ -17,7 +17,7 @@ var _prev_pos: Vector2 = Vector2.INF
 
 var _base_frames: SpriteFrames
 
-const BUBBLE_FONT := preload("res://assets/fonts/Monocraft.ttf")
+const BUBBLE_FONT := preload("res://assets/fonts/PixelifySans.ttf")
 const BUBBLE_MAX_WIDTH := 300.0
 var _bubble: RichTextLabel
 var _bubble_token: int = 0

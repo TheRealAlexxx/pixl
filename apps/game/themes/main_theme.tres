@@ -378,7 +378,7 @@ corner_detail = 1
 anti_aliasing = false
 
 [resource]
-default_font = ExtResource("1_font")
+default_font = ExtResource("2_pixelify")
 default_font_size = 15
 Button/colors/font_color = Color(0.227451, 0.141176, 0.062745, 1)
 Button/colors/font_disabled_color = Color(0.227451, 0.141176, 0.062745, 0.6)

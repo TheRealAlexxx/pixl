@@ -1,6 +1,6 @@
 extends Area2D
 
-const MONOCRAFT := preload("res://assets/fonts/Monocraft.ttf")
+const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 const COLOR_ACCENT := Color(1, 0.819608, 0.4)
 
 @export_enum("projects", "explore", "leaderboard", "shop") var action: String = "projects"

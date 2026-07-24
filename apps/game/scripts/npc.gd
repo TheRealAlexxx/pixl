@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-const MONOCRAFT := preload("res://assets/fonts/Monocraft.ttf")
+const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 
 @export var npc_name: String = "Villager"
 @export_multiline var dialogue: String = "Hello there!"

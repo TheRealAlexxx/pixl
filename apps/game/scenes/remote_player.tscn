@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dcp70mk4shvbc" path="res://scripts/remote_player.gd" id="1_bbtsb"]
 [ext_resource type="Texture2D" uid="uid://bhal7m0ab53om" path="res://assets/cozy-towns/CozyValley_Premium_1.3/Characters/-- Pre-assembled Characters/char2.png" id="1_bj1mr"]
-[ext_resource type="FontFile" uid="uid://oex4cc8vn0hy" path="res://assets/fonts/Monocraft.ttf" id="2_n407u"]
+[ext_resource type="FontFile" uid="uid://bk1tc0pxe787r" path="res://assets/fonts/PixelifySans.ttf" id="2_n407u"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_g2els"]
 atlas = ExtResource("1_bj1mr")

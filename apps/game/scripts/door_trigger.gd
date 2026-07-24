@@ -1,6 +1,6 @@
 extends Area2D
 
-const MONOCRAFT := preload("res://assets/fonts/Monocraft.ttf")
+const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 
 @export var target: String = "house"
 

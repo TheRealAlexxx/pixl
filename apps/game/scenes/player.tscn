@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://fa3fub2wlv3v"]
 
 [ext_resource type="Script" uid="uid://cevd8o7d7sou1" path="res://scripts/player.gd" id="1_g2els"]
-[ext_resource type="FontFile" uid="uid://oex4cc8vn0hy" path="res://assets/fonts/Monocraft.ttf" id="3_qhqgy"]
+[ext_resource type="FontFile" uid="uid://bk1tc0pxe787r" path="res://assets/fonts/PixelifySans.ttf" id="3_qhqgy"]
 [ext_resource type="Script" uid="uid://by3clcnxa4og7" path="res://scripts/shadow.gd" id="4_dqkch"]
 [ext_resource type="SpriteFrames" uid="uid://tunfxupw42b5" path="res://scenes/character_frames.tres" id="5_frames"]
 

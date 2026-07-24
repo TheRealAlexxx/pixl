@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-const MONOCRAFT := preload("res://assets/fonts/Monocraft.ttf")
+const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 
 @export var speed: float = 40.0
 @export var wander_radius: float = 80.0
