@@ -19,6 +19,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `music-grant` | Music Grant | 3 h | 150 | **$10** stackable grant, instruments/plugins/samples/any music gear. Fraudable like every grant | `/shop/music-grant.png` (generated pixel-art icon: boombox) |
 | `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.svg` (placeholder) |
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
+| `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
 | `pixel-composer` | Pixel Composer License | 5 h | 250 | $15, no shipping, easy to send as gift | `/shop/pixel-composer.png` |
 | `pico8` | PICO-8 License | 5 h | 250 | $15, gift code, no fraud, in theme asf | `/shop/pico8.png` |
 | `pixl-poster` | PIXL Poster | 6 h | 300 | **$20** print grant (general poster or print grant at a local shop). Design by Ricky or community bounty? **//not sure** | `/shop/poster.png` |
@@ -44,14 +45,16 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `sony-xm5` | Sony WH-1000XM5 | 72 h | 3600 | $250 Amazon US, easily shippable | `/shop/sony-headphones.png` |
 | `sparkx-i7` | Creality Sparkx i7 | 75 h | 3750 | $260 Amazon US, easily shippable, order in user's regional store | `/shop/sparkx-i7.png` |
 | `bambu-a1` | Bambu Lab A1 | 85 h | 4250 | $300 Amazon US, easily shippable, order in user's regional store | `/shop/bambu-a1.png` |
-| `centauri-carbon` | Centauri Carbon | 100 h | 5000 | $360 Amazon US, easily shippable, order in user's regional store | `/shop/centauri-carbon.png` (pending) |
+| `centauri-carbon` | Centauri Carbon | 100 h | 5000 | $360 Amazon US, easily shippable, order in user's regional store | `/shop/centauri-carbon.png` |
 | `ipad` | iPad (11th gen) | 115 h | 5750 | $400 US but 509€ EU and more in expensive regions; priced on US $400 | `/shop/ipad.png` |
 | `bambu-a1-combo` | Bambu Lab A1 Combo | 115 h | 5750 | $400 Amazon US (A1 + AMS Lite), easily shippable, order in user's regional store | `/shop/bambu-a1-combo.png` |
 | `samsung-s24` | Samsung Galaxy S24 | 115 h | 5750 | $400 US, easily orderable, cool phone | `/shop/samsung-s24.png` |
 | `airpods-max` | AirPods Max 2 | 129 h | 6450 | $450 Amazon US, easily shippable | `/shop/airpods-max.png` |
 | `nothing-phone` | Nothing Phone (4a) Pro | 143 h | 7150 | $499.99 US, easily orderable, cool phone | `/shop/nothing-phone.png` |
-| `macbook-neo` | MacBook Neo | 200 h (256GB) / 230 h (512GB) | 10000 (256GB) / 11500 (512GB) | Can't check Apple US pricing, ~$700 (256GB) / ~$800 (512GB) on Amazon. Easily shippable. One card on the site, 512GB price mentioned in the description, picked via order note | `/shop/macbook-neo.png` (pending) |
-| `macbook-air-m5` | MacBook Air M5 | 343 h (16GB/512GB) / 485 h (24GB/1TB) | 17150 (16GB/512GB) / 24250 (24GB/1TB) | Can't check Apple US pricing, ~$1200 (16GB/512GB) / ~$1700 (24GB/1TB) on Amazon. Easily shippable. One card on the site, 24GB/1TB price mentioned in the description, picked via order note | `/shop/macbook-air.png` (pending) |
+| `macbook-neo` | MacBook Neo | 200 h (256GB) / 230 h (512GB) | 10000 (256GB) / 11500 (512GB) | Can't check Apple US pricing, ~$700 (256GB) / ~$800 (512GB) on Amazon. Easily shippable. One card on the site, 512GB price mentioned in the description, picked via order note | `/shop/macbook-neo.png` |
+| `macbook-air-m5` | MacBook Air M5 | 343 h (16GB/512GB) / 485 h (24GB/1TB) | 17150 (16GB/512GB) / 24250 (24GB/1TB) | Can't check Apple US pricing, ~$1200 (16GB/512GB) / ~$1700 (24GB/1TB) on Amazon. Easily shippable. One card on the site, 24GB/1TB price mentioned in the description, picked via order note | `/shop/macbook-air.png` |
+| `framework-13` | Framework 13 DIY | 343 h | 17150 | $1200 Amazon US, good/repairable, DIY edition | `/shop/framework-13.png` |
+| `framework-16` | Framework 16 DIY | 358 h | 17900 | $1250, high hacker value, "people love it etc" | `/shop/framework-16.png` |
 | `mac-mini` | Mac Mini (24GB/512GB) | 450 h | 22500 | $1570 Amazon US, easily shippable, order in user's regional store | `/shop/mac-mini.png` |
 
 ## Sidequest Rewards (not buyable — earned by completing sidequests)
@@ -83,7 +86,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 ## Placeholder / pending images
 
 - `signed-photo.svg`, `mystery-box.svg` are quick pixel-art SVG placeholders — swap them for real PNGs when available.
-- `centauri-carbon.png`, `macbook-neo.png`, `macbook-air.png` are referenced in `Shop.tsx` but the files don't exist yet (Gabin is sourcing them) — the site will show a broken image for these until added to `public/shop/`.
+- All shop item images are now in place — no more missing/pending images as of this update.
 
 ## Where to edit items
 

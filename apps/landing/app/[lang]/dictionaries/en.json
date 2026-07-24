@@ -247,6 +247,10 @@
         "description": "A stackable $10 grant to spend on paints, pens, canvases or any art supplies you want."
       },
       {
+        "name": "PIXL Cookie Cutter",
+        "description": "Giant pixelated PIXL letter cookie cutters, designed by Ricky."
+      },
+      {
         "name": "Pixel Composer License",
         "description": "VFX compositor for pixel art. Effects and animations for your sprites."
       },
@@ -377,6 +381,14 @@
       {
         "name": "MacBook Air M5",
         "description": "Apple's air laptop, 16GB/512GB shown, add a note to pick 24GB/1TB for 24250 px."
+      },
+      {
+        "name": "Framework 13 DIY",
+        "description": "A modular, repairable 13-inch laptop you build yourself."
+      },
+      {
+        "name": "Framework 16 DIY",
+        "description": "The bigger 16-inch Framework laptop, build it yourself."
       },
       {
         "name": "Mac Mini (24GB/512GB)",

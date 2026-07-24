@@ -247,6 +247,10 @@
         "description": "Une bourse cumulable de 10 $ à dépenser en peintures, stylos, toiles ou toutes fournitures d'art."
       },
       {
+        "name": "Emporte-pièce PIXL",
+        "description": "D'énormes emporte-pièces en forme des lettres pixelisées PIXL, dessinés par Ricky."
+      },
+      {
         "name": "Licence Pixel Composer",
         "description": "Compositeur VFX pour le pixel art. Effets et animations pour tes sprites."
       },
@@ -377,6 +381,14 @@
       {
         "name": "MacBook Air M5",
         "description": "Le portable Air d'Apple, 16 Go/512 Go affiché, ajoute une note pour choisir 24 Go/1 To pour 24250 px."
+      },
+      {
+        "name": "Framework 13 DIY",
+        "description": "Un laptop 13 pouces modulaire et réparable que tu assembles toi-même."
+      },
+      {
+        "name": "Framework 16 DIY",
+        "description": "Le grand frère 16 pouces du Framework, à assembler toi-même."
       },
       {
         "name": "Mac Mini (24 Go/512 Go)",

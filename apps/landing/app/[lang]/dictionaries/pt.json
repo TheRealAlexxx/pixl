@@ -247,6 +247,10 @@
         "description": "Uma bolsa acumulável de US$ 10 para gastar em tintas, canetas, telas ou qualquer material de arte."
       },
       {
+        "name": "Cortador de Biscoito PIXL",
+        "description": "Cortadores de biscoito gigantes com as letras pixeladas do PIXL, desenhados pelo Ricky."
+      },
+      {
         "name": "Licença do Pixel Composer",
         "description": "Compositor de VFX para pixel art. Efeitos e animações para os seus sprites."
       },
@@ -377,6 +381,14 @@
       {
         "name": "MacBook Air M5",
         "description": "O notebook Air da Apple, 16GB/512GB mostrado; adicione uma nota para escolher 24GB/1TB por 24250 px."
+      },
+      {
+        "name": "Framework 13 DIY",
+        "description": "Um notebook modular e reparável de 13 polegadas que você monta você mesmo."
+      },
+      {
+        "name": "Framework 16 DIY",
+        "description": "O irmão maior de 16 polegadas do Framework, para montar você mesmo."
       },
       {
         "name": "Mac Mini (24GB/512GB)",

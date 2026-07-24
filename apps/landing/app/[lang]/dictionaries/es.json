@@ -247,6 +247,10 @@
         "description": "Una beca acumulable de 10 $ para gastar en pinturas, bolígrafos, lienzos o cualquier material de arte."
       },
       {
+        "name": "Cortador de Galletas PIXL",
+        "description": "Enormes cortadores de galletas con las letras pixeladas de PIXL, diseñados por Ricky."
+      },
+      {
         "name": "Licencia de Pixel Composer",
         "description": "Compositor de VFX para pixel art. Efectos y animaciones para tus sprites."
       },
@@ -377,6 +381,14 @@
       {
         "name": "MacBook Air M5",
         "description": "El portátil Air de Apple, se muestra 16GB/512GB; añade una nota para elegir 24GB/1TB por 24250 px."
+      },
+      {
+        "name": "Framework 13 DIY",
+        "description": "Un portátil modular y reparable de 13 pulgadas que ensamblas tú mismo."
+      },
+      {
+        "name": "Framework 16 DIY",
+        "description": "El hermano mayor de 16 pulgadas del Framework, para ensamblar tú mismo."
       },
       {
         "name": "Mac Mini (24GB/512GB)",

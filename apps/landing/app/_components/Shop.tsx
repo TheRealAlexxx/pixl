@@ -12,6 +12,7 @@ const ITEM_IMAGES = [
   "/shop/music-grant.png",
   "/shop/mystery-box.svg",
   "/shop/art-grant.png",
+  "/shop/cookie-cutter.png",
   "/shop/pixel-composer.png",
   "/shop/pico8.png",
   "/shop/poster.png",
@@ -45,14 +46,16 @@ const ITEM_IMAGES = [
   "/shop/nothing-phone.png",
   "/shop/macbook-neo.png",
   "/shop/macbook-air.png",
+  "/shop/framework-13.png",
+  "/shop/framework-16.png",
   "/shop/mac-mini.png",
 ];
 
 const ITEM_PRICES = [
-  100, 150, 150, 150, 150, 200, 200, 250, 250, 300, 350, 400, 400, 500, 500, 650, 700, 700, 750, 1000, 1000, 1450, 1500, 2000, 2150, 2750, 2900, 3350, 3350, 3600, 3750, 4250, 5000, 5750, 5750, 5750, 6450, 7150, 10000, 17150, 22500,
+  100, 150, 150, 150, 150, 200, 200, 200, 250, 250, 300, 350, 400, 400, 500, 500, 650, 700, 700, 750, 1000, 1000, 1450, 1500, 2000, 2150, 2750, 2900, 3350, 3350, 3600, 3750, 4250, 5000, 5750, 5750, 5750, 6450, 7150, 10000, 17150, 17150, 17900, 22500,
 ];
 
-const NICHE_INDICES = new Set([0, 5, 11]);
+const NICHE_INDICES = new Set([0, 5, 7, 11]);
 
 function ShopCard({
   item,
