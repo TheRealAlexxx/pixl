@@ -102,6 +102,7 @@ const Pixl = (() => {
   }
 
   const PAGES = [
+    ["docs", "DOCS"],
     ["shop", "SHOP"],
     // VAULT and QUESTS are hidden from the dash for now — not ready for players.
     // Re-enable when they are.

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixl · Docs</title>
+<link rel="icon" href="/index.icon.png">
+<link rel="stylesheet" href="/pixl.css">
+<style>
+  .wrap { max-width: 1040px; }
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; margin-top: 14px; }
+  .toc { position: sticky; top: 84px; border: 3px solid var(--stroke); background: var(--panel); padding: 16px; }
+  .toc h4 { font-family: var(--pixel); font-size: 12px; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; }
+  .toc a { display: block; padding: 6px 8px; color: var(--dim); text-decoration: none; font-size: 14px; border-left: 2px solid transparent; }
+  .toc a:hover { color: var(--ink); background: rgba(255,209,102,.08); }
+  .hero { padding: 26px 28px; border: 3px solid var(--stroke);
+    background: radial-gradient(130% 150% at 12% -30%, rgba(255,209,102,.16), transparent 55%), linear-gradient(var(--panel), var(--panel-2));
+    box-shadow: var(--drop); }
+  .hero h1 { font-family: var(--pixel); font-size: 30px; color: var(--gold); letter-spacing: 1px; }
+  .hero p { color: var(--dim); margin-top: 10px; line-height: 1.6; max-width: 60ch; }
+  .doc section { border: 3px solid var(--stroke); background: var(--panel); padding: 22px 24px; margin-top: 22px; scroll-margin-top: 84px; }
+  .doc h2 { font-family: var(--pixel); font-size: 20px; color: var(--gold); letter-spacing: .5px; margin-bottom: 6px; }
+  .doc h3 { font-size: 15px; color: var(--gold-soft); letter-spacing: .5px; margin: 20px 0 8px; text-transform: uppercase; }
+  .doc p { color: var(--dim); line-height: 1.65; margin: 10px 0; }
+  .doc ul { margin: 10px 0 10px 4px; padding: 0; list-style: none; }
+  .doc li { color: var(--dim); line-height: 1.6; padding: 4px 0 4px 20px; position: relative; }
+  .doc li::before { content: "▸"; color: var(--gold); position: absolute; left: 2px; }
+  .doc b, .doc strong { color: var(--ink); }
+  .callout { border-left: 4px solid var(--gold); background: rgba(255,209,102,.08); padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .callout.warn { border-left-color: var(--bad); background: rgba(160,42,42,.12); }
+  .callout .k { font-family: var(--pixel); font-size: 12px; letter-spacing: 1px; color: var(--gold); display: block; margin-bottom: 4px; }
+  .callout.warn .k { color: #ff8b8b; }
+  .callout p { margin: 0; color: var(--ink); }
+  code { background: var(--panel-deep); border: 1px solid var(--stroke); border-radius: 5px; padding: 1px 6px; font-size: 13px; color: var(--gold-soft); }
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    .toc { position: static; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="layout">
+    <nav class="toc">
+      <h4>ON THIS PAGE</h4>
+      <a href="#welcome">Welcome to Pixl</a>
+      <a href="#get">What do I get?</a>
+      <a href="#restoration">The Restoration</a>
+      <a href="#sidequest">Your Sidequest</a>
+      <a href="#building">Building</a>
+      <a href="#shipping">Shipping</a>
+      <a href="#rewards">Rewards</a>
+      <a href="#free">Free stuff</a>
+      <a href="#help">Need help?</a>
+    </nav>
+
+    <div class="doc">
+      <div class="hero" id="welcome">
+        <h1>Welcome to Pixl</h1>
+        <p>Pixl is where you build something real, ship it, and get rewarded for it. You take a sidequest (or build your own thing), ship real projects over the next few months, and earn pixels, real prizes, and help rebuild the world.</p>
+        <p>Everything runs inside a story about a broken digital world called <b>Origin</b>, shattered by something called the <b>Great Static</b> and slowly being rebuilt as Pixl. You don't need to care about all the lore to play, though — you just need to build stuff.</p>
+      </div>
+
+      <section id="get">
+        <h2>What do I actually get?</h2>
+        <ul>
+          <li>For every sidequest (or original project) you ship, you earn pixels. One hour of shipped work is <b>50 pixels</b>, plus the prize attached to that sidequest.</li>
+          <li>Pixels can be spent in the shop on real prizes, from stickers all the way up to a MacBook Air.</li>
+          <li>You also get starter guides, free hosting, tools, and yeah, stickers too.</li>
+        </ul>
+        <p>If you're ever stuck, search it up first. Whatever you're wondering, someone's probably already asked it in <code>#pixl</code>. If that doesn't get you an answer, just ask.</p>
+      </section>
+
+      <section id="restoration">
+        <h2>How the Restoration works</h2>
+        <p>Welcome to Origin. The world was broken by the <b>Great Static</b>, leaving behind lost systems, unfinished areas, and broken pieces of the digital world. The Restoration is how builders help put it back together.</p>
+        <h3>Chapters</h3>
+        <p>The Restoration is split into chapters. Each chapter focuses on rebuilding a different part of Origin — new challenges, sidequests, and projects appear as the world changes.</p>
+        <p>You don't need to start from the beginning, though. If you join late, you haven't missed your chance. Everything is still open for you to explore.</p>
+        <h3>Operations</h3>
+        <p>Inside each chapter are operations — bigger goals that need builders to complete them. They might involve:</p>
+        <ul>
+          <li>Building a tool</li>
+          <li>Solving a problem</li>
+          <li>Creating something new</li>
+          <li>Helping other builders</li>
+        </ul>
+        <p>Every project helps move the Restoration forward.</p>
+      </section>
+
+      <section id="sidequest">
+        <h2>Your sidequest</h2>
+        <p>Sidequests are challenges that give you something to build. They usually come from problems inside Origin, with characters (NPCs) asking builders for help. You can either pick an existing sidequest or create your own project — both count.</p>
+        <h3>What makes a good sidequest?</h3>
+        <ul>
+          <li>Solves a real problem</li>
+          <li>Shows what you built and learned</li>
+          <li>Has your own ideas added to it</li>
+          <li>Is more than just following a tutorial</li>
+        </ul>
+        <div class="callout warn">
+          <span class="k">The one rule</span>
+          <p>Don't just copy something. Tutorials are great for learning, but your final project should have something that makes it yours.</p>
+        </div>
+      </section>
+
+      <section id="building">
+        <h2>Building</h2>
+        <p>This is where you actually make your project. You can build almost anything.</p>
+        <h3>Software</h3>
+        <p>Websites, apps, games, bots, AI tools, and more. Useful tools: VS Code, GitHub, Hackatime.</p>
+        <h3>Hardware</h3>
+        <p>PCBs, electronics, robotics, 3D printing, and physical projects. Useful tools: CAD software, PCB design tools, hardware guides.</p>
+        <h3>Tracking your time</h3>
+        <p>Your build time is tracked through Hackatime. Every hour of shipped work earns you <b>50 pixels</b>.</p>
+      </section>
+
+      <section id="shipping">
+        <h2>Shipping</h2>
+        <p>Building something is only half the journey. Shipping means submitting your project for review. The flow is:</p>
+        <ul>
+          <li>Build your project</li>
+          <li>Write up what you made</li>
+          <li>Submit it for review</li>
+          <li>Get approved</li>
+          <li>Receive your pixels and rewards</li>
+        </ul>
+        <p>Before submitting, check what makes a good submission. Reviewers want to see what you built, what you learned, and what makes your project yours.</p>
+      </section>
+
+      <section id="rewards">
+        <h2>Rewards</h2>
+        <p>Pixels are your currency in Pixl. You earn them by shipping projects.</p>
+        <h3>Earning pixels</h3>
+        <ul>
+          <li><b>50 pixels per hour</b> of shipped work</li>
+          <li>Extra prizes from certain sidequests</li>
+        </ul>
+        <h3>Spending pixels</h3>
+        <p>Pixels can be spent in the shop. Rewards can include stickers, hardware, other builder gear, and bigger prizes like a MacBook Air. Keep building, keep shipping, and keep unlocking more.</p>
+      </section>
+
+      <section id="free">
+        <h2>Free stuff to help you build</h2>
+        <p>You shouldn't have to spend your own money to start building. Hack Club provides:</p>
+        <ul>
+          <li>Free AI credits for building your own agents and tools — not for just running a pre-built coding assistant.</li>
+          <li>Free hosting on Nest, a Linux server you can put basically anything on.</li>
+          <li>Free domains — open a PR on the DNS repo and claim one.</li>
+          <li>Free CDN for images, video, and other assets.</li>
+        </ul>
+      </section>
+
+      <section id="help">
+        <h2>Need help?</h2>
+        <p>Getting stuck is normal. Everyone does. Here's where to go:</p>
+        <ul>
+          <li>Ask in <code>#pixl</code> on Slack. Other builders are working through the same problems.</li>
+          <li>Search first. Seriously, whatever you're stuck on has probably already been answered somewhere.</li>
+          <li>If you still can't find it, ask.</li>
+        </ul>
+        <div class="callout">
+          <span class="k">Tip</span>
+          <p>The best builder skill is knowing how to search. Someone has probably already solved the problem you're facing.</p>
+        </div>
+        <div class="callout warn">
+          <span class="k">Warning</span>
+          <p>Don't just ship a copy of a tutorial. Take inspiration, but make it yours. That's what reviewers look for.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/pixl.js"></script>
+<script>
+  Pixl.mountTopbar("docs");
+  Pixl.loadWallet();
+</script>
+</body>
+</html>
