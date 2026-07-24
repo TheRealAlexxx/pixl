@@ -63,7 +63,13 @@ export default async function RootLayout({
         fulfillment: access.isSuper,
       }
     : null;
-  const reviewCount = nav?.review ? await countPendingReviews() : 0;
+  const reviewCount =
+    nav?.review && access
+      ? await countPendingReviews({
+          viewer: access.session.slackId,
+          canSecondPass: access.canSecondPass,
+        })
+      : 0;
   const reportCount = reportViewer ? await countOpenReports() : 0;
   const ticketCount = helper ? (await ticketStats()).open : 0;
   return (

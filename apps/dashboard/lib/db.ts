@@ -526,19 +526,44 @@ export async function listReviewedProjects(): Promise<ShippedProject[]> {
   return hydrateHours((data ?? []) as ShippedProject[]);
 }
 
-export async function countPendingReviews(): Promise<number> {
-  const { count, error } = await db
+// Pending-review count for the sidebar badge. With no opts it's the raw global
+// count (shipped + second_review). Pass the viewer to get a count that matches
+// what they can actually action: second_review items only count for final
+// reviewers, and anything another reviewer is actively holding is excluded , so
+// the badge never shows work the viewer can't see in their queue.
+export async function countPendingReviews(
+  opts?: { viewer?: string; canSecondPass?: boolean },
+): Promise<number> {
+  if (!opts) {
+    const { count, error } = await db
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["shipped", "second_review"])
+      .is("archived_at", null)
+      .is("rejected_at", null)
+      .is("banned_at", null);
+    if (error) {
+      console.error("countPendingReviews", error.message);
+      return 0;
+    }
+    return count ?? 0;
+  }
+  const statuses = opts.canSecondPass ? ["shipped", "second_review"] : ["shipped"];
+  const { data, error } = await db
     .from("projects")
-    .select("id", { count: "exact", head: true })
-    .in("status", ["shipped", "second_review"])
+    .select("id, reviewing_by, reviewing_at")
+    .in("status", statuses)
     .is("archived_at", null)
     .is("rejected_at", null)
-    .is("banned_at", null);
+    .is("banned_at", null)
+    .limit(500);
   if (error) {
     console.error("countPendingReviews", error.message);
     return 0;
   }
-  return count ?? 0;
+  return (data ?? []).filter(
+    (p) => !claimedByOther(p as ShippedProject, opts.viewer),
+  ).length;
 }
 
 async function attachPlayerNames(rows: (ModActionRow & { player_name?: string })[]) {
