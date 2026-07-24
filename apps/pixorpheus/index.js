@@ -226,7 +226,8 @@ function ticketBlocks(ticket) {
   const { description, title, opened_by_slack_id, status, claimed_by_slack_id, closed_by_slack_id, ticket_number, permalink } = ticket;
   // Slack requires button `value` to be a string; DB may hand back msg_ts as a number.
   const msg_ts = ticket.msg_ts == null ? '' : String(ticket.msg_ts);
-  const displayTitle = title || (description.length > 80 ? description.substring(0, 80) + '...' : description);
+  const safeDescription = description || '';
+  const displayTitle = title || (safeDescription.length > 80 ? safeDescription.substring(0, 80) + '...' : safeDescription) || '(no description)';
 
   let statusText;
   if (status === 'closed') statusText = closed_by_slack_id ? `✅ Resolved by <@${closed_by_slack_id}>` : '✅ Resolved';
@@ -404,8 +405,6 @@ async function handleNewQuestion(event, client) {
       console.error('[handleNewQuestion] ticket insert error:', e.message);
     }
   }
-
-  logEvent(client, `🎫 new ticket from <@${event.user}>: ${(event.text || '[no text]').slice(0, 140)}`);
 
   checkFAQAndSimilar(event, client).catch(() => {});
 
@@ -1847,16 +1846,48 @@ FINAL LENGTH CHECK: before sending, ask yourself — is this shorter than 2 sent
 // formatting drift: missing colons, lowercase "react:", trailing whitespace/newlines,
 // or a reply that is ONLY the REACT line. Anchored to its own line so normal text
 // mentioning "REACT" is left alone.
+// Canonical custom emoji names (must match the CUSTOM EMOJIS list in the system
+// prompt exactly). The prompt mixes hyphens and underscores across names
+// (:yay-gay: vs :blobhaj_party: vs :eyes_wtf:), which the model regularly mixes
+// up (e.g. writes :yay_gay: instead of :yay-gay:). Rather than trust the model
+// to get the exact separator right, normalize by matching on a punctuation-
+// insensitive key and rewriting to the real name — for both the REACT: line
+// and any :emoji: written inline in the reply text.
+const CUSTOM_EMOJIS = [
+  'wiltedrose', 'yay', 'loll', 'sad-pf', 'skulk', 'noooovanish', 'angy', 'yesyes',
+  'blobhaj_party', 'shocked', 'upvote', 'lets-fucking-gooo', 'stuck_out_tongue_closed_eyes',
+  'huh3d', 'thumbs-up', '3c', 'byee', 'hii', 'nono', 'hehehe', 'awww',
+  'alibaba-admire', 'alibaba-grin', 'cryign', 'heavysob', 'brokenheart', 'nyan',
+  'cat-gun', 'isob', 'sob-pray', 'agadance', 'cat-woah', 'cat-heart', 'communist',
+  'eyes_wtf', 'eyes_shaking', 'eyes-out-of-head', 'orpheus-love', 'orpheus-baguette',
+  'orphanage', 'orpheus-explode', 'hyper-dino-wave', 'pepedyingoflaughter',
+  'pet-gabin', 'pet-ridit', 'pet-maxx', 'yapa', 'yay-gay', 'wagay', 'gay-flag',
+  'bhjflag_gay', 'spinny_cat_gay', '1984',
+];
+const emojiLooseKey = (name) => name.toLowerCase().replace(/[-_]/g, '');
+const CUSTOM_EMOJI_BY_LOOSE_KEY = new Map(CUSTOM_EMOJIS.map(name => [emojiLooseKey(name), name]));
+
+function fixEmojiName(name) {
+  return CUSTOM_EMOJI_BY_LOOSE_KEY.get(emojiLooseKey(name)) || name;
+}
+
+function fixInlineEmojiMentions(text) {
+  return text.replace(/:([a-zA-Z0-9_+-]+):/g, (match, name) => {
+    const fixed = fixEmojiName(name);
+    return fixed === name ? match : `:${fixed}:`;
+  });
+}
+
 function extractReaction(raw) {
   if (!raw || typeof raw !== 'string') return { text: raw, emoji: null };
   let emoji = null;
   const text = raw
     .replace(/(?:^|\n)[ \t]*REACT:[ \t]*:?([a-zA-Z0-9_+-]+):?[ \t]*(?=\n|$)/gi, (_, name) => {
-      emoji = emoji || name;
+      emoji = emoji || fixEmojiName(name);
       return '';
     })
     .trim();
-  return { text, emoji };
+  return { text: fixInlineEmojiMentions(text), emoji };
 }
 
 let botUserId, botAppId;
@@ -2024,10 +2055,16 @@ app.message(async ({ message, client }) => {
     }
   }
 
-  // "thx orphan" easter egg
-  if (message.bot_id && message.bot_id !== botAppId && message.username?.toLowerCase().includes('orpheus')) {
-    await client.chat.postMessage({ channel: message.channel, text: 'thx orphan' });
-    return;
+  // "thx orphan" easter egg — match on bot_profile.name (how Slack reports a bot's
+  // real registered display name) since message.username is only set when a bot
+  // posts with a per-message username override, which most bots (incl. likely
+  // Orpheus) don't use, so it never matched.
+  if (message.bot_id && message.bot_id !== botAppId) {
+    const otherBotName = (message.bot_profile?.name || message.username || '').toLowerCase();
+    if (otherBotName.includes('orpheus')) {
+      await client.chat.postMessage({ channel: message.channel, text: 'thx orphan' });
+      return;
+    }
   }
 
   if (message.thread_ts && welcomeThreads.has(message.thread_ts) && !mentionsBot) return;
