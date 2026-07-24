@@ -557,7 +557,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
 }
 
 export async function reReviewProject(formData: FormData): Promise<void> {
-  const access = await requirePerm("review");
+  // Send back to review is a staff action , admins only (not plain reviewers).
+  const access = await requirePerm("ban");
   const by = actorName(access);
   const projectId = Number(formData.get("projectId") ?? 0);
   if (!projectId) return;

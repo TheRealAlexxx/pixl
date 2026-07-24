@@ -51,12 +51,12 @@ export default async function ProjectPage({
   const totalHours = hackatimeHours > 0 ? hackatimeHours : journalHours;
   const commits = await fetchCommits(project.repo_url);
   const ownerHandle = await slackHandle(project.users?.slack_id);
-  const canReview = canView(access, ["review"]);
-  // Banning / archiving / rejecting a project is an admin action , reviewers
-  // only grade. Gated on the "ban" permission (owners + sub-admins with ban).
+  // Banning / archiving / rejecting / sending back is an admin action ,
+  // reviewers only grade. Gated on the "ban" permission (owners + sub-admins).
   const canModerate = canView(access, ["ban"]);
+  // Send back to review is a staff action , admins only (not plain reviewers).
   const canReReview =
-    canReview &&
+    canModerate &&
     (project.status === "approved" || project.status === "needs_changes");
 
   return (
@@ -208,7 +208,7 @@ export default async function ProjectPage({
         )}
       </Card>
 
-      {(canReview || canModerate) && (
+      {canModerate && (
         <Card className="p-4 mb-8 gap-0">
           <div className="font-pixel text-xl mb-1">Staff actions</div>
           <p className="text-sm text-muted-foreground mb-3">
