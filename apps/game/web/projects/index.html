@@ -768,6 +768,20 @@
           .reduce((s, h) => s + h.seconds, 0);
       }
 
+      // Seconds from the Hackatime boxes currently ticked in the editor (which
+      // may not be saved yet), so ship-readiness reflects what the player sees.
+      function checkedHtSeconds() {
+        if (!stats || !stats.connected) return 0;
+        const checked = new Set(
+          [...document.querySelectorAll('input[name="ht"]:checked')].map(
+            (c) => c.value,
+          ),
+        );
+        return stats.projects
+          .filter((h) => checked.has(h.name))
+          .reduce((s, h) => s + h.seconds, 0);
+      }
+
       /* ---------- hackatime strip ---------- */
 
       function renderHt() {
@@ -1047,16 +1061,23 @@
             ...document.querySelectorAll('input[name="ht"]:checked'),
           ].map((c) => c.value),
         };
-        if (!body.name) return Pixl.toast(err("name_required"), true);
+        if (!body.name) {
+          Pixl.toast(err("name_required"), true);
+          return false;
+        }
         $("f-save").disabled = true;
         const r = p.id
           ? await Pixl.send("PUT", `/api/projects/${p.id}`, body)
           : await Pixl.send("POST", "/api/projects", body);
         $("f-save").disabled = false;
-        if (!r.ok) return Pixl.toast(err(r.error), true);
+        if (!r.ok) {
+          Pixl.toast(err(r.error), true);
+          return false;
+        }
         Pixl.toast(p.id ? "Saved!" : "Project created!");
         await loadProjects();
         location.hash = "#p=" + r.project.id;
+        return true;
       }
 
       /* ---------- project detail ---------- */
@@ -1095,7 +1116,7 @@
           <div class="ship-item"><span class="${p.repo_url ? "ok" : "no"}">${p.repo_url ? "+" : "-"}</span> GitHub repo linked</div>
           <div class="ship-item"><span class="${p.demo_url ? "ok" : "no"}">${p.demo_url ? "+" : "-"}</span> Demo link added</div>
           <div class="ship-item"><span class="${p.image_url ? "ok" : "no"}">${p.image_url ? "+" : "-"}</span> Thumbnail uploaded</div>
-          <div class="ship-item"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
+          <div class="ship-item" id="ship-ht"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
         </div>
         ${
           !isUpdate
@@ -1165,14 +1186,30 @@
         bindForm(p);
         if (inReview) lockForm();
         if ($("s-ship") && !inReview)
-          $("s-ship").addEventListener("click", () => {
+          $("s-ship").addEventListener("click", async () => {
             const blockers = shipBlockers(p, isUpdate);
             if (blockers.length) {
               Pixl.toast("Can't ship yet — " + blockers.join("; ") + ".", true);
               return;
             }
-            ship(p, isUpdate);
+            // Persist the form first so the Hackatime boxes the player ticked
+            // are saved before the server validates them , otherwise a linked
+            // project reads as 0h just because Save wasn't clicked.
+            if (!(await saveProject(p))) return;
+            const fresh = projects.find((x) => x.id === p.id) || p;
+            ship(fresh, isUpdate);
           });
+        // Keep the ship checklist's Hackatime line in sync as boxes are ticked,
+        // before any save.
+        document.querySelectorAll('input[name="ht"]').forEach((box) =>
+          box.addEventListener("change", () => {
+            const el = $("ship-ht");
+            if (!el) return;
+            const secs = checkedHtSeconds();
+            const ok = secs >= 3600;
+            el.innerHTML = `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span>`;
+          }),
+        );
         if ($("s-unship"))
           $("s-unship").addEventListener("click", () => unship(p));
         initMdBar();
@@ -1261,7 +1298,7 @@
         if (!p.repo_url) b.push("add a GitHub repo");
         if (!p.demo_url) b.push("add a demo / playable link");
         if (!p.image_url) b.push("upload a thumbnail");
-        if (linkedSeconds(p) < 3600)
+        if (checkedHtSeconds() < 3600)
           b.push("link a Hackatime project with ≥ 1h");
         if (isUpdate) {
           const notes =
