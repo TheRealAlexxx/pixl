@@ -181,6 +181,7 @@ async function autoCloseOldTickets() {
 
         try { await app.client.reactions.add({ channel: process.env.SLACK_HELP_CHANNEL, name: 'white_check_mark', timestamp: ticket.msg_ts }); } catch (e) {}
         try { await app.client.reactions.remove({ channel: process.env.SLACK_HELP_CHANNEL, name: 'thinking_face', timestamp: ticket.msg_ts }); } catch (e) {}
+        await deleteTitlePrompt(ticket.msg_ts, app.client, ticket.title_prompt_ts);
       } catch (e) {
         console.error('[autoClose] ticket error:', e.message);
       }
@@ -198,7 +199,27 @@ async function autoCloseOldTickets() {
 function tsStr(v) { return v == null ? v : String(v); }
 function normalizeTicket(t) {
   if (!t) return t;
-  return { ...t, msg_ts: tsStr(t.msg_ts), ticket_msg_ts: tsStr(t.ticket_msg_ts) };
+  return { ...t, msg_ts: tsStr(t.msg_ts), ticket_msg_ts: tsStr(t.ticket_msg_ts), title_prompt_ts: tsStr(t.title_prompt_ts) };
+}
+
+// "Set a title" prompt messages, keyed by ticket msg_ts — deleted once the user
+// sets/skips the title or the ticket gets resolved.
+const titlePrompts = new Map(); // msg_ts -> { channel, ts }
+
+async function deleteTitlePrompt(msgTs, client, knownTs = null) {
+  const mem = titlePrompts.get(msgTs);
+  titlePrompts.delete(msgTs);
+  let channel = mem?.channel || process.env.SLACK_HELP_CHANNEL;
+  let ts = knownTs || mem?.ts;
+  if (!ts) {
+    try {
+      const { data } = await db().from("tickets").select("title_prompt_ts").eq("msg_ts", msgTs).maybeSingle();
+      ts = tsStr(data?.title_prompt_ts);
+    } catch (e) {}
+  }
+  if (!ts) return;
+  try { await client.chat.delete({ channel, ts }); } catch (e) {}
+  db().from("tickets").update({ title_prompt_ts: null }).eq("msg_ts", msgTs).then(() => {}, () => {});
 }
 
 function ticketBlocks(ticket) {
@@ -421,15 +442,17 @@ async function handleNewQuestion(event, client) {
     ],
   });
 
+  // Posted as a real thread message (not ephemeral) so it can be deleted later —
+  // Slack offers no API to delete an ephemeral after the fact (e.g. on resolve).
   try {
-    await client.chat.postEphemeral({
+    const prompt = await client.chat.postMessage({
       channel: event.channel,
-      user: event.user,
-      text: "Give your ticket a title to help the support team!",
+      thread_ts: event.ts,
+      text: `<@${event.user}> give your ticket a title to help the support team!`,
       blocks: [
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: 'Give your ticket a short title so helpers can triage it faster :)' },
+          text: { type: 'mrkdwn', text: `<@${event.user}> give your ticket a short title so helpers can triage it faster :)` },
         },
         {
           type: 'actions',
@@ -450,6 +473,11 @@ async function handleNewQuestion(event, client) {
         },
       ],
     });
+    // Remember the prompt so it can be deleted on set/skip/resolve. DB write is
+    // best-effort (column added in migration 0044); the in-memory map covers the
+    // common case even if the column is missing.
+    titlePrompts.set(event.ts, { channel: event.channel, ts: prompt.ts });
+    db().from("tickets").update({ title_prompt_ts: prompt.ts }).eq("msg_ts", event.ts).then(() => {}, () => {});
   } catch (e) {}
 
   const timer = setTimeout(() => {
@@ -625,6 +653,9 @@ async function resolveTicket(msgTs, resolverSlackId, client) {
       timestamp: msgTs,
     });
   } catch (e) {}
+
+  // Clean up the "set a title" prompt if it's still sitting in the thread
+  await deleteTitlePrompt(msgTs, client, ticketRow?.title_prompt_ts);
 
   return 'ok';
 }
@@ -805,9 +836,27 @@ app.action('claim_ticket', async ({ ack, body, client }) => {
   }
 });
 
-app.action('skip_title', async ({ ack, body }) => {
+// The title prompt is now a public thread message — only the ticket author
+// should act on it.
+async function isTicketAuthor(msgTs, userId) {
+  const pending = pendingTickets.get(msgTs);
+  if (pending?.event?.user) return pending.event.user === userId;
+  try {
+    const { data } = await db().from("tickets").select("opened_by_slack_id").eq("msg_ts", msgTs).maybeSingle();
+    return data?.opened_by_slack_id === userId;
+  } catch (e) { return false; }
+}
+
+app.action('skip_title', async ({ ack, body, client }) => {
   await ack();
   const msgTs = body.actions[0].value;
+  if (!(await isTicketAuthor(msgTs, body.user.id))) {
+    try {
+      await client.chat.postEphemeral({ channel: body.channel.id, thread_ts: msgTs, user: body.user.id, text: "Only the ticket author can set or skip the title." });
+    } catch (e) {}
+    return;
+  }
+  await deleteTitlePrompt(msgTs, client, body.message?.ts);
   const pending = pendingTickets.get(msgTs);
   if (!pending) return;
   await createTicket(pending.event, null, app.client);
@@ -816,13 +865,19 @@ app.action('skip_title', async ({ ack, body }) => {
 app.action('open_title_modal', async ({ ack, body, client }) => {
   await ack();
   const msgTs = body.actions[0].value;
+  if (!(await isTicketAuthor(msgTs, body.user.id))) {
+    try {
+      await client.chat.postEphemeral({ channel: body.channel.id, thread_ts: msgTs, user: body.user.id, text: "Only the ticket author can set or skip the title." });
+    } catch (e) {}
+    return;
+  }
   try {
     await client.views.open({
       trigger_id: body.trigger_id,
       view: {
         type: 'modal',
         callback_id: 'title_modal',
-        private_metadata: msgTs,
+        private_metadata: JSON.stringify({ msgTs, promptTs: body.message?.ts || null }),
         notify_on_close: true,
         title: { type: 'plain_text', text: 'Set ticket title' },
         submit: { type: 'plain_text', text: 'Set title' },
@@ -847,10 +902,20 @@ app.action('open_title_modal', async ({ ack, body, client }) => {
   }
 });
 
+function parseTitleModalMeta(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return { msgTs: parsed.msgTs, promptTs: parsed.promptTs || null };
+  } catch (e) {}
+  // Backwards compat: metadata used to be the bare msg_ts string
+  return { msgTs: raw, promptTs: null };
+}
+
 app.view('title_modal', async ({ ack, body, view, client }) => {
   await ack();
-  const msgTs = view.private_metadata;
+  const { msgTs, promptTs } = parseTitleModalMeta(view.private_metadata);
   const title = view.state.values?.title_block?.title_input?.value?.trim() || null;
+  await deleteTitlePrompt(msgTs, client, promptTs);
   const pending = pendingTickets.get(msgTs);
   if (!pending) return;
   await createTicket(pending.event, title, client);
@@ -858,7 +923,8 @@ app.view('title_modal', async ({ ack, body, view, client }) => {
 
 app.view({ callback_id: 'title_modal', type: 'view_closed' }, async ({ ack, view }) => {
   await ack();
-  const msgTs = view.private_metadata;
+  const { msgTs, promptTs } = parseTitleModalMeta(view.private_metadata);
+  await deleteTitlePrompt(msgTs, app.client, promptTs);
   const pending = pendingTickets.get(msgTs);
   if (!pending) return;
   await createTicket(pending.event, null, app.client);
