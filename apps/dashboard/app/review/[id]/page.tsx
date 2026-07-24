@@ -376,8 +376,19 @@ export default async function ReviewDetail({
                 <div className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-2">
                   First pass
                 </div>
+                {p.first_pass_verdict && p.first_pass_verdict !== "approved" && (
+                  <div className="mb-2 rounded-md bg-rose-50 dark:bg-rose-950/30 px-2 py-1 text-sm font-semibold text-rose-700 dark:text-rose-300">
+                    ⚠ First reviewer proposed{" "}
+                    {p.first_pass_verdict === "banned" ? "a BAN" : "changes"} , confirm it, or approve to overturn.
+                  </div>
+                )}
                 <div className="text-sm text-foreground/70">
-                  Passed by <span className="font-medium text-foreground">{p.first_pass_by || "a reviewer"}</span>
+                  {p.first_pass_verdict === "banned"
+                    ? "Ban proposed by "
+                    : p.first_pass_verdict === "needs_changes"
+                      ? "Changes proposed by "
+                      : "Passed by "}
+                  <span className="font-medium text-foreground">{p.first_pass_by || "a reviewer"}</span>
                   {p.first_pass_hours != null && (
                     <>
                       {" "}

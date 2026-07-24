@@ -325,11 +325,11 @@ export async function reviewProject(formData: FormData): Promise<void> {
   const projectId = Number(formData.get("projectId") ?? 0);
   const verdict = String(formData.get("verdict") ?? "");
   const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
-  if (!projectId || (verdict !== "approved" && verdict !== "needs_changes")) return;
+  if (!projectId || !["approved", "needs_changes", "ban"].includes(verdict)) return;
 
   const { data: current } = await db
     .from("projects")
-    .select("status, user_id, name, first_pass_by, first_pass_hours, shipped_at")
+    .select("status, user_id, name, first_pass_by, first_pass_hours, first_pass_verdict, shipped_at")
     .eq("id", projectId)
     .single();
   if (!current) return;
@@ -357,44 +357,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
-  // Request changes , bounce back to the maker from either stage.
-  if (verdict === "needs_changes") {
-    const { data: project, error } = await db
-      .from("projects")
-      .update({
-        status: "needs_changes",
-        review_note: note,
-        reviewing_by: "",
-        reviewing_at: null,
-        first_pass_by: "",
-        first_pass_at: null,
-        first_pass_note: "",
-        first_pass_hours: null,
-      })
-      .eq("id", projectId)
-      .in("status", ["shipped", "second_review"])
-      .select("id, name, user_id")
-      .single();
-    if (error || !project) {
-      console.error("reviewProject (changes) failed", error?.message);
-      return;
-    }
-    await insertReviewAudit(formData, projectId, project.user_id, by, "needs_changes", note, claimedHours, approvedHours);
-    if (stage === "second_review")
-      await settleFirstPassPayouts(projectId, project.name, true, false);
-    if (!own) await recordSettledPayout(projectId, access, "needs_changes", formData, project.name);
-    await notifyOwner(
-      project.user_id,
-      "Changes requested",
-      `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
-    );
-    await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
-    revalidatePath("/review");
-    redirect("/review");
-  }
-
-  // First pass without final-reviewer rights → hold for a second pass.
+  // First pass by a non-final reviewer: EVERY verdict (approve, request changes,
+  // ban) is only a PROPOSAL. Hold the project in 'second_review' carrying what
+  // was proposed, so a final reviewer confirms or overturns it. Seniors skip
+  // this and act outright below.
   if (stage === "shipped" && !access.canSecondPass) {
+    const proposedKey = verdict === "ban" ? "banned" : verdict;
     const { data: project, error } = await db
       .from("projects")
       .update({
@@ -407,6 +375,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
         first_pass_at: new Date().toISOString(),
         first_pass_note: note,
         first_pass_hours: approvedHours,
+        first_pass_verdict: proposedKey,
       })
       .eq("id", projectId)
       .eq("status", "shipped")
@@ -416,18 +385,94 @@ export async function reviewProject(formData: FormData): Promise<void> {
       console.error("reviewProject (first pass) failed", error?.message);
       return;
     }
-    await insertReviewAudit(formData, projectId, project.user_id, by, "first_pass_approved", note, claimedHours, approvedHours);
+    await insertReviewAudit(formData, projectId, project.user_id, by, `first_pass_${proposedKey}`, note, claimedHours, approvedHours);
     if (!own) await recordPendingPayout(projectId, access, formData);
-    await logModAction(project.user_id, "project_first_pass", `${project.name}: ${note}`, by);
+    await logModAction(project.user_id, "project_first_pass", `${project.name}: proposed ${proposedKey.replace("_", " ")} , ${note}`, by);
     revalidatePath("/review");
     redirect("/review");
   }
 
-  // Final approval , credit pixels. Only final reviewers reach here.
+  // From here, a FINAL reviewer is deciding , a senior first-passing a shipped
+  // project outright, or confirming/overturning a second_review proposal.
   if (stage === "second_review" && !access.canSecondPass)
-    redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can approve this stage.")}`);
+    redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can decide this stage.")}`);
   if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
     redirect(`${back}?error=${encodeURIComponent("A different reviewer must do the final pass.")}`);
+
+  const proposed = (current.first_pass_verdict as string | null) ?? null;
+  const finalKey = verdict === "ban" ? "banned" : verdict;
+  // The first pass gets docked if the final reviewer lands on a different call.
+  const overturned = stage === "second_review" && proposed != null && proposed !== finalKey;
+
+  // Request changes , bounce back to the maker.
+  if (verdict === "needs_changes") {
+    const { data: project, error } = await db
+      .from("projects")
+      .update({
+        status: "needs_changes",
+        review_note: note,
+        reviewing_by: "",
+        reviewing_at: null,
+        first_pass_by: "",
+        first_pass_at: null,
+        first_pass_note: "",
+        first_pass_hours: null,
+        first_pass_verdict: null,
+      })
+      .eq("id", projectId)
+      .in("status", ["shipped", "second_review"])
+      .select("id, name, user_id")
+      .single();
+    if (error || !project) {
+      console.error("reviewProject (changes) failed", error?.message);
+      return;
+    }
+    await insertReviewAudit(formData, projectId, project.user_id, by, "needs_changes", note, claimedHours, approvedHours);
+    if (stage === "second_review")
+      await settleFirstPassPayouts(projectId, project.name, overturned, false);
+    if (!own) await recordSettledPayout(projectId, access, "needs_changes", formData, project.name);
+    await notifyOwner(
+      project.user_id,
+      "Changes requested",
+      `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
+    );
+    await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
+    revalidatePath("/review");
+    redirect("/review");
+  }
+
+  // Ban , a final reviewer confirms a proposed ban (or a senior bans outright).
+  if (verdict === "ban") {
+    const { data: project, error } = await db
+      .from("projects")
+      .update({
+        banned_at: new Date().toISOString(),
+        ban_reason: note,
+        ban_by: reviewer,
+        reviewing_by: "",
+        reviewing_at: null,
+        first_pass_verdict: null,
+      })
+      .eq("id", projectId)
+      .in("status", ["shipped", "second_review"])
+      .select("id, name, user_id")
+      .single();
+    if (error || !project) {
+      console.error("reviewProject (ban) failed", error?.message);
+      return;
+    }
+    await insertReviewAudit(formData, projectId, project.user_id, by, "banned", note, claimedHours, approvedHours);
+    if (stage === "second_review")
+      await settleFirstPassPayouts(projectId, project.name, overturned, false);
+    if (!own) await recordSettledPayout(projectId, access, "needs_changes", formData, project.name);
+    const banBody = `Your project "${project.name}" was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
+    await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
+    await dmOrEmail(project.user_id, "Project banned", banBody);
+    await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
+    revalidatePath("/review");
+    revalidatePath("/", "layout");
+    redirect("/review");
+  }
 
   const creditHours = approvedHours ?? claimedHours;
   const { data: project, error } = await db
@@ -453,7 +498,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     const fpHours =
       current.first_pass_hours != null ? Number(current.first_pass_hours) : claimedHours;
     const hoursSlashed = fpHours > 0 && (approvedHours ?? claimedHours) < fpHours * 0.7;
-    await settleFirstPassPayouts(projectId, project.name, false, hoursSlashed);
+    await settleFirstPassPayouts(projectId, project.name, overturned, hoursSlashed);
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 

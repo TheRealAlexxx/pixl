@@ -33,6 +33,22 @@ function VerdictButtons({ secondPass }: { secondPass: boolean }) {
       >
         {pending && clicked === "needs_changes" ? "Sending back…" : "Request changes"}
       </Button>
+      <Button
+        name="verdict"
+        value="ban"
+        disabled={pending}
+        onClick={() => setClicked("ban")}
+        variant="outline"
+        className="border-red-700 text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+      >
+        {pending && clicked === "ban"
+          ? secondPass
+            ? "Banning…"
+            : "Proposing…"
+          : secondPass
+            ? "Ban project"
+            : "Propose ban"}
+      </Button>
     </>
   );
 }

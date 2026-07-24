@@ -92,6 +92,7 @@ export interface ProjectRow {
   first_pass_at: string | null;
   first_pass_note: string;
   first_pass_hours: number | null;
+  first_pass_verdict: string | null;
   shipped_at: string | null;
   created_at: string;
 }
