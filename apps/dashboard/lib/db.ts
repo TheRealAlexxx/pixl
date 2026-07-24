@@ -1622,15 +1622,16 @@ export async function getProject(id: number) {
 
 export async function listProjects(
   query?: string,
-  opts: { archived?: boolean } = {},
+  opts: { archived?: boolean; includeArchived?: boolean } = {},
 ): Promise<ProjectWithUser[]> {
   let q = db
     .from("projects")
     .select("*, users(id, display_name, slack_id)")
     .order("created_at", { ascending: false })
     .limit(500);
+  // archived: only archived. includeArchived: both. default: only active.
   if (opts.archived) q = q.not("archived_at", "is", null);
-  else q = q.is("archived_at", null);
+  else if (!opts.includeArchived) q = q.is("archived_at", null);
   if (query) q = q.ilike("name", `%${query}%`);
   const { data, error } = await q;
   if (error) {

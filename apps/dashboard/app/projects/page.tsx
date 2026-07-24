@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { requirePagePerm } from "@/lib/guard";
+import { requirePagePerm, canView } from "@/lib/guard";
 import { listProjects } from "@/lib/db";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
+import { Badge } from "@/components/ui/badge";
 import { slackHandles } from "@/lib/slack";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,10 +23,16 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<{ q?: string; view?: string }>;
 }) {
-  await requirePagePerm(["review", "warn", "ban"]);
+  const access = await requirePagePerm(["review", "warn", "ban"]);
+  // Admins (ban perm) see archived projects mixed into the main list; plain
+  // reviewers only see active ones.
+  const isAdmin = canView(access, ["ban"]);
   const { q, view } = await searchParams;
   const archived = view === "archived";
-  const projects = await listProjects(q, { archived });
+  const projects = await listProjects(q, {
+    archived,
+    includeArchived: !archived && isAdmin,
+  });
   const handles = await slackHandles(projects.map((p) => p.users?.slack_id));
 
   return (
@@ -77,7 +84,10 @@ export default async function ProjectsPage({
                   )}
                 </TableCell>
                 <TableCell className="p-3">
-                  <StatusBadge status={p.status} />
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge status={p.status} />
+                    {p.archived_at && <Badge variant="secondary">Archived</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell className="p-3">
                   {p.users ? (
