@@ -142,10 +142,10 @@ function parseProjectBody(
 ): { error: string; fields?: never } | { error?: never; fields: ProjectFields } {
   const name = String(body?.name ?? "").trim().slice(0, 120);
   if (!name) return { error: "name_required" };
+  // Save accepts any URL , repo/demo are only validated at ship time, so people
+  // can jot down a link and fix it up before shipping.
   const repoUrl = ensureProtocol(body?.repoUrl).slice(0, 500);
-  if (repoUrl && !isGithubRepoUrl(repoUrl)) return { error: "repo_not_github" };
-  const demo = normalizeDemoUrl(body?.demoUrl);
-  if ("error" in demo) return { error: demo.error };
+  const demoUrl = ensureProtocol(body?.demoUrl).slice(0, 500);
   const usedAi = body?.usedAi === true;
   const aiNotes = String(body?.aiNotes ?? "").trim().slice(0, 500);
   if (usedAi && aiNotes.length < 10) return { error: "ai_notes_required" };
@@ -158,7 +158,7 @@ function parseProjectBody(
       name,
       description: String(body?.description ?? "").trim().slice(0, 2000),
       repo_url: repoUrl,
-      demo_url: demo.url,
+      demo_url: demoUrl,
       image_url: String(body?.imageUrl ?? "").trim().slice(0, 500),
       level: Number.isInteger(level) && level >= 1 && level <= 4 ? level : 1,
       project_type: projectType,
@@ -253,6 +253,12 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "demo_required" });
   if (!String(project.image_url ?? "").trim())
     return res.status(400).json({ ok: false, error: "image_required" });
+  // URLs are only validated here, at ship time (save accepts anything).
+  if (!isGithubRepoUrl(project.repo_url as string))
+    return res.status(400).json({ ok: false, error: "repo_not_github" });
+  const demoCheck = normalizeDemoUrl(project.demo_url as string);
+  if ("error" in demoCheck)
+    return res.status(400).json({ ok: false, error: demoCheck.error });
 
   const [repoAlive, demoAlive] = await Promise.all([
     urlAlive(project.repo_url as string),
