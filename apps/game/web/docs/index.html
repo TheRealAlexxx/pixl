@@ -7,62 +7,87 @@
 <link rel="icon" href="/index.icon.png">
 <link rel="stylesheet" href="/pixl.css">
 <style>
-  .wrap { max-width: 1040px; }
-  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; margin-top: 14px; }
-  .toc { position: sticky; top: 84px; border: 3px solid var(--stroke); background: var(--panel); padding: 16px; }
-  .toc h4 { font-family: var(--pixel); font-size: 12px; letter-spacing: 1.5px; color: var(--gold); margin-bottom: 10px; }
-  .toc a { display: block; padding: 6px 8px; color: var(--dim); text-decoration: none; font-size: 14px; border-left: 2px solid transparent; }
-  .toc a:hover { color: var(--ink); background: rgba(255,209,102,.08); }
-  .hero { padding: 26px 28px; border: 3px solid var(--stroke);
-    background: radial-gradient(130% 150% at 12% -30%, rgba(255,209,102,.16), transparent 55%), linear-gradient(var(--panel), var(--panel-2));
-    box-shadow: var(--drop); }
-  .hero h1 { font-family: var(--pixel); font-size: 30px; color: var(--gold); letter-spacing: 1px; }
-  .hero p { color: var(--dim); margin-top: 10px; line-height: 1.6; max-width: 60ch; }
-  .doc section { border: 3px solid var(--stroke); background: var(--panel); padding: 22px 24px; margin-top: 22px; scroll-margin-top: 84px; }
-  .doc h2 { font-family: var(--pixel); font-size: 20px; color: var(--gold); letter-spacing: .5px; margin-bottom: 6px; }
-  .doc h3 { font-size: 15px; color: var(--gold-soft); letter-spacing: .5px; margin: 20px 0 8px; text-transform: uppercase; }
-  .doc p { color: var(--dim); line-height: 1.65; margin: 10px 0; }
-  .doc ul { margin: 10px 0 10px 4px; padding: 0; list-style: none; }
-  .doc li { color: var(--dim); line-height: 1.6; padding: 4px 0 4px 20px; position: relative; }
+  /* Docs is its own standalone surface — no game topbar. A full-height grouped
+     sidebar on the left, one section per "page" on the right (hash-routed). */
+  body { overflow-y: auto; }
+  .docs { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; align-items: start; }
+
+  .docs-nav { position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    border-right: 3px solid var(--stroke); background: var(--panel); padding: 18px 16px 28px; }
+  .docs-brand { display: flex; align-items: center; gap: 9px; text-decoration: none;
+    font-family: var(--pixel); font-size: 15px; letter-spacing: 2px; color: var(--gold);
+    padding: 4px 6px 14px; border-bottom: 2px solid var(--stroke); margin-bottom: 8px; }
+  .docs-brand img { width: 24px; height: 24px; }
+  .docs-group { margin-top: 16px; }
+  .docs-group h4 { font-family: var(--pixel); font-size: 11px; letter-spacing: 1.5px;
+    color: var(--faint); margin: 0 0 6px 6px; text-transform: uppercase; }
+  .docs-nav a.section-link { display: block; padding: 6px 10px; color: var(--dim);
+    text-decoration: none; font-size: 14px; border-left: 2px solid transparent; border-radius: 0 6px 6px 0;
+    transition: color .12s, background .12s, border-color .12s; }
+  .docs-nav a.section-link:hover { color: var(--ink); background: rgba(255,209,102,.08); }
+  .docs-nav a.section-link.active { color: var(--ink); background: rgba(255,209,102,.12); border-left-color: var(--gold); }
+
+  .docs-main { padding: 40px 56px 96px; }
+  .doc-page { display: none; }
+  .doc-page.is-active { display: block; animation: fade .18s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .eyebrow { font-family: var(--pixel); font-size: 11px; letter-spacing: 2px; color: var(--gold-soft); text-transform: uppercase; margin-bottom: 10px; }
+  .doc h1 { font-family: var(--pixel); font-size: 32px; color: var(--gold); letter-spacing: 1px; line-height: 1.2; }
+  .doc h2 { font-family: var(--pixel); font-size: 18px; color: var(--gold); letter-spacing: .5px; margin: 26px 0 6px; }
+  .doc h3 { font-size: 14px; color: var(--gold-soft); letter-spacing: .5px; margin: 20px 0 8px; text-transform: uppercase; }
+  .doc p { color: var(--dim); line-height: 1.7; margin: 12px 0; }
+  .doc .lead { font-size: 17px; color: var(--ink); }
+  .doc ul { margin: 12px 0; padding: 0; list-style: none; }
+  .doc li { color: var(--dim); line-height: 1.6; padding: 5px 0 5px 22px; position: relative; }
   .doc li::before { content: "▸"; color: var(--gold); position: absolute; left: 2px; }
   .doc b, .doc strong { color: var(--ink); }
-  .callout { border-left: 4px solid var(--gold); background: rgba(255,209,102,.08); padding: 12px 16px; margin: 16px 0; border-radius: 0 8px 8px 0; }
+  .hero { padding: 26px 28px; border: 3px solid var(--stroke); margin-top: 4px;
+    background: radial-gradient(130% 150% at 12% -30%, rgba(255,209,102,.16), transparent 55%), linear-gradient(var(--panel), var(--panel-2));
+    box-shadow: var(--drop); }
+  .hero h1 { margin-bottom: 4px; }
+  .callout { border-left: 4px solid var(--gold); background: rgba(255,209,102,.08); padding: 12px 16px; margin: 18px 0; border-radius: 0 8px 8px 0; }
   .callout.warn { border-left-color: var(--bad); background: rgba(160,42,42,.12); }
   .callout .k { font-family: var(--pixel); font-size: 12px; letter-spacing: 1px; color: var(--gold); display: block; margin-bottom: 4px; }
   .callout.warn .k { color: #ff8b8b; }
   .callout p { margin: 0; color: var(--ink); }
   code { background: var(--panel-deep); border: 1px solid var(--stroke); border-radius: 5px; padding: 1px 6px; font-size: 13px; color: var(--gold-soft); }
+
+  /* prev / next footer */
+  .doc-foot { display: flex; gap: 12px; margin-top: 40px; padding-top: 24px; border-top: 2px solid var(--stroke); }
+  .doc-foot a { flex: 1; text-decoration: none; border: 2px solid var(--stroke); background: var(--panel);
+    padding: 12px 16px; border-radius: 10px; transition: border-color .12s, background .12s; }
+  .doc-foot a:hover { border-color: var(--gold); background: rgba(255,209,102,.06); }
+  .doc-foot a.next { text-align: right; }
+  .doc-foot .dir { display: block; font-family: var(--pixel); font-size: 10px; letter-spacing: 1.5px; color: var(--faint); text-transform: uppercase; }
+  .doc-foot .ttl { color: var(--gold-soft); font-size: 15px; }
+
   @media (max-width: 820px) {
-    .layout { grid-template-columns: 1fr; }
-    .toc { position: static; }
+    .docs { grid-template-columns: 1fr; }
+    .docs-nav { position: static; height: auto; border-right: 0; border-bottom: 3px solid var(--stroke); }
+    .docs-main { padding: 28px 20px 72px; }
   }
 </style>
 </head>
 <body>
-<main class="wrap">
-  <div class="layout">
-    <nav class="toc">
-      <h4>ON THIS PAGE</h4>
-      <a href="#welcome">Welcome to Pixl</a>
-      <a href="#get">What do I get?</a>
-      <a href="#restoration">The Restoration</a>
-      <a href="#sidequest">Your Sidequest</a>
-      <a href="#building">Building</a>
-      <a href="#shipping">Shipping</a>
-      <a href="#rewards">Rewards</a>
-      <a href="#free">Free stuff</a>
-      <a href="#help">Need help?</a>
-    </nav>
+<div class="docs">
+  <aside class="docs-nav">
+    <a class="docs-brand" id="docs-brand" title="Back to the game"><img src="/index.icon.png" alt="">PIXL DOCS</a>
+    <nav id="docs-nav-list"></nav>
+  </aside>
 
-    <div class="doc">
-      <div class="hero" id="welcome">
+  <main class="docs-main">
+    <article class="doc">
+      <div class="hero doc-page" id="welcome">
+        <div class="eyebrow">Start here</div>
         <h1>Welcome to Pixl</h1>
-        <p>Pixl is where you build something real, ship it, and get rewarded for it. You take a sidequest (or build your own thing), ship real projects over the next few months, and earn pixels, real prizes, and help rebuild the world.</p>
+        <p class="lead">Pixl is where you build something real, ship it, and get rewarded for it. Take a sidequest (or build your own thing), ship real projects over the next few months, and earn pixels, real prizes, and help rebuild the world.</p>
         <p>Everything runs inside a story about a broken digital world called <b>Origin</b>, shattered by something called the <b>Great Static</b> and slowly being rebuilt as Pixl. You don't need to care about all the lore to play, though — you just need to build stuff.</p>
       </div>
 
-      <section id="get">
-        <h2>What do I actually get?</h2>
+      <section class="doc-page" id="get">
+        <div class="eyebrow">Start here</div>
+        <h1>What do I actually get?</h1>
         <ul>
           <li>For every sidequest (or original project) you ship, you earn pixels. One hour of shipped work is <b>50 pixels</b>, plus the prize attached to that sidequest.</li>
           <li>Pixels can be spent in the shop on real prizes, from stickers all the way up to a MacBook Air.</li>
@@ -71,13 +96,14 @@
         <p>If you're ever stuck, search it up first. Whatever you're wondering, someone's probably already asked it in <code>#pixl</code>. If that doesn't get you an answer, just ask.</p>
       </section>
 
-      <section id="restoration">
-        <h2>How the Restoration works</h2>
+      <section class="doc-page" id="restoration">
+        <div class="eyebrow">The Restoration</div>
+        <h1>How the Restoration works</h1>
         <p>Welcome to Origin. The world was broken by the <b>Great Static</b>, leaving behind lost systems, unfinished areas, and broken pieces of the digital world. The Restoration is how builders help put it back together.</p>
-        <h3>Chapters</h3>
+        <h2>Chapters</h2>
         <p>The Restoration is split into chapters. Each chapter focuses on rebuilding a different part of Origin — new challenges, sidequests, and projects appear as the world changes.</p>
         <p>You don't need to start from the beginning, though. If you join late, you haven't missed your chance. Everything is still open for you to explore.</p>
-        <h3>Operations</h3>
+        <h2>Operations</h2>
         <p>Inside each chapter are operations — bigger goals that need builders to complete them. They might involve:</p>
         <ul>
           <li>Building a tool</li>
@@ -88,10 +114,11 @@
         <p>Every project helps move the Restoration forward.</p>
       </section>
 
-      <section id="sidequest">
-        <h2>Your sidequest</h2>
+      <section class="doc-page" id="sidequest">
+        <div class="eyebrow">The Restoration</div>
+        <h1>Your sidequest</h1>
         <p>Sidequests are challenges that give you something to build. They usually come from problems inside Origin, with characters (NPCs) asking builders for help. You can either pick an existing sidequest or create your own project — both count.</p>
-        <h3>What makes a good sidequest?</h3>
+        <h2>What makes a good sidequest?</h2>
         <ul>
           <li>Solves a real problem</li>
           <li>Shows what you built and learned</li>
@@ -104,19 +131,21 @@
         </div>
       </section>
 
-      <section id="building">
-        <h2>Building</h2>
+      <section class="doc-page" id="building">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Building</h1>
         <p>This is where you actually make your project. You can build almost anything.</p>
-        <h3>Software</h3>
+        <h2>Software</h2>
         <p>Websites, apps, games, bots, AI tools, and more. Useful tools: VS Code, GitHub, Hackatime.</p>
-        <h3>Hardware</h3>
+        <h2>Hardware</h2>
         <p>PCBs, electronics, robotics, 3D printing, and physical projects. Useful tools: CAD software, PCB design tools, hardware guides.</p>
-        <h3>Tracking your time</h3>
+        <h2>Tracking your time</h2>
         <p>Your build time is tracked through Hackatime. Every hour of shipped work earns you <b>50 pixels</b>.</p>
       </section>
 
-      <section id="shipping">
-        <h2>Shipping</h2>
+      <section class="doc-page" id="shipping">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Shipping</h1>
         <p>Building something is only half the journey. Shipping means submitting your project for review. The flow is:</p>
         <ul>
           <li>Build your project</li>
@@ -128,20 +157,22 @@
         <p>Before submitting, check what makes a good submission. Reviewers want to see what you built, what you learned, and what makes your project yours.</p>
       </section>
 
-      <section id="rewards">
-        <h2>Rewards</h2>
+      <section class="doc-page" id="rewards">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Rewards</h1>
         <p>Pixels are your currency in Pixl. You earn them by shipping projects.</p>
-        <h3>Earning pixels</h3>
+        <h2>Earning pixels</h2>
         <ul>
           <li><b>50 pixels per hour</b> of shipped work</li>
           <li>Extra prizes from certain sidequests</li>
         </ul>
-        <h3>Spending pixels</h3>
+        <h2>Spending pixels</h2>
         <p>Pixels can be spent in the shop. Rewards can include stickers, hardware, other builder gear, and bigger prizes like a MacBook Air. Keep building, keep shipping, and keep unlocking more.</p>
       </section>
 
-      <section id="free">
-        <h2>Free stuff to help you build</h2>
+      <section class="doc-page" id="free">
+        <div class="eyebrow">Resources</div>
+        <h1>Free stuff to help you build</h1>
         <p>You shouldn't have to spend your own money to start building. Hack Club provides:</p>
         <ul>
           <li>Free AI credits for building your own agents and tools — not for just running a pre-built coding assistant.</li>
@@ -151,8 +182,9 @@
         </ul>
       </section>
 
-      <section id="help">
-        <h2>Need help?</h2>
+      <section class="doc-page" id="help">
+        <div class="eyebrow">Resources</div>
+        <h1>Need help?</h1>
         <p>Getting stuck is normal. Everyone does. Here's where to go:</p>
         <ul>
           <li>Ask in <code>#pixl</code> on Slack. Other builders are working through the same problems.</li>
@@ -168,14 +200,68 @@
           <p>Don't just ship a copy of a tutorial. Take inspiration, but make it yours. That's what reviewers look for.</p>
         </div>
       </section>
-    </div>
-  </div>
-</main>
-<script>window.PIXL_PUBLIC = true;</script>
-<script src="/pixl.js"></script>
+
+      <div class="doc-foot" id="doc-foot"></div>
+    </article>
+  </main>
+</div>
+
 <script>
-  Pixl.mountTopbar("docs");
-  if (Pixl.hasToken) Pixl.loadWallet();
+  // On play.* the game is at the root; under pixl.rsvp it lives at /play.
+  document.getElementById("docs-brand").href =
+    location.hostname.startsWith("play.") ? "/" : "/play";
+
+  // Grouped nav → one section per "page", routed by URL hash.
+  const GROUPS = [
+    { title: "Start here", items: [["welcome", "Welcome"], ["get", "What you get"]] },
+    { title: "The Restoration", items: [["restoration", "How it works"], ["sidequest", "Your sidequest"]] },
+    { title: "Build & ship", items: [["building", "Building"], ["shipping", "Shipping"], ["rewards", "Rewards"]] },
+    { title: "Resources", items: [["free", "Free stuff"], ["help", "Need help"]] },
+  ];
+  const FLAT = GROUPS.flatMap((g) => g.items);
+  const IDS = FLAT.map((x) => x[0]);
+  const LABEL = Object.fromEntries(FLAT);
+
+  const navList = document.getElementById("docs-nav-list");
+  const linkById = {};
+  for (const g of GROUPS) {
+    const group = document.createElement("div");
+    group.className = "docs-group";
+    const h = document.createElement("h4");
+    h.textContent = g.title;
+    group.appendChild(h);
+    for (const [id, label] of g.items) {
+      const a = document.createElement("a");
+      a.className = "section-link";
+      a.href = "#" + id;
+      a.textContent = label;
+      group.appendChild(a);
+      linkById[id] = a;
+    }
+    navList.appendChild(group);
+  }
+
+  const pages = [...document.querySelectorAll(".doc-page")];
+  const foot = document.getElementById("doc-foot");
+
+  function footLink(entry, dir) {
+    if (!entry) return "";
+    const cls = dir === "Next" ? "next" : "prev";
+    return `<a class="${cls}" href="#${entry[0]}"><span class="dir">${dir}</span><span class="ttl">${entry[1]}</span></a>`;
+  }
+
+  function show(id) {
+    if (!linkById[id]) id = IDS[0];
+    pages.forEach((p) => p.classList.toggle("is-active", p.id === id));
+    for (const k in linkById) linkById[k].classList.toggle("active", k === id);
+    const i = IDS.indexOf(id);
+    foot.innerHTML = footLink(FLAT[i - 1], "Previous") + footLink(FLAT[i + 1], "Next");
+    document.title = "Pixl · " + (LABEL[id] || "Docs");
+    window.scrollTo(0, 0);
+  }
+
+  window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+  show(location.hash.slice(1) || IDS[0]);
 </script>
 </body>
 </html>
