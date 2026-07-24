@@ -1925,6 +1925,7 @@ const activeThreads = new Map();
 const pendingReplies = new Map();
 const threadHistory = new Map();
 const mutedThreads = new Set();
+const lastOrphanThanksAt = new Map(); // channel -> timestamp, dedupes "thx orphan" ping-pong
 const THREAD_TTL = 2 * 60 * 60 * 1000;
 
 app.message(async ({ message, client }) => {
@@ -2089,10 +2090,17 @@ app.message(async ({ message, client }) => {
   // real registered display name) since message.username is only set when a bot
   // posts with a per-message username override, which most bots (incl. likely
   // Orpheus) don't use, so it never matched.
+  // Cooldown per channel: Orpheus replying "np"/"you're welcome" to our "thx orphan"
+  // is itself a new Orpheus message, which would match again and ping-pong forever
+  // without this — only say it once per channel every 10s.
   if (message.bot_id && message.bot_id !== botAppId) {
     const otherBotName = (message.bot_profile?.name || message.username || '').toLowerCase();
     if (otherBotName.includes('orpheus')) {
-      await client.chat.postMessage({ channel: message.channel, thread_ts: message.thread_ts, text: 'thx orphan' });
+      const lastAt = lastOrphanThanksAt.get(message.channel) || 0;
+      if (Date.now() - lastAt > 10 * 1000) {
+        lastOrphanThanksAt.set(message.channel, Date.now());
+        await client.chat.postMessage({ channel: message.channel, thread_ts: message.thread_ts, text: 'thx orphan' });
+      }
       return;
     }
   }
