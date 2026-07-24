@@ -23,7 +23,11 @@ function db() { return supabase; }
 async function aiCall(body) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (!openrouterKey) { const err = new Error('no credits'); err.code = NO_CREDITS; throw err; }
-  const orBody = { ...body, model: 'google/gemini-2.5-flash-lite:nitro' };
+  // Persona chat / roasts / classification model. Defaults to Claude Opus 4.8
+  // (a big step up from gemini-flash-lite); override with PIXO_MODEL, e.g.
+  // "anthropic/claude-haiku-4.5" or "anthropic/claude-sonnet-4.6" if you want
+  // cheaper/faster on this high-volume bot.
+  const orBody = { ...body, model: process.env.PIXO_MODEL || 'anthropic/claude-opus-4.8' };
   try {
     const res = await axios.post(OPENROUTER_URL, orBody, {
       headers: { Authorization: `Bearer ${openrouterKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pixorpheus.app', 'X-Title': 'Pixorpheus' },
