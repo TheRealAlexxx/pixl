@@ -151,7 +151,7 @@ async function autoCloseOldTickets() {
   try {
     const cutoff = new Date(Date.now() - 7 * 86400_000);
     const { data: openTickets } = await db().from("tickets").select("*").eq("status", "open");
-    const result = (openTickets || []).filter(t => {
+    const result = (openTickets || []).map(normalizeTicket).filter(t => {
       const msgDate = new Date(parseFloat(t.msg_ts) * 1000);
       const lastDate = t.last_msg_at ? new Date(t.last_msg_at) : msgDate;
       return msgDate < cutoff && lastDate < cutoff;
@@ -189,6 +189,16 @@ async function autoCloseOldTickets() {
   } catch (e) {
     console.error('[autoClose]', e.message);
   }
+}
+
+// Slack timestamps must be strings. If the DB column ever returns them as
+// numbers (wrong column type in Supabase), buttons get a numeric `value`
+// (invalid_blocks — the ticket-channel forward silently fails) and thread_ts
+// becomes a float Slack can't match. Coerce at every DB read.
+function tsStr(v) { return v == null ? v : String(v); }
+function normalizeTicket(t) {
+  if (!t) return t;
+  return { ...t, msg_ts: tsStr(t.msg_ts), ticket_msg_ts: tsStr(t.ticket_msg_ts) };
 }
 
 function ticketBlocks(ticket) {
@@ -286,7 +296,7 @@ async function createTicket(event, title, client) {
   let ticketRow;
   try {
     const r = await db().from("tickets").select("*").eq("msg_ts", event.ts).limit(1).maybeSingle();
-    ticketRow = r.data;
+    ticketRow = normalizeTicket(r.data);
   } catch (e) {
     console.error('[createTicket] SELECT error:', e.message);
     creatingTickets.delete(event.ts);
@@ -297,12 +307,12 @@ async function createTicket(event, title, client) {
     // Fallback: ticket wasn't pre-created, insert it now
     const description = event.text || '[no text — see thread for attachments]';
     const r = await db().from("tickets").insert({ msg_ts: event.ts, description, status: "open", opened_by_slack_id: event.user }).select().single();
-    ticketRow = r.data;
+    ticketRow = normalizeTicket(r.data);
     if (!ticketRow) {
       // Likely a unique violation if another call snuck in (supabase-js reports it
       // via r.error instead of throwing) — try SELECT again
       const retry = await db().from("tickets").select("*").eq("msg_ts", event.ts).limit(1).maybeSingle();
-      ticketRow = retry.data;
+      ticketRow = normalizeTicket(retry.data);
     }
     if (!ticketRow) {
       console.error('[createTicket] could not find or create ticket for', event.ts);
@@ -321,7 +331,7 @@ async function createTicket(event, title, client) {
           channel: process.env.SLACK_TICKET_CHANNEL,
           ts: ticketRow.ticket_msg_ts,
           text: `Ticket from <@${event.user}>: ${title}`,
-          blocks: ticketBlocks(updated.data || ticketRow),
+          blocks: ticketBlocks(normalizeTicket(updated.data) || ticketRow),
         });
       } catch (e) {}
     }
@@ -341,7 +351,7 @@ async function createTicket(event, title, client) {
     if (title) updates.title = title;
     if (permalink) updates.permalink = permalink;
     const updated = await db().from("tickets").update(updates).eq("msg_ts", event.ts).select().single();
-    if (updated.data) ticketRow = updated.data;
+    if (updated.data) ticketRow = normalizeTicket(updated.data);
   } catch (e) {}
 
   // Post to ticket channel
@@ -450,7 +460,8 @@ async function handleNewQuestion(event, client) {
 }
 
 async function handleMessageInThread(event, client) {
-  const { data: ticket } = await db().from("tickets").select("*").eq("msg_ts", event.thread_ts).maybeSingle();
+  const { data: rawTicket } = await db().from("tickets").select("*").eq("msg_ts", event.thread_ts).maybeSingle();
+  const ticket = normalizeTicket(rawTicket);
   if (!ticket) return;
 
   const isHelper = await checkIsHelper(event.user);
@@ -472,19 +483,28 @@ async function checkIsHelper(slackUserId) {
   return !!data;
 }
 
+// Membership checks run on every button click; cache them so a rate-limited
+// conversations.members call can't stall the whole interaction flow each time.
+const ticketChannelMembership = new Map(); // userId -> { ok, at }
+const MEMBERSHIP_TTL_MS = 5 * 60 * 1000;
+
 async function checkIsInTicketChannel(slackUserId, client) {
+  const cached = ticketChannelMembership.get(slackUserId);
+  if (cached && Date.now() - cached.at < MEMBERSHIP_TTL_MS) return cached.ok;
   try {
     let cursor;
+    let ok = false;
     do {
       const result = await client.conversations.members({
         channel: process.env.SLACK_TICKET_CHANNEL,
         limit: 200,
         cursor,
       });
-      if (result.members.includes(slackUserId)) return true;
+      if (result.members.includes(slackUserId)) { ok = true; break; }
       cursor = result.response_metadata?.next_cursor;
     } while (cursor);
-    return false;
+    ticketChannelMembership.set(slackUserId, { ok, at: Date.now() });
+    return ok;
   } catch (e) {
     return false;
   }
@@ -577,7 +597,8 @@ async function resolveTicket(msgTs, resolverSlackId, client) {
     ],
   });
 
-  const { data: ticketRow } = await db().from("tickets").select("*").eq("msg_ts", msgTs).maybeSingle();
+  const { data: rawTicketRow } = await db().from("tickets").select("*").eq("msg_ts", msgTs).maybeSingle();
+  const ticketRow = normalizeTicket(rawTicketRow);
   if (ticketRow?.ticket_msg_ts) {
     try {
       await client.chat.update({
@@ -621,7 +642,8 @@ async function reopenTicket(msgTs, reopenerSlackId, client) {
     text: `Ticket reopened by <@${reopenerSlackId}>.`,
   });
 
-  const { data: ticketRow } = await db().from("tickets").select("*").eq("msg_ts", msgTs).maybeSingle();
+  const { data: rawTicketRow } = await db().from("tickets").select("*").eq("msg_ts", msgTs).maybeSingle();
+  const ticketRow = normalizeTicket(rawTicketRow);
   if (ticketRow?.ticket_msg_ts) {
     try {
       await client.chat.update({
@@ -764,7 +786,7 @@ app.action('claim_ticket', async ({ ack, body, client }) => {
   let ticketRow;
   try {
     const { data } = await db().from("tickets").select("*").eq("msg_ts", msgTs).maybeSingle();
-    ticketRow = data;
+    ticketRow = normalizeTicket(data);
   } catch (e) { return; }
   if (!ticketRow || ticketRow.status === 'closed') return;
 
@@ -1418,7 +1440,7 @@ async function loadPendingPolls() {
     for (const row of pollRows || []) {
       const delay = Number(row.closes_at) - Date.now();
       const options = Array.isArray(row.options) ? row.options : JSON.parse(row.options);
-      schedulePollClose(row.channel, row.message_ts, row.question, options, row.id, delay);
+      schedulePollClose(row.channel, tsStr(row.message_ts), row.question, options, row.id, delay);
     }
     if ((pollRows || []).length) console.log(`Loaded ${pollRows.length} pending poll(s).`);
   } catch (e) { console.error('loadPendingPolls error:', e.message); }
