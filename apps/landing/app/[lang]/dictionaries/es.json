@@ -275,12 +275,20 @@
         "description": "Placa de desarrollo ESP32 con una protoboard y componentes para empezar a trastear."
       },
       {
+        "name": "FURYCUBE 68%",
+        "description": "Un teclado mecánico hot-swap barato para tus game jams nocturnas."
+      },
+      {
         "name": "Peluche de Godot (edición limitada)",
         "description": "El peluche oficial del robot Godot. Apoyo emocional para las game jams."
       },
       {
         "name": "Sudadera PIXL",
         "description": "Sudadera PIXL de edición limitada con el logo en el pecho."
+      },
+      {
+        "name": "Peluche Blahaj",
+        "description": "Un peluche tiburón Blahaj enviado a tu casa."
       },
       {
         "name": "Wacom Intuos (Small)",
@@ -291,12 +299,8 @@
         "description": "Una consola portátil retro para jugar a tus creaciones y a los clásicos donde vayas."
       },
       {
-        "name": "Epomaker TH80 V2 Pro",
+        "name": "Epomaker x Aula F75 Pro",
         "description": "Teclado mecánico hot-swap con una pequeña pantalla. Añade una nota para elegir tu color."
-      },
-      {
-        "name": "Epomaker x Aula F75",
-        "description": "Teclado mecánico hot-swap del 75 %. Añade una nota para elegir tu color."
       },
       {
         "name": "GameMaker Pro",
@@ -311,12 +315,32 @@
         "description": "Una Raspberry Pi 5 (4GB) para tus servidores, emuladores y experimentos. Versión de 8GB por 3150 px."
       },
       {
+        "name": "Sony WH-CH720N",
+        "description": "Auriculares ligeros con cancelación de ruido, fáciles para el bolsillo."
+      },
+      {
+        "name": "Creality Ender 3 V3",
+        "description": "Una impresora 3D de nivel inicial fiable para props y prototipos."
+      },
+      {
+        "name": "AirPods Pro 3",
+        "description": "Los auriculares con cancelación de ruido de Apple, compactos y fáciles de llevar a todas partes."
+      },
+      {
         "name": "Bambu Lab A1 Mini",
         "description": "Una impresora 3D rápida y silenciosa. Imprime tus propios props y carcasas de juego."
       },
       {
+        "name": "SSD externo Samsung T7 (1TB)",
+        "description": "Un SSD portátil rápido para copias de seguridad, builds y archivos pesados."
+      },
+      {
         "name": "Sony WH-1000XM5",
         "description": "Auriculares con cancelación de ruido para entrar en la zona."
+      },
+      {
+        "name": "Creality Sparkx i7",
+        "description": "Una impresora 3D rápida y capaz para tus proyectos más grandes."
       },
       {
         "name": "Bambu Lab A1",
@@ -335,8 +359,16 @@
         "description": "La A1 junto con el AMS Lite para impresiones multicolor nada más sacarla de la caja."
       },
       {
+        "name": "Samsung Galaxy S24",
+        "description": "Un flagship Android sólido para el día a día y probar tus apps."
+      },
+      {
         "name": "AirPods Max 2",
         "description": "Los auriculares de diadema con cancelación de ruido de Apple. El flex definitivo."
+      },
+      {
+        "name": "Nothing Phone (4a) Pro",
+        "description": "Un teléfono Android elegante con el diseño transparente característico de Nothing."
       },
       {
         "name": "MacBook Neo",
@@ -345,6 +377,10 @@
       {
         "name": "MacBook Air M5",
         "description": "El portátil Air de Apple, se muestra 16GB/512GB; añade una nota para elegir 24GB/1TB por 24250 px."
+      },
+      {
+        "name": "Mac Mini (24GB/512GB)",
+        "description": "Un Mac de escritorio compacto para programar, hacer streaming y proyectos diarios."
       }
     ]
   },

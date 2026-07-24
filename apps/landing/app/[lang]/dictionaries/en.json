@@ -10,9 +10,9 @@
     "realPrizes": "real prizes to your door.",
     "placeholder": "your@email.com",
     "rsvp": "RSVP",
-    "alreadyIn": "you\u2019re already in",
+    "alreadyIn": "you’re already in",
     "viewYourRsvp": "view your RSVP",
-    "errorNoEmail": "yo, drop your email first \ud83d\udc40",
+    "errorNoEmail": "yo, drop your email first 👀",
     "errorInvalidEmail": "that doesn't look like a real email lol"
   },
   "description": {
@@ -117,7 +117,7 @@
         },
         "prize": {
           "title": "Domain + Sticker Pack",
-          "description": "A custom domain of your choice (.com, .dev, .xyz\u2026) + a Hack Club sticker pack shipped to your door."
+          "description": "A custom domain of your choice (.com, .dev, .xyz…) + a Hack Club sticker pack shipped to your door."
         }
       },
       {
@@ -275,12 +275,20 @@
         "description": "ESP32 dev board with a breadboard and components to start hacking."
       },
       {
+        "name": "FURYCUBE 68%",
+        "description": "A cheap hot-swap mechanical keyboard for late night game jams."
+      },
+      {
         "name": "Godot Plush (Limited Edition)",
         "description": "The official Godot robot plushie. Emotional support for game jams."
       },
       {
         "name": "PIXL Hoodie",
         "description": "Limited PIXL hoodie with the logo on the chest."
+      },
+      {
+        "name": "Blahaj Plush",
+        "description": "A plush Blahaj shark shipped to your door."
       },
       {
         "name": "Wacom Intuos (Small)",
@@ -291,12 +299,8 @@
         "description": "A retro handheld to play your builds and the classics on the go."
       },
       {
-        "name": "Epomaker TH80 V2 Pro",
+        "name": "Epomaker x Aula F75 Pro",
         "description": "Hot-swap mechanical keyboard with a little screen. Add a note to pick your color."
-      },
-      {
-        "name": "Epomaker x Aula F75",
-        "description": "75% hot-swap mechanical keyboard. Add a note to pick your color."
       },
       {
         "name": "GameMaker Pro",
@@ -311,12 +315,32 @@
         "description": "A Raspberry Pi 5 (4GB) to run your servers, emulators and experiments. 8GB version for 3150 px."
       },
       {
+        "name": "Sony WH-CH720N",
+        "description": "Lightweight noise cancelling headphones, easy on the budget."
+      },
+      {
+        "name": "Creality Ender 3 V3",
+        "description": "A dependable entry-level 3D printer for props and prototypes."
+      },
+      {
+        "name": "AirPods Pro 3",
+        "description": "Apple's noise cancelling earbuds, compact and easy to bring everywhere."
+      },
+      {
         "name": "Bambu Lab A1 Mini",
         "description": "A fast, quiet 3D printer. Print your own game props and cases."
       },
       {
+        "name": "Samsung T7 External SSD (1TB)",
+        "description": "A fast portable SSD for backups, builds and moving big files around."
+      },
+      {
         "name": "Sony WH-1000XM5",
         "description": "Noise cancelling headphones to get in the zone."
+      },
+      {
+        "name": "Creality Sparkx i7",
+        "description": "A fast, capable 3D printer for bigger builds."
       },
       {
         "name": "Bambu Lab A1",
@@ -335,8 +359,16 @@
         "description": "The A1 bundled with the AMS Lite for multi-color prints out of the box."
       },
       {
+        "name": "Samsung Galaxy S24",
+        "description": "A solid Android flagship for everyday use and testing your apps."
+      },
+      {
         "name": "AirPods Max 2",
         "description": "Apple's over-ear noise cancelling headphones. The endgame flex."
+      },
+      {
+        "name": "Nothing Phone (4a) Pro",
+        "description": "A sleek Android phone with Nothing's signature transparent design."
       },
       {
         "name": "MacBook Neo",
@@ -345,6 +377,10 @@
       {
         "name": "MacBook Air M5",
         "description": "Apple's air laptop, 16GB/512GB shown, add a note to pick 24GB/1TB for 24250 px."
+      },
+      {
+        "name": "Mac Mini (24GB/512GB)",
+        "description": "A compact desktop Mac for coding, streaming and everyday builds."
       }
     ]
   },
@@ -398,11 +434,11 @@
   "footer": {
     "aProjectBy": "A project by",
     "teens": "Teens",
-    "hackClubDesc1": "Hack Club is a 501(c)(3) nonprofit and network of 60k+ technical high schoolers. We believe you learn best by building, so we\u2019re creating community and providing grants so you can make awesome projects. In the past few years, we\u2019ve",
+    "hackClubDesc1": "Hack Club is a 501(c)(3) nonprofit and network of 60k+ technical high schoolers. We believe you learn best by building, so we’re creating community and providing grants so you can make awesome projects. In the past few years, we’ve",
     "partneredWithGithub": "partnered with GitHub to run Summer of Making",
-    "hostedWorldsLongest": "hosted the world\u2019s longest hackathon on land",
-    "ranCanadasLargest": "ran Canada\u2019s largest high school hackathon",
-    "hackClubMotto": "At Hack Club, students aren\u2019t just learning, they\u2019re shipping.",
+    "hostedWorldsLongest": "hosted the world’s longest hackathon on land",
+    "ranCanadasLargest": "ran Canada’s largest high school hackathon",
+    "hackClubMotto": "At Hack Club, students aren’t just learning, they’re shipping.",
     "pixl": "Pixl",
     "whatIsPixl": "What is Pixl",
     "howItWorks": "How it works",
@@ -418,7 +454,7 @@
     "ourTeamAndBoard": "Our Team & Board",
     "branding": "Branding",
     "donate": "Donate",
-    "madeWithLove": "Pixl is made with \u2665 by teenagers for teenagers",
+    "madeWithLove": "Pixl is made with ♥ by teenagers for teenagers",
     "addSomething": "want to add something ? Make a PR on",
     "github": "GitHub"
   }
