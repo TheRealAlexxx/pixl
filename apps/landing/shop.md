@@ -19,7 +19,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `music-grant` | Music Grant | 3 h | 150 | **$10** stackable grant, instruments/plugins/samples/any music gear. Fraudable like every grant | `/shop/music-grant.png` (generated pixel-art icon: boombox) |
 | `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.svg` (placeholder) |
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
-| `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
+| `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. Description has a small nod to sponsor Barnav ("our resident cookie muncher"). ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
 | `pixel-composer` | Pixel Composer License | 5 h | 250 | $15, no shipping, easy to send as gift | `/shop/pixel-composer.png` |
 | `pico8` | PICO-8 License | 5 h | 250 | $15, gift code, no fraud, in theme asf | `/shop/pico8.png` |
 | `pixl-poster` | PIXL Poster | 6 h | 300 | **$20** print grant (general poster or print grant at a local shop). Design by Ricky or community bounty? **//not sure** | `/shop/poster.png` |
