@@ -125,8 +125,8 @@ export function CommitList({ result }: { result: CommitResult }) {
                         c.tracked !== undefined &&
                         c.additions >= 200 &&
                         c.additions / (Math.max(c.tracked, 60) / 3600) > 1500
-                          ? "text-destructive font-semibold"
-                          : "text-muted-foreground"
+                          ? "font-semibold"
+                          : ""
                       }`}
                       title={
                         c.tracked !== undefined &&
@@ -136,7 +136,12 @@ export function CommitList({ result }: { result: CommitResult }) {
                           : "Lines added / removed"
                       }
                     >
-                      +{c.additions} −{c.deletions ?? 0}
+                      <span className="text-emerald-600 dark:text-emerald-400">
+                        +{c.additions}
+                      </span>{" "}
+                      <span className="text-rose-600 dark:text-rose-400">
+                        −{c.deletions ?? 0}
+                      </span>
                     </span>
                   )}
                   {gaps.has(c.sha) && (

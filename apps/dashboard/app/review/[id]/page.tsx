@@ -37,14 +37,20 @@ function ago(iso: string | null): string {
   return `${Math.floor(d / 60_000)}m ago`;
 }
 
-const TRUST_VARIANT = (level: string): "success" | "destructive" | "warning" | "info" =>
+const TRUST_VARIANT = (
+  level: string,
+): "success" | "destructive" | "warning" | "info" | "secondary" =>
   level === "green"
     ? "success"
     : level === "red" || level === "convicted"
       ? "destructive"
       : level === "yellow" || level === "suspected"
         ? "warning"
-        : "info";
+        : "secondary";
+
+// Hackatime returns "blue" for accounts it hasn't scored yet.
+const TRUST_LABEL = (level: string): string =>
+  level === "blue" ? "unscored" : level;
 
 export default async function ReviewDetail({
   params,
@@ -332,7 +338,7 @@ export default async function ReviewDetail({
 
             {trust && (
               <Card className="p-4 flex-row items-center gap-3">
-                <Badge variant={TRUST_VARIANT(trust.level)}>{trust.level}</Badge>
+                <Badge variant={TRUST_VARIANT(trust.level)}>{TRUST_LABEL(trust.level)}</Badge>
                 <span className="text-xs text-muted-foreground">
                   Hackatime trust factor , {trust.level === "green"
                     ? "no fraud flags on this account."
