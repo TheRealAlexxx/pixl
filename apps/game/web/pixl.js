@@ -120,20 +120,23 @@ const Pixl = (() => {
     const nav = PAGES.map(([slug, label]) =>
       `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${label}</a>`,
     ).join("");
-    document.body.insertAdjacentHTML("afterbegin", `
-      <header class="topbar">
-        <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
-        <nav class="nav">${nav}</nav>
-        <div class="topbar-right">
-          <button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
+    // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
+    // topbar: no wallet, no tour replay, and the button invites them into the game.
+    const right = token
+      ? `<button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
             style="background:none;border:2px solid var(--stroke);color:var(--gold);width:32px;height:32px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0">?</button>
           <div class="wallet-chip" id="pixl-wallet" title="Your pixels">
             <img src="/img/pixel.png" alt="px">
             <span class="px">—</span>
             <span class="lv"></span>
           </div>
-          <a class="btn dark" href="${GAME}">BACK TO GAME</a>
-        </div>
+          <a class="btn dark" href="${GAME}">BACK TO GAME</a>`
+      : `<a class="btn" href="${GAME}">ENTER THE GAME</a>`;
+    document.body.insertAdjacentHTML("afterbegin", `
+      <header class="topbar">
+        <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
+        <nav class="nav">${nav}</nav>
+        <div class="topbar-right">${right}</div>
       </header>`);
     const help = document.getElementById("pixl-help-btn");
     if (help) help.onclick = () => runTour();
@@ -522,7 +525,9 @@ const Pixl = (() => {
     });
   }
 
-  if (!token) {
+  // Pages can opt out of the sign-in gate (e.g. the public docs) by setting
+  // window.PIXL_PUBLIC = true before loading this script.
+  if (!token && !window.PIXL_PUBLIC) {
     document.addEventListener("DOMContentLoaded", gate);
   }
 

@@ -171,10 +171,11 @@
     </div>
   </div>
 </main>
+<script>window.PIXL_PUBLIC = true;</script>
 <script src="/pixl.js"></script>
 <script>
   Pixl.mountTopbar("docs");
-  Pixl.loadWallet();
+  if (Pixl.hasToken) Pixl.loadWallet();
 </script>
 </body>
 </html>
