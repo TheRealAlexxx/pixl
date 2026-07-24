@@ -556,6 +556,43 @@ export async function reviewProject(formData: FormData): Promise<void> {
   redirect("/review");
 }
 
+// Reviewers can re-grade the difficulty level (L1–L4) a maker self-assigned.
+export async function setProjectLevel(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const level = Number(formData.get("level") ?? 0);
+  const back = `/review/${projectId}`;
+  if (!projectId || !Number.isInteger(level) || level < 1 || level > 4) return;
+
+  const { data: current } = await db
+    .from("projects")
+    .select("user_id, name, level")
+    .eq("id", projectId)
+    .single();
+  if (!current) return;
+  if (await isOwnProject(access, current.user_id))
+    redirect(`${back}?error=${encodeURIComponent("You can't change the level of your own project.")}`);
+  if (Number(current.level) === level) {
+    revalidatePath(back);
+    redirect(back);
+  }
+
+  const { error } = await db.from("projects").update({ level }).eq("id", projectId);
+  if (error) {
+    console.error("setProjectLevel failed", error.message);
+    return;
+  }
+  await logModAction(
+    current.user_id,
+    "project_level_changed",
+    `${current.name}: level set to L${level} (was L${current.level ?? 1})`,
+    by,
+  );
+  revalidatePath(back);
+  redirect(back);
+}
+
 export async function reReviewProject(formData: FormData): Promise<void> {
   // Send back to review is a staff action , admins only (not plain reviewers).
   const access = await requirePerm("ban");

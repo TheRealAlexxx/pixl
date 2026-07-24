@@ -8,7 +8,7 @@ import { yswsShipsFor } from "@/lib/ysws";
 import { renderMarkdown } from "@/lib/markdown";
 import { db } from "@/lib/db";
 import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
-import { banProject } from "@/app/actions";
+import { banProject, setProjectLevel } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
@@ -192,6 +192,25 @@ export default async function ReviewDetail({
               <ShipBadges project={p} />
               <span className="text-xs text-muted-foreground font-mono ml-auto">#{p.id}</span>
             </div>
+            {!isOwn && (
+              <form action={setProjectLevel} className="flex items-center gap-2 mb-3 text-sm">
+                <input type="hidden" name="projectId" value={p.id} />
+                <label className="text-muted-foreground">Re-grade level</label>
+                <select
+                  name="level"
+                  defaultValue={p.level ?? 1}
+                  className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                >
+                  <option value={1}>L1 · Greenhorn</option>
+                  <option value={2}>L2 · Deputy</option>
+                  <option value={3}>L3 · Outlaw</option>
+                  <option value={4}>L4 · Legend</option>
+                </select>
+                <PendingButton variant="secondary" size="sm" pendingText="Saving…">
+                  Set
+                </PendingButton>
+              </form>
+            )}
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight break-words">{p.name}</h1>
             {p.description && (
               <div
