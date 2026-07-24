@@ -300,9 +300,170 @@ const Pixl = (() => {
     return (seconds / 3600).toFixed(1) + "h";
   }
 
+  /* ─────────────────────────── onboarding tour ───────────────────────────
+   * A first-visit interactive walkthrough for people who've never heard of
+   * Hack Club or Pixl. Each step is either a centered card (great for intro
+   * copy + a short video/GIF) or a spotlight that highlights a real element on
+   * the page and points a tooltip at it. Runs once, then remembers via
+   * localStorage. EDIT ONBOARDING_STEPS to change the copy / media / targets.
+   *
+   * Step shape:
+   *   { title, body, target?, video?, img? }
+   *     target  CSS selector to spotlight (omit for a centered card)
+   *     video   URL of a short .mp4/.webm to autoplay muted+looped in the card
+   *     img     URL of a .gif/.png to show in the card instead of a video
+   * A step whose target isn't on the current page falls back to a centered card.
+   */
+  const ONBOARDING_STEPS = [
+    {
+      title: "Welcome to Pixl 👋",
+      body: "New here? Take 30 seconds and we'll show you the ropes. You can skip anytime.",
+      // video: "/img/onboarding/welcome.mp4",
+    },
+    {
+      title: "What's Hack Club?",
+      body: "Hack Club is a worldwide community of teenage hackers, makers and builders. You learn by shipping real things , and they send real prizes and grants for what you make.",
+      // video: "/img/onboarding/hackclub.mp4",
+    },
+    {
+      title: "So what's Pixl?",
+      body: "Pixl is a pixel-art world you actually build. Ship real projects for the characters inside it, repair the world, and earn <b>pixels</b> , the in-game currency , plus real-world rewards.",
+    },
+    {
+      target: ".nav",
+      title: "Getting around",
+      body: "Jump between the shop, explore, your projects and more from up here.",
+    },
+    {
+      target: "#pixl-wallet",
+      title: "Your pixels",
+      body: "This is your wallet. Earn pixels by shipping projects, then spend them in the shop on real rewards.",
+    },
+    {
+      target: "#new-btn",
+      title: "Start a project",
+      body: "Tap here to create your first project. Give it a name, link a GitHub repo and a demo, and log your time with Hackatime.",
+    },
+    {
+      target: "#s-ship",
+      title: "Ship it for review",
+      body: "When your project is ready, ship it. A reviewer checks it out and credits you pixels + a prize for the work.",
+    },
+    {
+      title: "That's it , go build 🚀",
+      body: "Pick a sidequest or make your own thing. Stuck? Ask in <b>#pixl-help</b> on the Hack Club Slack.",
+    },
+  ];
+
+  function injectTourCSS() {
+    if (document.getElementById("pixl-tour-css")) return;
+    const s = document.createElement("style");
+    s.id = "pixl-tour-css";
+    s.textContent = `
+      #pixl-tour{position:fixed;inset:0;z-index:99999;font-family:var(--sans,sans-serif)}
+      #pixl-tour .pt-veil{position:absolute;inset:0;background:rgba(10,10,14,.72)}
+      #pixl-tour .pt-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,10,14,.72);transition:all .25s ease;pointer-events:none;border:2px solid var(--gold,#f4b942)}
+      #pixl-tour .pt-card{position:absolute;max-width:340px;width:calc(100% - 32px);background:var(--panel,#1b1b24);color:var(--ink,#f4f4f5);border:2px solid var(--stroke,#2a2a35);border-radius:14px;padding:18px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .2s ease,left .2s ease}
+      #pixl-tour .pt-card.center{top:50%;left:50%;transform:translate(-50%,-50%)}
+      #pixl-tour .pt-media{width:100%;border-radius:10px;margin-bottom:12px;display:block;background:#000;aspect-ratio:16/9;object-fit:cover}
+      #pixl-tour .pt-title{font-family:var(--pixel,var(--sans));font-size:18px;letter-spacing:.5px;color:var(--gold,#f4b942);margin-bottom:8px}
+      #pixl-tour .pt-body{font-size:14px;line-height:1.55;color:var(--dim,#cfcfd6)}
+      #pixl-tour .pt-body b{color:var(--ink,#f4f4f5)}
+      #pixl-tour .pt-foot{display:flex;align-items:center;gap:10px;margin-top:16px}
+      #pixl-tour .pt-dots{display:flex;gap:5px;margin-right:auto}
+      #pixl-tour .pt-dot{width:7px;height:7px;border-radius:50%;background:var(--muted,#4a4a52)}
+      #pixl-tour .pt-dot.on{background:var(--gold,#f4b942)}
+      #pixl-tour .pt-skip{background:none;border:0;color:var(--faint,#8a8a93);cursor:pointer;font-size:12px;padding:6px}
+      #pixl-tour .pt-btn{background:var(--gold,#f4b942);color:var(--btn-ink,#241710);border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
+      #pixl-tour .pt-back{background:none;border:1px solid var(--stroke,#2a2a35);color:var(--dim,#cfcfd6);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function markOnboarded() {
+    try { localStorage.setItem("pixl_onboarded", "1"); } catch {}
+  }
+
+  function runTour(steps = ONBOARDING_STEPS, startAt = 0) {
+    injectTourCSS();
+    document.getElementById("pixl-tour")?.remove();
+    const root = document.createElement("div");
+    root.id = "pixl-tour";
+    root.innerHTML = `<div class="pt-veil"></div><div class="pt-hole" style="display:none"></div><div class="pt-card"></div>`;
+    document.body.appendChild(root);
+    const veil = root.querySelector(".pt-veil");
+    const hole = root.querySelector(".pt-hole");
+    const card = root.querySelector(".pt-card");
+    let i = Math.max(0, Math.min(startAt, steps.length - 1));
+
+    function close() { root.remove(); markOnboarded(); }
+
+    function media(step) {
+      if (step.video) return `<video class="pt-media" src="${esc(step.video)}" autoplay muted loop playsinline></video>`;
+      if (step.img) return `<img class="pt-media" src="${esc(step.img)}" alt="">`;
+      return "";
+    }
+
+    function render() {
+      const step = steps[i];
+      const el = step.target ? document.querySelector(step.target) : null;
+      const dots = steps.map((_, n) => `<span class="pt-dot ${n === i ? "on" : ""}"></span>`).join("");
+      card.innerHTML = `
+        ${media(step)}
+        <div class="pt-title">${esc(step.title)}</div>
+        <div class="pt-body">${step.body}</div>
+        <div class="pt-foot">
+          <div class="pt-dots">${dots}</div>
+          ${i > 0 ? `<button class="pt-back">Back</button>` : `<button class="pt-skip">Skip</button>`}
+          <button class="pt-btn">${i === steps.length - 1 ? "Done" : "Next"}</button>
+        </div>`;
+      card.querySelector(".pt-btn").onclick = () => (i === steps.length - 1 ? close() : (i++, render()));
+      const back = card.querySelector(".pt-back");
+      if (back) back.onclick = () => { i--; render(); };
+      const skip = card.querySelector(".pt-skip");
+      if (skip) skip.onclick = close;
+
+      if (el && el.getClientRects().length) {
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        // wait a tick for the smooth scroll before measuring
+        setTimeout(() => {
+          const r = el.getBoundingClientRect();
+          const pad = 6;
+          hole.style.display = "block";
+          hole.style.top = `${r.top - pad}px`;
+          hole.style.left = `${r.left - pad}px`;
+          hole.style.width = `${r.width + pad * 2}px`;
+          hole.style.height = `${r.height + pad * 2}px`;
+          card.classList.remove("center");
+          const below = r.bottom + 14;
+          const room = window.innerHeight - r.bottom;
+          const cw = card.offsetWidth || 340;
+          const ch = card.offsetHeight || 200;
+          card.style.top = `${room > ch + 20 ? below : Math.max(14, r.top - ch - 14)}px`;
+          card.style.left = `${Math.min(Math.max(14, r.left + r.width / 2 - cw / 2), window.innerWidth - cw - 14)}px`;
+        }, 260);
+      } else {
+        hole.style.display = "none";
+        card.classList.add("center");
+        card.style.top = "";
+        card.style.left = "";
+      }
+    }
+    veil.onclick = close;
+    render();
+  }
+
+  // Run the tour once, the first time a signed-in newcomer opens the dash.
+  function maybeOnboard(steps = ONBOARDING_STEPS) {
+    let done = true;
+    try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch {}
+    if (done || !token) return;
+    setTimeout(() => runTour(steps), 700);
+  }
+
   if (!token) {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token };
+  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS };
 })();
