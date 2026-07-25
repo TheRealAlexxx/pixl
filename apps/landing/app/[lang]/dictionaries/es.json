@@ -240,6 +240,10 @@
         "description": "Una beca acumulable de 10 $ para gastar en instrumentos, plugins, samples o cualquier equipo musical. No la uses para suscripciones a Spotify/Apple Music etc."
       },
       {
+        "name": "Beca de herramientas de soldadura",
+        "description": "Una beca acumulable de $10 para herramientas y suministros de soldadura."
+      },
+      {
         "name": "Beca de hardware",
         "description": "Una beca acumulable de $10 para gastar en hardware para tus proyectos."
       },
@@ -262,6 +266,10 @@
       {
         "name": "Cortador de Galletas PIXL",
         "description": "Enormes cortadores de galletas con las letras pixeladas de PIXL, diseñados por Ricky. Hornea una tanda para Barnav, nuestro devorador de galletas oficial."
+      },
+      {
+        "name": "Cautín de soldadura",
+        "description": "Un kit de cautín con puntas nuevas y flux — útil para el kit Tamagotchi y otros proyectos de hardware."
       },
       {
         "name": "Licencia de Pixel Composer",
@@ -290,6 +298,10 @@
       {
         "name": "Juego indie a tu elección",
         "description": "Elige de nuestra selección de juegos indie geniales. Enviado como enlace de regalo en Steam o Humble Bundle."
+      },
+      {
+        "name": "Set de destornillador eléctrico",
+        "description": "Un set de destornillador eléctrico para construir y reparar tus proyectos de hardware."
       },
       {
         "name": "Kit de inicio ESP32",

@@ -10,12 +10,14 @@ const ITEM_IMAGES = [
   "/shop/hc-stickers.png",
   "/shop/api.png",
   "/shop/music-grant.png",
+  "/shop/soldering-grant.png",
   "/shop/hardware-grant.png",
   "/shop/domain-grant.png",
   "/shop/hosting-grant.png",
   "/shop/mystery-box.png",
   "/shop/art-grant.png",
   "/shop/cookie-cutter.png",
+  "/shop/soldering-iron.png",
   "/shop/pixel-composer.png",
   "/shop/pico8.png",
   "/shop/poster.png",
@@ -23,6 +25,7 @@ const ITEM_IMAGES = [
   "/shop/google-play.png",
   "/shop/tamagotchi.png",
   "/shop/indie-game.png",
+  "/shop/screwdriver.png",
   "/shop/esp32.png",
   "/shop/furycube.png",
   "/shop/godot-plush.png",
@@ -63,10 +66,10 @@ const ITEM_IMAGES = [
 ];
 
 const ITEM_PRICES = [
-  100, 150, 150, 150, 150, 175, 175, 175, 200, 200, 200, 250, 250, 300, 350, 350, 400, 400, 500, 500, 650, 700, 700, 700, 700, 700, 750, 1000, 1000, 1450, 1450, 1450, 1500, 1850, 2000, 2150, 2750, 2900, 3350, 3350, 3600, 3750, 4250, 5000, 5750, 5750, 5750, 6450, 7150, 10000, 10000, 17150, 17150, 17900, 22500,
+  100, 150, 150, 150, 150, 150, 175, 175, 175, 200, 200, 200, 200, 250, 250, 300, 350, 350, 400, 400, 425, 500, 500, 650, 700, 700, 700, 700, 700, 750, 1000, 1000, 1450, 1450, 1450, 1500, 1850, 2000, 2150, 2750, 2900, 3350, 3350, 3600, 3750, 4250, 5000, 5750, 5750, 5750, 6450, 7150, 10000, 10000, 17150, 17150, 17900, 22500,
 ];
 
-const NICHE_INDICES = new Set([0, 8, 10, 14]);
+const NICHE_INDICES = new Set([0, 9, 11, 16]);
 
 function ShopCard({
   item,

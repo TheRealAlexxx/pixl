@@ -240,6 +240,10 @@
         "description": "Uma bolsa acumulável de US$ 10 para gastar em instrumentos, plugins, samples ou qualquer equipamento musical. Não use para assinatura de Spotify/Apple Music etc."
       },
       {
+        "name": "Bolsa de ferramentas de solda",
+        "description": "Uma bolsa acumulável de $10 para ferramentas e suprimentos de solda."
+      },
+      {
         "name": "Bolsa de hardware",
         "description": "Uma bolsa acumulável de $10 para gastar em hardware para seus projetos."
       },
@@ -262,6 +266,10 @@
       {
         "name": "Cortador de Biscoito PIXL",
         "description": "Cortadores de biscoito gigantes com as letras pixeladas do PIXL, desenhados pelo Ricky. Asse uma fornada para o Barnav, nosso devorador de biscoitos oficial."
+      },
+      {
+        "name": "Ferro de solda",
+        "description": "Um kit de ferro de solda com pontas novas e fluxo — útil para o kit Tamagotchi e outros projetos de hardware."
       },
       {
         "name": "Licença do Pixel Composer",
@@ -290,6 +298,10 @@
       {
         "name": "Jogo indie à sua escolha",
         "description": "Escolha da nossa seleção de jogos indie legais. Enviado como link de presente na Steam ou Humble Bundle."
+      },
+      {
+        "name": "Kit de chave de fenda elétrica",
+        "description": "Um kit de chave de fenda elétrica para construir e consertar seus projetos de hardware."
       },
       {
         "name": "Kit inicial ESP32",

@@ -36,6 +36,11 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
   /* states */
   --good:#54c06a;--bad:#e0555f;--stroke:#3a2c1d;
   --btn-ink:#1a1206;
+  /* Fixed (never redefined per-theme) light backing for product images/icons —
+     a lot of shop art is a dark/black silhouette on a transparent PNG, which
+     disappears against --panel-deep in dark mode. Product photos read the
+     same in both themes, like a real e-commerce thumbnail always does. */
+  --img-slot:#fdf6ee;
   /* Pixelify Sans is the blocky pixel/retro display face — labels, nav,
      buttons, headings. Rubik carries all body copy + data-dense areas.
      --pixel stays the var name for the display face (used everywhere). */

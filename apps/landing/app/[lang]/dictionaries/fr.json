@@ -240,6 +240,10 @@
         "description": "Une bourse cumulable de 10 $ à dépenser en instruments, plugins, samples ou tout matériel musical. À ne pas utiliser pour un abonnement Spotify/Apple Music etc."
       },
       {
+        "name": "Bourse outils de soudure",
+        "description": "Une bourse cumulable de 10$ pour des outils et fournitures de soudure."
+      },
+      {
         "name": "Bourse matériel",
         "description": "Une bourse cumulable de 10$ à dépenser sur du matériel pour vos projets."
       },
@@ -262,6 +266,10 @@
       {
         "name": "Emporte-pièce PIXL",
         "description": "D'énormes emporte-pièces en forme des lettres pixelisées PIXL, dessinés par Ricky. Prépare une fournée pour Barnav, notre dévoreur de cookies officiel."
+      },
+      {
+        "name": "Fer à souder",
+        "description": "Un kit de fer à souder avec des pointes neuves et du flux — utile pour le kit Tamagotchi et d'autres montages hardware."
       },
       {
         "name": "Licence Pixel Composer",
@@ -290,6 +298,10 @@
       {
         "name": "Jeu indé de ton choix",
         "description": "Choisis parmi notre sélection de jeux indé sympas. Envoyé en lien cadeau sur Steam ou Humble Bundle."
+      },
+      {
+        "name": "Kit de tournevis électrique",
+        "description": "Un kit de tournevis électrique pour construire et réparer vos projets hardware."
       },
       {
         "name": "Kit de démarrage ESP32",
