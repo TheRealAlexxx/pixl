@@ -451,8 +451,8 @@ const Pixl = (() => {
     s.id = "pixl-tour-css";
     s.textContent = `
       #pixl-tour{position:fixed;inset:0;z-index:99999;font-family:var(--sans,sans-serif)}
-      #pixl-tour .pt-veil{position:absolute;inset:0;background:rgba(10,10,14,.72)}
-      #pixl-tour .pt-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,10,14,.72);transition:all .25s ease;pointer-events:none;border:2px solid var(--gold,#ec4899)}
+      #pixl-tour .pt-veil{position:absolute;inset:0;background:rgba(10,10,14,.5)}
+      #pixl-tour .pt-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,10,14,.5);transition:all .25s ease;pointer-events:none;border:2px solid var(--gold,#ec4899)}
       #pixl-tour .pt-card{position:absolute;max-width:340px;width:calc(100% - 32px);background:var(--panel,#1b1b24);color:var(--ink,#f4f4f5);border:2px solid var(--stroke,#2a2a35);border-radius:14px;padding:18px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .2s ease,left .2s ease}
       #pixl-tour .pt-card.center{top:50%;left:50%;transform:translate(-50%,-50%)}
       #pixl-tour .pt-media{width:100%;border-radius:10px;margin-bottom:12px;display:block;background:#000;aspect-ratio:16/9;object-fit:cover}
@@ -611,7 +611,9 @@ const Pixl = (() => {
         card.style.left = "";
       }
     }
-    veil.onclick = close;
+    // Clicking the dimmed backdrop is inert — the tour only closes via Skip/Done,
+    // so a stray click outside the card doesn't drop the player out of onboarding.
+    veil.onclick = null;
     render();
   }
 
