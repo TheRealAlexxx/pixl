@@ -8,7 +8,7 @@ import { yswsShipsFor } from "@/lib/ysws";
 import { renderMarkdown } from "@/lib/markdown";
 import { db } from "@/lib/db";
 import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
-import { banProject, setProjectLevel } from "@/app/actions";
+import { banProject, setProjectLevel, sendBackToFirstPass } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, TypeBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export const dynamic = "force-dynamic";
 
@@ -429,12 +431,12 @@ export default async function ReviewDetail({
               <>
                 <Card className="p-5 gap-0">
                   <div className="text-sm font-semibold mb-1">
-                    {isFinalStage ? "Final pass" : canSecondPass ? "Your verdict" : "First pass"}
+                    {isFinalStage ? "Final pass" : "First pass"}
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">
-                    {canSecondPass
+                    {isFinalStage
                       ? "Approving credits pixels at the player's level rate ($4–6/hr in px) and ships it. Every verdict needs a note. You can only lower the credited hours."
-                      : "Every verdict needs a note. Approving sends this to a final reviewer before pixels are credited. You can only lower the credited hours."}
+                      : "Every verdict needs a note. Approving sends this to a final reviewer before pixels are credited , even you have final-reviewer rights, your own first look is still just a proposal. You can only lower the credited hours."}
                   </p>
                   <ReviewForm
                     projectId={p.id}
@@ -442,10 +444,49 @@ export default async function ReviewDetail({
                     demoUrl={p.demo_url}
                     claimedHours={hours}
                     defaultHours={formDefaultHours}
-                    secondPass={canSecondPass}
+                    secondPass={isFinalStage}
                     bounties={bounties}
                   />
                 </Card>
+
+                {isFinalStage && (
+                <details className="rounded-xl bg-card ring-1 ring-violet-300 dark:ring-violet-500/30 p-4 text-card-foreground">
+                  <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-violet-700 dark:text-violet-400 select-none list-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-600" />
+                    Send back to first pass
+                  </summary>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Not confident enough to confirm or overturn the first pass yourself? Send it back
+                    to the front of the queue for a fresh first-pass look instead , no verdict, no
+                    pixels credited yet. The first-pass reviewer is still paid in full unless you
+                    flag it as their mistake below.
+                  </p>
+                  <form action={sendBackToFirstPass} className="mt-3 flex flex-col gap-2">
+                    <input type="hidden" name="projectId" value={p.id} />
+                    <Textarea
+                      name="reason"
+                      required
+                      rows={2}
+                      placeholder="Why send this back (internal, not shown to the player)…"
+                      className="text-sm resize-y"
+                    />
+                    <Label className="flex items-start gap-2 text-sm py-0.5 font-normal">
+                      <Checkbox name="voidPayout" value="1" className="mt-0.5" />
+                      <span>
+                        This was the first-pass reviewer&apos;s mistake , void their pending payout
+                        instead of paying it in full
+                      </span>
+                    </Label>
+                    <PendingButton
+                      className="bg-violet-700 text-white border-transparent hover:bg-violet-800"
+                      pendingText="Sending back…"
+                      confirm="Send this back to first pass?"
+                    >
+                      Send back to first pass
+                    </PendingButton>
+                  </form>
+                </details>
+                )}
 
                 {canModerate && (
                 <details className="rounded-xl bg-card ring-1 ring-rose-300 dark:ring-rose-500/30 p-4 text-card-foreground">

@@ -202,11 +202,11 @@
         padding: 10px 12px;
         border: 1px solid var(--stroke);
         border-radius: var(--radius-sm);
-        background: rgba(236, 72, 153, 0.1);
-        color: var(--gold);
+        background: color-mix(in srgb, var(--bad) 12%, var(--panel));
+        color: var(--bad);
       }
       .note-strip.teal {
-        background: rgba(56, 189, 248, 0.12);
+        background: color-mix(in srgb, var(--teal) 12%, var(--panel));
         color: var(--teal);
       }
       .tl-list {
@@ -447,8 +447,8 @@
         background: var(--panel-deep);
       }
       .disclosure.update {
-        background: rgba(236, 72, 153, 0.06);
-        border-color: rgba(236, 72, 153, 0.35);
+        background: color-mix(in srgb, var(--gold) 6%, var(--panel-deep));
+        border-color: color-mix(in srgb, var(--gold) 35%, var(--stroke));
       }
       .disclosure-check {
         display: flex;
@@ -684,7 +684,7 @@
   </head>
   <body>
     <main class="wrap">
-      <section class="hero panel-deep">
+      <section class="hero hud deep">
         <div>
           <h1 class="page-title">PROJECTS</h1>
           <div class="page-sub">

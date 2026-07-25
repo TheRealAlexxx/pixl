@@ -19,6 +19,7 @@ const VERDICT_LABEL: Record<
   project_approved: { label: "Approved", variant: "success" },
   project_needs_changes: { label: "Needs changes", variant: "destructive" },
   review_reverted: { label: "Reverted", variant: "info" },
+  project_sent_to_first_pass: { label: "Sent to first pass", variant: "info" },
 };
 
 export function ReviewDetailTabs({

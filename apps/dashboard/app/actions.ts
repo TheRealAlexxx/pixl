@@ -304,6 +304,24 @@ async function settleFirstPassPayouts(
   }
 }
 
+// A project sent back to first pass never got a real verdict, so the pending
+// first-pass payout is void , no pixels, no dock against the reviewer. Distinct
+// from settleFirstPassPayouts, which always resolves to 'paid' (possibly cut).
+async function voidFirstPassPayouts(projectId: number): Promise<void> {
+  const { error } = await db
+    .from("review_payouts")
+    .update({
+      status: "voided",
+      paid_pixels: 0,
+      cut_pct: 100,
+      cut_reason: "sent back for a redo before a final verdict",
+      settled_at: new Date().toISOString(),
+    })
+    .eq("project_id", projectId)
+    .eq("status", "pending");
+  if (error) console.error("voidFirstPassPayouts failed", error.message);
+}
+
 async function notifyOwner(
   userId: string,
   title: string,
@@ -314,11 +332,11 @@ async function notifyOwner(
   await dmOrEmail(userId, title, body);
 }
 
-// Two-pass review. A shipped project gets a first pass from any reviewer; if
-// approved it moves to 'second_review' for a final reviewer's sign-off (unless
-// that first reviewer is themselves a final reviewer, in which case it's
-// approved outright). Pixels are credited only on final approval. "Request
-// changes" bounces it back to the maker from either stage.
+// Two-pass review. A shipped project always gets a first pass from *some*
+// reviewer , even a final reviewer's first look on a fresh 'shipped' project is
+// only a proposal, same as anyone else's. It moves to 'second_review' and needs
+// a DIFFERENT final reviewer to confirm or overturn it before pixels are
+// credited. "Request changes" bounces it back to the maker from either stage.
 export async function reviewProject(formData: FormData): Promise<void> {
   const access = await requirePerm("review");
   const by = actorName(access);
@@ -357,11 +375,11 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
-  // First pass by a non-final reviewer: EVERY verdict (approve, request changes,
-  // ban) is only a PROPOSAL. Hold the project in 'second_review' carrying what
-  // was proposed, so a final reviewer confirms or overturns it. Seniors skip
-  // this and act outright below.
-  if (stage === "shipped" && !access.canSecondPass) {
+  // First pass on a freshly-shipped project: EVERY verdict (approve, request
+  // changes, ban) is only a PROPOSAL, regardless of the reviewer's own
+  // permissions. Hold the project in 'second_review' carrying what was
+  // proposed, so a different final reviewer confirms or overturns it.
+  if (stage === "shipped") {
     const proposedKey = verdict === "ban" ? "banned" : verdict;
     const { data: project, error } = await db
       .from("projects")
@@ -392,8 +410,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
     redirect("/review");
   }
 
-  // From here, a FINAL reviewer is deciding , a senior first-passing a shipped
-  // project outright, or confirming/overturning a second_review proposal.
+  // From here the project is always in 'second_review' , a final reviewer is
+  // confirming or overturning the first-pass proposal.
   if (stage === "second_review" && !access.canSecondPass)
     redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can decide this stage.")}`);
   if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
@@ -693,6 +711,85 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   });
   if (notifyError) console.error("re-review notification failed", notifyError.message);
   revalidatePath("/", "layout");
+}
+
+// A final reviewer looking at a second_review project isn't confident enough
+// to confirm or overturn the first pass , send it back to the front of the
+// 'shipped' queue for a fresh first-pass look instead of forcing a verdict.
+// The first-pass reviewer's pending payout only gets voided if this was THEIR
+// mistake (a checkbox on the form) , otherwise it's paid out in full, same as
+// a normal confirmed first pass, since it's not fair to dock them for
+// something outside their control (flaky demo, ambiguous scope, etc).
+// Distinct from reReviewProject, which reopens a project that already got a
+// FINAL verdict.
+export async function sendBackToFirstPass(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const voidPayout = formData.get("voidPayout") === "1";
+  const back = `/review/${projectId}`;
+  if (!projectId) return;
+  if (!access.canSecondPass)
+    redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can send a project back to first pass.")}`);
+  if (!reason)
+    redirect(`${back}?error=${encodeURIComponent("Say why you're sending this back to first pass.")}`);
+
+  const { data: current } = await db
+    .from("projects")
+    .select("status, user_id, name")
+    .eq("id", projectId)
+    .single();
+  if (!current) return;
+  if (current.status !== "second_review")
+    redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting a final pass.")}`);
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({
+      status: "shipped",
+      review_note: "",
+      approved_hours: null,
+      reviewing_by: "",
+      reviewing_at: null,
+      first_pass_by: "",
+      first_pass_at: null,
+      first_pass_note: "",
+      first_pass_hours: null,
+      first_pass_verdict: null,
+    })
+    .eq("id", projectId)
+    .eq("status", "second_review")
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("sendBackToFirstPass failed", error?.message);
+    return;
+  }
+
+  if (voidPayout) await voidFirstPassPayouts(projectId);
+  else await settleFirstPassPayouts(projectId, project.name, false, false);
+
+  const claimedHours = await claimedHoursFor(projectId);
+  const { error: auditError } = await db.from("review_audits").insert({
+    project_id: projectId,
+    user_id: project.user_id,
+    reviewer: by,
+    verdict: "sent_to_first_pass",
+    note: reason,
+    audit_note: "",
+    claimed_hours: claimedHours,
+  });
+  if (auditError) console.error("send-back audit insert failed", auditError.message);
+
+  await logModAction(
+    project.user_id,
+    "project_sent_to_first_pass",
+    `${project.name}: back at the front of the queue, first-pass payout ${voidPayout ? "voided" : "paid in full"} , ${reason}`,
+    by,
+  );
+  revalidatePath("/review");
+  redirect("/review");
 }
 
 // Manual pixel correction from the Pixels tab. Deducts (or grants) whole
