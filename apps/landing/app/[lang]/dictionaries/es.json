@@ -272,6 +272,10 @@
         "description": "Un kit de cautín con puntas nuevas y flux — útil para el kit Tamagotchi y otros proyectos de hardware."
       },
       {
+        "name": "Beca de comida",
+        "description": "Una beca acumulable de $10 para comida y snacks mientras construyes."
+      },
+      {
         "name": "Licencia de Pixel Composer",
         "description": "Compositor de VFX para pixel art. Efectos y animaciones para tus sprites."
       },

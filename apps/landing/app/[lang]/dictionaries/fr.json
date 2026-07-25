@@ -272,6 +272,10 @@
         "description": "Un kit de fer à souder avec des pointes neuves et du flux — utile pour le kit Tamagotchi et d'autres montages hardware."
       },
       {
+        "name": "Bourse nourriture",
+        "description": "Une bourse cumulable de 10$ pour de la nourriture et des snacks pendant que vous codez."
+      },
+      {
         "name": "Licence Pixel Composer",
         "description": "Compositeur VFX pour le pixel art. Effets et animations pour tes sprites."
       },

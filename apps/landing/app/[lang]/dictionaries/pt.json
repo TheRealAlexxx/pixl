@@ -272,6 +272,10 @@
         "description": "Um kit de ferro de solda com pontas novas e fluxo — útil para o kit Tamagotchi e outros projetos de hardware."
       },
       {
+        "name": "Bolsa de comida",
+        "description": "Uma bolsa acumulável de $10 para comida e lanches enquanto você constrói."
+      },
+      {
         "name": "Licença do Pixel Composer",
         "description": "Compositor de VFX para pixel art. Efeitos e animações para os seus sprites."
       },

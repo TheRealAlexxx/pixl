@@ -272,6 +272,10 @@
         "description": "A soldering iron kit with fresh tips and flux — handy for the Tamagotchi kit and other hardware builds."
       },
       {
+        "name": "Food Grant",
+        "description": "A stackable $10 grant for food and snacks while you build."
+      },
+      {
         "name": "Pixel Composer License",
         "description": "VFX compositor for pixel art. Effects and animations for your sprites."
       },

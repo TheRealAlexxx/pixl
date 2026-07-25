@@ -25,6 +25,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
 | `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. Description has a small nod to sponsor Barnav ("our resident cookie muncher"). ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
 | `soldering-iron` | Soldering Iron | 4 h | 200 | $15 on Amazon (iron + tips + flux). Useful for the Tamagotchi DIY kit and other hardware builds | `/shop/soldering-iron.png` |
+| `food-grant` | Food Grant | 4 h | 200 | **$10** stackable grant, food/snacks while building | `/shop/food-grant.png` (generated pixel-art icon: pizza slice) |
 | `pixel-composer` | Pixel Composer License | 5 h | 250 | $15, no shipping, easy to send as gift | `/shop/pixel-composer.png` |
 | `pico8` | PICO-8 License | 5 h | 250 | $15, gift code, no fraud, in theme asf | `/shop/pico8.png` |
 | `pixl-poster` | PIXL Poster | 6 h | 300 | **$20** print grant (general poster or print grant at a local shop). Design by Ricky or community bounty? **//not sure** | `/shop/poster.png` |
