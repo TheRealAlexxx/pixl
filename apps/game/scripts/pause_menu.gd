@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const THEME := preload("res://themes/main_theme.tres")
+const ONBOARDING := preload("res://scripts/onboarding.gd")
 
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
@@ -122,6 +123,13 @@ func _build_ui() -> void:
 	character_button.text = "Customise Look"
 	character_button.pressed.connect(_on_character)
 	body.add_child(character_button)
+
+	# Replay the first-run arrival flow (cinematic → Pixo → naming → first Trial)
+	# on demand — runs regardless of the saved onboarding step, so no reset needed.
+	var replay_button := Button.new()
+	replay_button.text = "Replay intro"
+	replay_button.pressed.connect(_replay_onboarding)
+	body.add_child(replay_button)
 
 	var menu_button := Button.new()
 	menu_button.text = "Quit to Main Menu"
@@ -490,6 +498,16 @@ func resume_game() -> void:
 	global.pop_ui_blocker()
 	_settings_root.visible = false
 	_root.visible = false
+
+func _replay_onboarding() -> void:
+	var scene := get_tree().current_scene
+	resume_game()
+	if scene == null:
+		return
+	var flow := ONBOARDING.new()
+	scene.add_child(flow)
+	flow.finished.connect(func(): flow.queue_free())
+	flow.start()
 
 func _on_character() -> void:
 	var current := get_tree().current_scene
