@@ -11,6 +11,11 @@ var font_scale := 1.0
 var zoom_level := 1.0
 
 func _ready() -> void:
+	# HUD text is sized for a 1600x900 desktop canvas — bump the default on
+	# touch devices so it's actually readable before a saved preference (if
+	# any) overrides it below.
+	if DisplayServer.is_touchscreen_available():
+		font_scale = 1.3
 	_load()
 
 func _load() -> void:
