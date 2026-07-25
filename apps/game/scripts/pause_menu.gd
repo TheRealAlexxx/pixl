@@ -20,6 +20,14 @@ var _name_save: Button
 var _name_status: Label
 var _name_saving := false
 
+# Menus are laid out for a 1600x900 desktop canvas — scale up from center on
+# touch devices so text/buttons are actually legible on a phone screen.
+func _scale_for_touch(c: Control) -> void:
+	if not DisplayServer.is_touchscreen_available():
+		return
+	c.pivot_offset = get_viewport().get_visible_rect().size / 2.0
+	c.scale = Vector2.ONE * 1.3
+
 func _ready() -> void:
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -82,6 +90,7 @@ func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.theme = THEME
+	_scale_for_touch(_root)
 	add_child(_root)
 
 	var backdrop := ColorRect.new()
@@ -124,6 +133,7 @@ func _build_settings_ui() -> void:
 	_settings_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_root.theme = THEME
 	_settings_root.visible = false
+	_scale_for_touch(_settings_root)
 	add_child(_settings_root)
 
 	var backdrop := ColorRect.new()

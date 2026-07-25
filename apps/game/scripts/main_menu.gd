@@ -19,6 +19,11 @@ var _name_warn: Label
 var _name_save: Button
 
 func _ready() -> void:
+	# Menu is laid out for a 1600x900 desktop canvas — scale the whole thing
+	# up from its center on touch devices so it's actually legible.
+	if DisplayServer.is_touchscreen_available():
+		pivot_offset = get_viewport_rect().size / 2.0
+		scale = Vector2.ONE * 1.3
 	if NetworkManager.session_token == "":
 		get_tree().change_scene_to_file("res://scenes/login.tscn")
 		return

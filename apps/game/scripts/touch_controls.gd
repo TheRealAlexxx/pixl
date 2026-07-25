@@ -1,9 +1,10 @@
 extends CanvasLayer
-# On-screen movement joystick + interact button for touchscreens (mobile web).
-# Never shown on a desktop/mouse browser — DisplayServer.is_touchscreen_available()
-# gates the whole thing off at boot. Feeds the same "move_*"/"interact" actions
-# that keyboard input already produces, so nothing downstream needs to know a
-# touch happened at all.
+# On-screen movement joystick + interact/chat/menu buttons for touchscreens
+# (mobile web). Never shown on a desktop/mouse browser —
+# DisplayServer.is_touchscreen_available() gates the whole thing off at boot.
+# Movement/interact feed the same actions keyboard input already produces;
+# chat and menu call straight into ChatHud/PauseMenu since there's no keyboard
+# shortcut to simulate for those (Enter to chat, Esc for the pause menu).
 
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const MOVE_ACTIONS := {
@@ -15,6 +16,8 @@ var _root: Control
 var _joy_base: Control
 var _joy_knob: Control
 var _interact_btn: Control
+var _chat_btn: Control
+var _menu_btn: Control
 
 var _joy_center: Vector2 = Vector2.ZERO
 var _joy_radius: float = 55.0
@@ -34,33 +37,65 @@ func _build_ui() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 
-	_joy_base = _circle(110, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.4))
+	# Everything below scales with the same font_scale the HUD text uses
+	# (bumped to 1.3 by default on touch devices), so bumping the "text size"
+	# setting also grows the touch targets.
+	var s: float = Settings.font_scale
+	var joy_size := 170.0 * s
+	_joy_radius = joy_size / 2.0
+	var knob_size := 72.0 * s
+	var interact_size := 120.0 * s
+	var side_btn_size := 92.0 * s
+	var margin := 34.0 * s
+
+	_joy_base = _circle(joy_size, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.4))
 	_joy_base.anchor_left = 0; _joy_base.anchor_right = 0
 	_joy_base.anchor_top = 1; _joy_base.anchor_bottom = 1
-	_joy_base.offset_left = 36; _joy_base.offset_right = 36 + 110
-	_joy_base.offset_top = -166; _joy_base.offset_bottom = -166 + 110
+	_joy_base.offset_left = margin; _joy_base.offset_right = margin + joy_size
+	_joy_base.offset_top = -(margin + joy_size + 20.0); _joy_base.offset_bottom = -(margin + 20.0)
 	_root.add_child(_joy_base)
 
-	_joy_knob = _circle(50, Color(1, 1, 1, 0.5), Color(1, 1, 1, 0.7))
+	_joy_knob = _circle(knob_size, Color(1, 1, 1, 0.5), Color(1, 1, 1, 0.7))
 	_joy_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_joy_base.add_child(_joy_knob)
 	_center_knob()
 
-	_interact_btn = _circle(84, Color(1, 0.819608, 0.4, 0.28), Color(1, 0.819608, 0.4, 0.75))
+	_interact_btn = _circle(interact_size, Color(1, 0.819608, 0.4, 0.28), Color(1, 0.819608, 0.4, 0.75))
 	_interact_btn.anchor_left = 1; _interact_btn.anchor_right = 1
 	_interact_btn.anchor_top = 1; _interact_btn.anchor_bottom = 1
-	_interact_btn.offset_left = -36 - 84; _interact_btn.offset_right = -36
-	_interact_btn.offset_top = -150; _interact_btn.offset_bottom = -150 + 84
+	_interact_btn.offset_left = -margin - interact_size; _interact_btn.offset_right = -margin
+	_interact_btn.offset_top = -(margin + interact_size + 10.0); _interact_btn.offset_bottom = -(margin + 10.0)
+	_label(_interact_btn, "E", 30.0 * s)
+	_root.add_child(_interact_btn)
+
+	# Chat + menu sit on the right edge, vertically centered, well clear of
+	# both the top HUD row (wallet/chips/clock) and the interact button below.
+	_chat_btn = _circle(side_btn_size, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.4))
+	_chat_btn.anchor_left = 1; _chat_btn.anchor_right = 1
+	_chat_btn.anchor_top = 0.5; _chat_btn.anchor_bottom = 0.5
+	_chat_btn.offset_left = -margin - side_btn_size; _chat_btn.offset_right = -margin
+	_chat_btn.offset_top = -side_btn_size - 12.0; _chat_btn.offset_bottom = -12.0
+	_label(_chat_btn, "CHAT", 13.0 * s)
+	_root.add_child(_chat_btn)
+
+	_menu_btn = _circle(side_btn_size, Color(1, 1, 1, 0.14), Color(1, 1, 1, 0.4))
+	_menu_btn.anchor_left = 1; _menu_btn.anchor_right = 1
+	_menu_btn.anchor_top = 0.5; _menu_btn.anchor_bottom = 0.5
+	_menu_btn.offset_left = -margin - side_btn_size; _menu_btn.offset_right = -margin
+	_menu_btn.offset_top = 12.0; _menu_btn.offset_bottom = side_btn_size + 12.0
+	_label(_menu_btn, "MENU", 13.0 * s)
+	_root.add_child(_menu_btn)
+
+func _label(parent: Control, text: String, font_size: float) -> void:
 	var lbl := Label.new()
-	lbl.text = "E"
-	lbl.add_theme_font_size_override("font_size", 26)
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", int(round(font_size)))
 	lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.9))
 	lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_interact_btn.add_child(lbl)
-	_root.add_child(_interact_btn)
+	parent.add_child(lbl)
 
 func _circle(size: float, fill: Color, ring: Color) -> Control:
 	var c := Control.new()
@@ -101,15 +136,24 @@ func _input(event: InputEvent) -> void:
 		_update_joystick(event.position)
 		get_viewport().set_input_as_handled()
 
+func _hits(c: Control, pos: Vector2, slop: float = 1.0) -> bool:
+	return pos.distance_to(c.global_position + c.size / 2.0) <= c.size.x / 2.0 * slop
+
 func _on_touch_down(index: int, pos: Vector2) -> void:
-	if _joy_touch_index == -1 and pos.distance_to(_joy_base.global_position + _joy_base.size / 2.0) <= _joy_radius * 1.6:
+	if _joy_touch_index == -1 and _hits(_joy_base, pos, 1.6):
 		_joy_touch_index = index
 		_joy_center = _joy_base.global_position + _joy_base.size / 2.0
 		_update_joystick(pos)
 		get_viewport().set_input_as_handled()
-	elif _interact_touch_index == -1 and pos.distance_to(_interact_btn.global_position + _interact_btn.size / 2.0) <= _interact_btn.size.x / 2.0 * 1.2:
+	elif _interact_touch_index == -1 and _hits(_interact_btn, pos, 1.2):
 		_interact_touch_index = index
 		_press_interact()
+		get_viewport().set_input_as_handled()
+	elif _hits(_chat_btn, pos, 1.2):
+		ChatHud._open_input()
+		get_viewport().set_input_as_handled()
+	elif _hits(_menu_btn, pos, 1.2):
+		PauseMenu.pause_game()
 		get_viewport().set_input_as_handled()
 
 func _on_touch_up(index: int) -> void:

@@ -21,6 +21,8 @@
      headings, a light thread of Pixl (gold accents + the wordmark). Normal
      docs layout, not the chunky game/dash panels. */
   body { overflow-y: auto; }
+  /* Docs' own accent in light mode — pink instead of the dash's amber gold. */
+  :root[data-theme="light"] { --gold: #db2777; --gold-soft: #ec4899; }
   .docs { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 100vh; align-items: start; }
 
   .docs-nav { position: sticky; top: 0; height: 100vh; overflow-y: auto;
