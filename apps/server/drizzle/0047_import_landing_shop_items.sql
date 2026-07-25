@@ -13,7 +13,7 @@
 --   DELETE FROM shop_items WHERE created_by = 'landing-sync';
 
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
-VALUES ('Signed Org Photo', 'A signed photo of one of the org members, shipped to your door.', 100, 'https://pixl.rsvp/shop/signed-photo.svg', '[]'::jsonb, true, 0, 'landing-sync', 0);
+VALUES ('Signed Org Photo', 'A signed photo of one of the org members, shipped to your door.', 100, 'https://pixl.rsvp/shop/signed-photo.png', '[]'::jsonb, true, 0, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
 VALUES ('Game Assets Grant', 'A stackable $10 grant to buy tilesets, sprites, music and sounds for your game.', 150, 'https://pixl.rsvp/shop/assets-grant.png', '[]'::jsonb, true, 1, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
@@ -23,7 +23,7 @@ VALUES ('AI Credits', 'A $10 grant for AI credits for the provider of your choic
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
 VALUES ('Music Grant', 'A stackable $10 grant to spend on instruments, plugins, samples or any music gear you want. Don''t use it for subscription to spotify/apple music etc', 150, 'https://pixl.rsvp/shop/music-grant.png', '[]'::jsonb, true, 4, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
-VALUES ('Random Desk Object', 'A random object from our desks: a PCB, a sticker stash, anything. Comes with a signed letter. Only a few in stock!', 200, 'https://pixl.rsvp/shop/mystery-box.svg', '[]'::jsonb, true, 5, 'landing-sync', 0);
+VALUES ('Random Desk Object', 'A random object from our desks: a PCB, a sticker stash, anything. Comes with a signed letter. Only a few in stock!', 200, 'https://pixl.rsvp/shop/mystery-box.png', '[]'::jsonb, true, 5, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
 VALUES ('Art Supply Grant', 'A stackable $10 grant to spend on paints, pens, canvases or any art supplies you want.', 200, 'https://pixl.rsvp/shop/art-grant.png', '[]'::jsonb, true, 6, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)

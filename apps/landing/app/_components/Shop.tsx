@@ -13,7 +13,7 @@ const ITEM_IMAGES = [
   "/shop/hardware-grant.png",
   "/shop/domain-grant.png",
   "/shop/hosting-grant.png",
-  "/shop/mystery-box.svg",
+  "/shop/mystery-box.png",
   "/shop/art-grant.png",
   "/shop/cookie-cutter.png",
   "/shop/pixel-composer.png",

@@ -20,7 +20,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `hardware-grant` | Hardware Grant | 3.5 h | 175 | **$10** stackable grant, any hardware for your projects | `/shop/hardware-grant.png` (real "$10 Hardware Grant Card" graphic w/ JLCPCB, Raspberry Pi, Micro Center, AliExpress, Creality, Bambu Lab, Adafruit) |
 | `domain-grant` | Domain Grant | 3.5 h | 175 | **$12** stackable grant, registering a domain. Already exists as a Sidequest too | `/shop/domain-grant.png` (generated pixel-art icon: globe) |
 | `hosting-grant` | Hosting Grant | 3.5 h | 175 | **$10** stackable grant, hosting (Railway, any cloud platform) | `/shop/hosting-grant.png` (generated pixel-art icon: cloud + server) |
-| `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.svg` (placeholder) |
+| `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.png` (generated pixel-art icon: ribboned mystery crate) |
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
 | `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. Description has a small nod to sponsor Barnav ("our resident cookie muncher"). ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
 | `pixel-composer` | Pixel Composer License | 5 h | 250 | $15, no shipping, easy to send as gift | `/shop/pixel-composer.png` |
@@ -96,7 +96,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 
 ## Placeholder / pending images
 
-- `mystery-box.svg` is a quick pixel-art SVG placeholder — swap for a real product photo when available. `signed-photo.png` is a real image now (fanned polaroid composite).
+- All images are now in place — no more SVG placeholders. `signed-photo.png` is a fanned polaroid composite (the 3 orgs' Slack pfps); `mystery-box.png`, `hardware-grant.png`, `apple-dev.png`, `steam-license.png` are real/generated images swapped in after the initial batch.
 - All other images (including the 9 new grant/license icons — `hardware-grant`, `domain-grant`, `hosting-grant`, `cpu-grant`, `gpu-grant`, `ram-grant`, `google-play`, `steam-license`, `apple-dev` — and the real photos for `pencil-pro` and `ipad-air-m4`) are in place, no longer pending.
 
 ## Where to edit items
