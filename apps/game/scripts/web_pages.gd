@@ -38,18 +38,29 @@ func open(path: String) -> void:
 		OS.shell_open(url)
 
 func _build_url(path: String) -> String:
+	# path may carry its own query and/or fragment, e.g.
+	# "projects?from=game&trial=101#foo". Split both off so the base stays a clean
+	# path segment and the caller's query is merged after token/embed (rather than
+	# jammed into the path before the trailing slash).
 	var base := path
 	var fragment := ""
-	var hash_pos := path.find("#")
+	var query := ""
+	var hash_pos := base.find("#")
 	if hash_pos != -1:
-		base = path.substr(0, hash_pos)
-		fragment = path.substr(hash_pos)
+		fragment = base.substr(hash_pos)
+		base = base.substr(0, hash_pos)
+	var q_pos := base.find("?")
+	if q_pos != -1:
+		query = base.substr(q_pos + 1)
+		base = base.substr(0, q_pos)
 	var url := _web_base() + "/" + base + "/"
 	var sep := "?"
 	if NetworkManager.session_token != "":
 		url += sep + "token=" + NetworkManager.session_token.uri_encode()
 		sep = "&"
 	url += sep + "embed=1"
+	if query != "":
+		url += "&" + query
 	url += fragment
 	return url
 

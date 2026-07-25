@@ -71,16 +71,12 @@ const PANELS := [
 
 const FONT := preload("res://assets/fonts/PixelifySans.ttf")
 const TYPE_CPS := 42.0
-# Auto-play dwell after a non-final caption line finishes typing, before the
-# next line. The final line of a panel uses the panel's own longer "hold".
-const LINE_DWELL := 1.1
 
 var _panel := -1
 var _line := 0
 var _lines: PackedStringArray = PackedStringArray()
 var _typing := false
 var _type_len := 0
-var _wait_left := 0.0
 var _done := false
 var _standalone := false
 
@@ -216,7 +212,6 @@ func next_panel() -> void:
 	_title.visible = p["texture"] == null  # placeholder only until art exists
 	_lines = PackedStringArray(p["lines"])
 	_line = -1
-	_wait_left = 0.0
 	# Fade the tint plate in for this beat.
 	_bg.color = Color(p["tint"], 1.0).darkened(0.86)
 	var fade := create_tween()
@@ -232,24 +227,16 @@ func _next_line() -> void:
 	_type_len = _caption.text.length()
 	_caption.visible_characters = 0
 	_typing = _type_len > 0
-	_wait_left = 0.0
 
-# Dwell to wait after the current line finishes typing before auto-advancing:
-# the panel's own hold on the last line, a short line dwell otherwise.
-func _dwell_for_current() -> float:
-	return float(PANELS[_panel]["hold"]) if _line >= _lines.size() - 1 else LINE_DWELL
-
-# [E]/click: snap a typing line to full (then it still auto-continues or a
-# second press moves on); otherwise advance the line/panel immediately.
+# [E]/click: snap a still-typing line to full first; otherwise advance to the
+# next line (or panel). Player-driven — nothing auto-advances.
 func _advance() -> void:
 	if _done:
 		return
 	if _typing:
 		_typing = false
 		_caption.visible_characters = _type_len
-		_wait_left = _dwell_for_current()
 		return
-	_wait_left = 0.0
 	if _line >= _lines.size() - 1:
 		next_panel()
 	else:
@@ -267,23 +254,14 @@ func _finish() -> void:
 	finished.emit()
 
 func _process(delta: float) -> void:
-	if _done:
+	# Only drives the typewriter reveal; advancing a finished line waits for the
+	# player ([E]/click/space) — see _advance / _unhandled_input.
+	if _done or not _typing:
 		return
-	if _typing:
-		_caption.visible_characters = mini(
-			_type_len, _caption.visible_characters + int(ceil(TYPE_CPS * delta)))
-		if _caption.visible_characters >= _type_len:
-			_typing = false
-			_wait_left = _dwell_for_current()
-		return
-	# Line finished typing — run down the dwell, then advance line or panel.
-	if _wait_left > 0.0:
-		_wait_left -= delta
-		if _wait_left <= 0.0:
-			if _line >= _lines.size() - 1:
-				next_panel()
-			else:
-				_next_line()
+	_caption.visible_characters = mini(
+		_type_len, _caption.visible_characters + int(ceil(TYPE_CPS * delta)))
+	if _caption.visible_characters >= _type_len:
+		_typing = false
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _done:

@@ -555,14 +555,27 @@ const Pixl = (() => {
   // shared counter is authoritative so the tour resumes across the game↔dash
   // hop and doesn't replay once finished on another device. Falls back to the
   // per-device localStorage guard when there's no account/server to ask.
+  // Index the tour should resume at when the player was handed off from the
+  // in-game arrival ("Open it in the Terminal"): the Builder-Terminal step, so
+  // we continue where Pixo left off instead of replaying the welcome + lore he
+  // already covered. Falls back to 0 if that step is ever renamed/removed.
+  function handoffStartIndex(steps) {
+    const i = steps.findIndex((s) => s.target === "#new-btn");
+    return i >= 0 ? i : 0;
+  }
+
   async function maybeOnboard(steps = ONBOARDING_STEPS) {
     if (!token) return; // signed-out (public docs) never auto-runs
+    // The in-game hand-off arrives as ?from=game (see web_pages.gd) — trust it
+    // even before the step=1 POST has landed, so we never replay the intro.
+    const fromGame = new URLSearchParams(location.search).get("from") === "game";
     const ob = await getOnboarding();
     if (ob && ob.ok) {
       if (ob.done) { markOnboarded(); return; }
-      // step 0 (arrived here first) or 1 (handed off from the in-game guide) —
-      // either way the dashboard tour is what's pending. Sync completion back.
-      setTimeout(() => runTour(steps, 0, true), 700);
+      // step 1 = handed off from the in-game arrival → continue from the Builder
+      // Terminal. step 0 = landed on the dashboard first → full tour from the top.
+      const startAt = (fromGame || ob.step >= 1) ? handoffStartIndex(steps) : 0;
+      setTimeout(() => runTour(steps, startAt, true), 700);
       return;
     }
     // Server unreachable / pre-migration — fall back to the local guard.

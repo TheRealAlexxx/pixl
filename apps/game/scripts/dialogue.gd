@@ -48,8 +48,8 @@ func _build_ui() -> void:
 	panel.anchor_right = 0.5
 	panel.anchor_top = 1.0
 	panel.anchor_bottom = 1.0
-	panel.offset_left = -340
-	panel.offset_right = 340
+	panel.offset_left = -520
+	panel.offset_right = 520
 	panel.offset_top = -28
 	panel.offset_bottom = -28
 	panel.custom_minimum_size = Vector2(0, 120)
