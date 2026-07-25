@@ -220,6 +220,7 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
   transition:color .13s ease,border-color .13s ease,background .13s ease;
 }
 .theme-toggle:hover,.rail-btn:hover{color:var(--gold);border-color:var(--gold)}
+.theme-toggle svg,.rail-btn svg{width:16px;height:16px;image-rendering:pixelated}
 
 /* ══════════════════════════ components ══════════════════════════ */
 .btn{

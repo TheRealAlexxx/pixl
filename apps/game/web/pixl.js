@@ -11,7 +11,7 @@ const Pixl = (() => {
   function syncThemeToggles() {
     const light = document.documentElement.dataset.theme === "light";
     document.querySelectorAll(".theme-toggle").forEach((btn) => {
-      btn.textContent = light ? "☾" : "☀";
+      btn.innerHTML = light ? MOON_ICON : SUN_ICON;
       btn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
       btn.onclick = toggleTheme;
     });
@@ -151,6 +151,11 @@ const Pixl = (() => {
   };
   // Teal energy shard — the Restoration Energy motif, reused in the top rail.
   const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
+  // Blocky pixel-art glyphs for the top-rail controls (help + theme toggle),
+  // matching the sidebar nav icons instead of leaving these as raw text glyphs.
+  const HELP_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="11" y="4" width="2" height="2"/><rect x="11" y="6" width="2" height="2"/><rect x="9" y="8" width="2" height="2"/><rect x="7" y="9" width="2" height="3"/><rect x="7" y="13" width="2" height="2"/></svg>`;
+  const SUN_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="4" height="4"/><rect x="7" y="1" width="2" height="2"/><rect x="7" y="13" width="2" height="2"/><rect x="1" y="7" width="2" height="2"/><rect x="13" y="7" width="2" height="2"/><rect x="3" y="3" width="2" height="2"/><rect x="11" y="3" width="2" height="2"/><rect x="3" y="11" width="2" height="2"/><rect x="11" y="11" width="2" height="2"/></svg>`;
+  const MOON_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="3" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="2" y="6" width="5" height="1"/><rect x="2" y="7" width="5" height="1"/><rect x="2" y="8" width="5" height="1"/><rect x="2" y="9" width="6" height="1"/><rect x="2" y="10" width="8" height="1"/><rect x="3" y="11" width="10" height="1"/><rect x="4" y="12" width="8" height="1"/><rect x="5" y="13" width="6" height="1"/></svg>`;
 
   function mountTopbar(active) {
     const nav = PAGES.map(([slug, label]) =>
@@ -170,7 +175,7 @@ const Pixl = (() => {
             <span class="px">—</span>
             <span class="lv"></span>
           </div>
-          <button class="rail-btn" id="pixl-help-btn" type="button" title="New here? Replay the tour" aria-label="Replay the tour">?</button>
+          <button class="rail-btn" id="pixl-help-btn" type="button" title="New here? Replay the tour" aria-label="Replay the tour">${HELP_ICON}</button>
           ${themeBtn}`
       : `<a class="btn" href="${GAME}">ENTER THE GAME</a>${themeBtn}`;
     const foot = token
