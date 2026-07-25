@@ -1,7 +1,10 @@
 extends Node
 
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior"]
-const WEB_BASE_URL := "https://play.pixl.rsvp"
+# Companion web pages (shop/projects/docs/…) are served at the site root. Open
+# them on whatever origin the game is running on, canonicalizing the play.*
+# subdomain onto the apex so links never bounce users off to play.pixl.rsvp.
+const CANONICAL_BASE := "https://pixl.rsvp"
 
 const _open_js := """(function(u){
 	if (window.open(u, 'pixl_web')) return;
@@ -41,7 +44,7 @@ func _build_url(path: String) -> String:
 	if hash_pos != -1:
 		base = path.substr(0, hash_pos)
 		fragment = path.substr(hash_pos)
-	var url := WEB_BASE_URL + "/" + base + "/"
+	var url := _web_base() + "/" + base + "/"
 	var sep := "?"
 	if NetworkManager.session_token != "":
 		url += sep + "token=" + NetworkManager.session_token.uri_encode()
@@ -49,6 +52,16 @@ func _build_url(path: String) -> String:
 	url += sep + "embed=1"
 	url += fragment
 	return url
+
+# Base origin for the companion pages. In a web build this is the origin the
+# game is loaded from (so pixl.rsvp/play → pixl.rsvp), with the play.* subdomain
+# folded onto the apex. Native builds fall back to the canonical site.
+func _web_base() -> String:
+	if OS.has_feature("web"):
+		var origin = JavaScriptBridge.eval("location.origin", true)
+		if typeof(origin) == TYPE_STRING and String(origin).begins_with("http"):
+			return String(origin).replace("//play.pixl.rsvp", "//pixl.rsvp")
+	return CANONICAL_BASE
 
 func _in_gameplay() -> bool:
 	var cur := get_tree().current_scene

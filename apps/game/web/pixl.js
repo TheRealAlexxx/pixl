@@ -141,29 +141,49 @@ const Pixl = (() => {
     ["report", "REPORT"],
   ];
 
+  // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
+  const ICONS = {
+    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 3h5c.6 0 1 .3 1 .6V14c0-.3-.4-.6-1-.6H2zM14 3H9c-.6 0-1 .3-1 .6V14c0-.3.4-.6 1-.6h5z"/></svg>`,
+    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 5h10l-1 9H4z"/><path d="M6 3h4v1H6z"/><rect x="6" y="4" width="1" height="1.6"/><rect x="9" y="4" width="1" height="1.6"/></svg>`,
+    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
+    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
+    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,
+  };
+  // Teal energy shard — the Restoration Energy motif, reused in the top rail.
+  const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
+
   function mountTopbar(active) {
     const nav = PAGES.map(([slug, label]) =>
-      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${label}</a>`,
+      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${ICONS[slug] || ""}<span>${label}</span></a>`,
     ).join("");
     // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
-    // topbar: no wallet, no tour replay, and the button invites them into the game.
+    // rail: no wallet, no tour replay, and the CTA invites them into the game.
     const themeBtn = `<button class="theme-toggle" id="pixl-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>`;
-    const right = token
-      ? `${themeBtn}<button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
-            style="background:none;border:1px solid var(--stroke);color:var(--gold);width:32px;height:32px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0">?</button>
+    const rail = token
+      ? `<div class="rest-chip" id="pixl-rest" title="Core Integrity — the community's Restoration progress" hidden>
+            <span class="slot">${RE_ICON}</span>
+            <span class="re">—</span>
+            <span class="rl">CORE</span>
+          </div>
           <div class="wallet-chip" id="pixl-wallet" title="Your pixels">
-            <img src="/img/pixel.png" alt="px">
+            <span class="slot"><img src="/img/pixel.png" alt="px"></span>
             <span class="px">—</span>
             <span class="lv"></span>
           </div>
-          <a class="btn dark" href="${GAME}">BACK TO GAME</a>`
-      : `${themeBtn}<a class="btn" href="${GAME}">ENTER THE GAME</a>`;
+          <button class="rail-btn" id="pixl-help-btn" type="button" title="New here? Replay the tour" aria-label="Replay the tour">?</button>
+          ${themeBtn}`
+      : `<a class="btn" href="${GAME}">ENTER THE GAME</a>${themeBtn}`;
+    const foot = token
+      ? `<a class="btn dark" href="${GAME}">◄ BACK TO GAME</a>`
+      : `<a class="btn" href="${GAME}">ENTER GAME</a>`;
+    document.body.classList.add("has-sidebar");
     document.body.insertAdjacentHTML("afterbegin", `
-      <header class="topbar">
-        <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
+      <aside class="sidebar">
+        <a class="sb-logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PI<span>XL</span></a>
         <nav class="nav">${nav}</nav>
-        <div class="topbar-right">${right}</div>
-      </header>`);
+        <div class="sb-foot">${foot}</div>
+      </aside>
+      <div class="toprail">${rail}</div>`);
     const help = document.getElementById("pixl-help-btn");
     if (help) help.onclick = () => runTour();
     syncThemeToggles();
@@ -173,6 +193,8 @@ const Pixl = (() => {
 
   async function loadWallet() {
     const el = document.getElementById("pixl-wallet");
+    // Kick off the collective Core Integrity chip alongside the personal wallet.
+    loadRestoration();
     if (!el) return null;
     try {
       const w = await api("/api/profile/wallet");
@@ -180,6 +202,26 @@ const Pixl = (() => {
       el.querySelector(".px").textContent = Math.round(w.pixels).toLocaleString();
       el.querySelector(".lv").textContent = `LVL ${w.level} · ${w.pxPerHour} px/h`;
       return w;
+    } catch {
+      return null;
+    }
+  }
+
+  // Fills the teal "Core Integrity" chip from the live community goal, if one is
+  // running. No active goal → the chip stays hidden (never shows fake data).
+  async function loadRestoration() {
+    const el = document.getElementById("pixl-rest");
+    if (!el) return null;
+    try {
+      const d = await api("/api/events/active");
+      const goal = (d.events || []).find(
+        (e) => e.type === "community_goal" && Number(e.target) > 0,
+      );
+      if (!goal) return null;
+      const pct = Math.max(0, Math.min(100, Math.round((goal.progress / goal.target) * 100)));
+      el.querySelector(".re").textContent = pct + "%";
+      el.removeAttribute("hidden");
+      return goal;
     } catch {
       return null;
     }
@@ -588,5 +630,5 @@ const Pixl = (() => {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
+  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
 })();

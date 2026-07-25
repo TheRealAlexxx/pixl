@@ -7,166 +7,208 @@
     <link rel="icon" href="/index.icon.png" />
     <link rel="stylesheet" href="/pixl.css" />
     <style>
+      /* ── shop hero: a pixel-HUD outpost window with the keeper in an
+         inventory-slot frame (re-skinned off Beest's confidence, none of its
+         parchment). ── */
       .shop-hero {
-        margin-top: 8px;
-        padding: 26px 28px 30px;
-        position: relative;
-        overflow: hidden;
-      }
-      .shop-hero .awning {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 22px;
-        background: repeating-linear-gradient(
-          90deg,
-          var(--gold) 0 34px,
-          #f4e3c2 34px 68px
-        );
-        border-bottom: 1px solid var(--stroke);
+        margin-top: 4px;
+        padding: 22px 26px 24px;
       }
       .shop-hero-inner {
         display: flex;
-        gap: 26px;
-        align-items: flex-end;
+        gap: 24px;
+        align-items: center;
         flex-wrap: wrap;
-        padding-top: 16px;
       }
-      .keeper-box {
+      .keeper-slot {
+        width: 96px;
+        height: 96px;
+        flex-shrink: 0;
         display: flex;
         align-items: flex-end;
-        gap: 14px;
+        justify-content: center;
+        background: var(--panel-deep);
+        border: 1px solid var(--stroke);
+        border-radius: 3px;
+        overflow: hidden;
+        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
       }
       .keeper {
         width: 32px;
         height: 32px;
         background: url("/img/gabin_char.png") no-repeat 0 -64px;
-        transform: scale(4);
+        transform: scale(3);
         transform-origin: bottom center;
         image-rendering: pixelated;
         animation: keeper-bob 1.6s steps(2) infinite;
       }
       @keyframes keeper-bob {
-        0%,
-        100% {
-          transform: scale(4) translateY(0);
-        }
-        50% {
-          transform: scale(4) translateY(-0.5px);
-        }
-      }
-      .keeper-wrap {
-        width: 128px;
-        height: 128px;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        overflow: visible;
+        0%, 100% { transform: scale(3) translateY(0); }
+        50% { transform: scale(3) translateY(-0.6px); }
       }
       .bubble {
         position: relative;
-        background: #f4ead4;
-        color: #241710;
-        border: 1px solid var(--stroke);
-        border-radius: var(--radius);
-        box-shadow: var(--drop);
-        padding: 12px 16px 10px;
-        font-size: 15px;
-        max-width: 330px;
-        line-height: 1.55;
-        margin-bottom: 34px;
+        align-self: flex-start;
+        margin-top: 10px;
+        background: var(--panel-deep);
+        color: var(--ink);
+        border: 1px solid var(--teal);
+        border-radius: 3px;
+        padding: 11px 15px;
+        font-family: var(--pixel);
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        max-width: 340px;
+        line-height: 1.5;
       }
       .bubble::after {
         content: "";
         position: absolute;
-        left: -13px;
-        bottom: 12px;
-        width: 10px;
-        height: 10px;
-        background: #f4ead4;
-        border-left: 1px solid var(--stroke);
-        border-bottom: 1px solid var(--stroke);
+        left: -6px;
+        top: 16px;
+        width: 9px;
+        height: 9px;
+        background: var(--panel-deep);
+        border-left: 1px solid var(--teal);
+        border-bottom: 1px solid var(--teal);
         transform: rotate(45deg);
       }
       .shop-title-box {
         margin-left: auto;
         text-align: right;
       }
+      .open-sign {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 10px;
+        font-family: var(--pixel);
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: var(--teal);
+      }
+      .open-sign .dot { animation: open-blink 1.4s steps(2) infinite; }
+      @keyframes open-blink { 50% { opacity: 0.3; } }
+
+      /* ── toolbar + facet chips ── */
       .toolbar {
         display: flex;
-        gap: 12px;
-        margin: 26px 0 18px;
+        gap: 10px;
+        margin: 22px 0 14px;
         flex-wrap: wrap;
       }
       .toolbar input.field {
         flex: 1;
         min-width: 200px;
       }
+      .tiers {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .tier {
+        cursor: pointer;
+        font-family: var(--pixel);
+        font-size: 12px;
+        letter-spacing: 1px;
+        padding: 6px 12px;
+        color: var(--faint);
+        background: var(--panel);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        transition: color 0.13s ease, border-color 0.13s ease, background 0.13s ease;
+      }
+      .tier:hover { color: var(--ink); border-color: var(--faint); }
+      .tier.on {
+        color: var(--btn-ink);
+        background: var(--gold);
+        border-color: transparent;
+      }
+
       .limited-banner {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
         flex-wrap: wrap;
-        padding: 12px 18px 10px;
+        padding: 11px 16px;
         margin-bottom: 18px;
-        background: rgba(236, 72, 153, 0.1);
-        border: 1px solid var(--stroke);
+        background: color-mix(in srgb, var(--gold) 12%, var(--panel));
+        border: 1px solid var(--gold);
         border-radius: var(--radius);
-        box-shadow: var(--drop);
         color: var(--ink);
-        font-size: 15px;
+        font-family: var(--pixel);
+        font-size: 13px;
+        letter-spacing: 1px;
       }
-      .limited-banner .tick {
+      .limited-banner .tick { color: var(--gold); }
+
+      /* ── section headers (two-currency split) ── */
+      .shop-section-h {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 8px 0 16px;
+      }
+      .shop-section-h .t {
+        font-family: var(--pixel);
+        font-size: 18px;
+        letter-spacing: 1px;
         color: var(--gold);
-        font-weight: 700;
       }
+      .shop-section-h.rest .t { color: var(--teal); }
+      .shop-section-h .s {
+        font-size: 12.5px;
+        color: var(--faint);
+      }
+
+      /* ── item cards ── */
       .item-card {
         display: flex;
         flex-direction: column;
         gap: 10px;
-        padding: 14px 14px 16px;
+        padding: 13px 13px 15px;
         position: relative;
       }
       .item-card.limited {
         border-color: var(--gold);
-        box-shadow: var(--drop), 0 0 0 1px var(--gold);
+        box-shadow: 0 0 0 1px var(--gold), var(--drop);
       }
       .item-img {
-        height: 150px;
+        height: 148px;
         display: flex;
         align-items: center;
         justify-content: center;
         background: var(--panel-deep);
         border: 1px solid var(--stroke);
-        border-radius: var(--radius-sm);
+        border-radius: 3px;
         overflow: hidden;
+        image-rendering: pixelated;
       }
       .item-img .ph {
-        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
-        opacity: 0.9;
+        width: 40px;
+        height: 40px;
+        opacity: 0.5;
+        background: var(--stroke);
+        clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
       }
-      .item-img img {
-        max-width: 100%;
-        max-height: 100%;
-      }
-      .item-img .ph {
-        font-size: 44px;
-      }
+      .item-img img { max-width: 100%; max-height: 100%; }
       .item-name {
-        font-size: 19px;
+        font-family: var(--pixel);
+        font-size: 17px;
+        letter-spacing: 0.5px;
         color: var(--ink);
-        letter-spacing: 0.3px;
       }
       .item-desc {
-        font-size: 14.5px;
+        font-size: 14px;
         color: var(--dim);
-        line-height: 1.55;
+        line-height: 1.5;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        min-height: 2.8em;
+        min-height: 2.7em;
       }
       .item-foot {
         display: flex;
@@ -175,49 +217,31 @@
         margin-top: auto;
       }
       .price {
-        color: var(--teal);
-        font-size: 19px;
+        color: var(--gold);
+        font-family: var(--pixel);
+        font-size: 17px;
         display: flex;
         align-items: center;
         gap: 7px;
       }
-      .price img {
-        width: 17px;
-        height: 17px;
-      }
-      .price.cant {
-        color: var(--bad);
-      }
+      .price img { width: 16px; height: 16px; }
+      .price.cant { color: var(--bad); }
       .limited-tag {
         position: absolute;
-        top: -12px;
-        right: 10px;
+        top: -9px;
+        right: 9px;
         background: var(--gold);
         color: var(--btn-ink);
-        border: 1px solid var(--stroke);
-        border-radius: 6px;
-        font-size: 11px;
+        border-radius: 3px;
+        font-family: var(--pixel);
+        font-size: 10px;
         letter-spacing: 1px;
-        padding: 4px 8px 3px;
+        padding: 3px 7px;
         animation: limited-blink 1s steps(2) infinite;
       }
-      @keyframes limited-blink {
-        50% {
-          background: var(--gold-soft);
-        }
-      }
-      .afford-dot {
-        width: 10px;
-        height: 10px;
-        border: 1px solid var(--stroke);
-        border-radius: 50%;
-      }
-      .afford-dot.yes {
-        background: var(--good);
-      }
-      .afford-dot.no {
-        background: var(--bad);
-      }
+      @keyframes limited-blink { 50% { background: var(--gold-soft); } }
+
+      /* ── detail modal ── */
       #detail-img {
         width: 240px;
         height: 240px;
@@ -227,18 +251,12 @@
         justify-content: center;
         background: var(--panel-deep);
         border: 1px solid var(--stroke);
-        border-radius: var(--radius);
+        border-radius: 3px;
         overflow: hidden;
+        image-rendering: pixelated;
       }
-      #detail-img img {
-        max-width: 100%;
-        max-height: 100%;
-      }
-      .detail-row {
-        display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
-      }
+      #detail-img img { max-width: 100%; max-height: 100%; }
+      .detail-row { display: flex; gap: 24px; flex-wrap: wrap; }
       .detail-info {
         flex: 1;
         min-width: 240px;
@@ -247,7 +265,9 @@
         gap: 13px;
       }
       #detail-name {
-        font-size: 27px;
+        font-family: var(--pixel);
+        font-size: 26px;
+        letter-spacing: 0.5px;
         color: var(--gold);
       }
       #detail-desc {
@@ -256,30 +276,16 @@
         color: var(--ink);
         white-space: pre-wrap;
       }
-      .options-row {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .opt-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
+      .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .opt-group { display: flex; flex-direction: column; gap: 6px; }
       .opt-group-name {
-        font-size: 12px;
+        font-family: var(--pixel);
+        font-size: 11px;
         letter-spacing: 1px;
         color: var(--dim);
       }
-      .opt-choices {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .opt-choice {
-        cursor: pointer;
-        user-select: none;
-      }
+      .opt-choices { display: flex; gap: 8px; flex-wrap: wrap; }
+      .opt-choice { cursor: pointer; user-select: none; }
       .opt-choice.on {
         color: var(--btn-ink);
         background: var(--gold);
@@ -288,97 +294,85 @@
       .afford-bar {
         height: 14px;
         border: 1px solid var(--stroke);
-        border-radius: 999px;
+        border-radius: 2px;
         background: var(--panel-deep);
         overflow: hidden;
       }
       .afford-bar > div {
         height: 100%;
-        background: var(--gold);
+        background: repeating-linear-gradient(90deg, var(--gold) 0 7px, var(--gold-soft) 7px 14px);
         transition: width 0.3s ease;
       }
-      .trophy-head {
-        font-size: 20px;
-        color: var(--gold);
-        letter-spacing: 2px;
-        margin: 6px 0 16px;
-      }
+
+      /* ── trophies / restoration rewards ── */
       .trophy-card {
         display: flex;
         flex-direction: column;
         gap: 10px;
         position: relative;
         overflow: hidden;
-        padding: 14px 14px 16px;
+        padding: 13px 13px 15px;
       }
-      .trophy-card.locked {
-        filter: saturate(0.55) brightness(0.82);
-      }
+      .trophy-card.locked { filter: saturate(0.5) brightness(0.8); }
       .trophy-card.claimable {
-        border-color: var(--gold);
-        box-shadow: var(--drop), 0 0 0 1px var(--gold);
-        animation: trophy-glow 1.4s ease infinite;
+        border-color: var(--teal);
+        box-shadow: 0 0 0 1px var(--teal), var(--drop);
+        animation: trophy-glow 1.6s ease infinite;
       }
       @keyframes trophy-glow {
-        50% {
-          box-shadow: var(--drop), 0 0 0 1px var(--gold-soft), 0 0 14px rgba(236, 72, 153, 0.35);
-        }
+        50% { box-shadow: 0 0 0 1px var(--teal-hover), 0 0 16px color-mix(in srgb, var(--teal) 40%, transparent), var(--drop); }
       }
       .trophy-card.claimed {
         border-color: var(--good);
-        box-shadow: var(--drop), 0 0 0 1px var(--good);
+        box-shadow: 0 0 0 1px var(--good), var(--drop);
       }
-      .trophy-img {
-        background: var(--panel-deep);
-      }
+      .trophy-img { background: var(--panel-deep); }
       .trophy-tag {
         position: absolute;
-        top: -10px;
-        right: 10px;
-        font-size: 11px;
+        top: -9px;
+        right: 9px;
+        font-family: var(--pixel);
+        font-size: 10px;
         letter-spacing: 1px;
-        padding: 4px 8px 3px;
-        border: 1px solid var(--stroke);
-        border-radius: 6px;
+        padding: 3px 7px;
+        border-radius: 3px;
         background: var(--panel-deep);
+        border: 1px solid var(--stroke);
         color: var(--dim);
       }
       .trophy-tag.ready {
-        background: var(--gold);
+        background: var(--teal);
         color: var(--btn-ink);
+        border-color: transparent;
         animation: limited-blink 1s steps(2) infinite;
       }
       .trophy-tag.claimed {
         background: var(--good);
-        color: var(--btn-ink);
+        color: #fff;
+        border-color: transparent;
       }
-      .trophy-foot {
-        margin-top: auto;
-      }
+      .trophy-foot { margin-top: auto; }
       .trophy-progress {
         height: 12px;
         border: 1px solid var(--stroke);
-        border-radius: 999px;
+        border-radius: 2px;
         background: var(--panel-deep);
         overflow: hidden;
       }
       .trophy-progress > div {
         height: 100%;
-        background: var(--gold);
+        background: repeating-linear-gradient(90deg, var(--teal) 0 6px, var(--teal-hover) 6px 12px);
         transition: width 0.5s ease;
       }
       .trophy-need {
-        font-size: 14px;
+        font-size: 13.5px;
         color: var(--faint);
         margin-top: 6px;
       }
-      .trophy-need.earned {
-        color: var(--good);
-      }
-      .trophy-claim {
-        width: 100%;
-        justify-content: center;
-      }
+      .trophy-need.earned { color: var(--good); }
+      .trophy-claim { width: 100%; justify-content: center; }
+
+      /* ── ticker ── */
       .marquee {
         overflow: hidden;
         white-space: nowrap;
@@ -386,41 +380,31 @@
         border-bottom: 1px solid var(--stroke);
         background: var(--panel-deep);
         color: var(--faint);
-        font-size: 13px;
+        font-family: var(--pixel);
+        font-size: 12px;
         letter-spacing: 2px;
-        padding: 7px 0 5px;
-        margin: 34px 0 0;
+        padding: 8px 0;
+        margin-top: 36px;
       }
-      .marquee > div {
-        display: inline-block;
-        animation: marquee 30s linear infinite;
-      }
+      .marquee > div { display: inline-block; animation: marquee 30s linear infinite; }
       @keyframes marquee {
-        from {
-          transform: translateX(0);
-        }
-        to {
-          transform: translateX(-50%);
-        }
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
       }
     </style>
   </head>
   <body>
     <main class="wrap">
-      <section class="shop-hero wood">
-        <div class="awning"></div>
+      <section class="shop-hero hud">
         <div class="shop-hero-inner">
-          <div class="keeper-box">
-            <div class="keeper-wrap">
-              <div class="keeper" id="keeper"></div>
-            </div>
-            <div class="bubble" id="bubble">HEY! WELCOME IN.</div>
+          <div class="keeper-slot">
+            <div class="keeper" id="keeper"></div>
           </div>
+          <div class="bubble" id="bubble">HEY! WELCOME IN.</div>
           <div class="shop-title-box">
             <h1 class="page-title">THE PIXL SHOP</h1>
-            <div class="page-sub">
-              STICKERS · LICENSES · PLUSHIES · HARDWARE — ALL REAL
-            </div>
+            <div class="page-sub">Stickers · Licenses · Plushies · Hardware — all real</div>
+            <div class="open-sign"><span class="dot teal"></span>OPEN · PIXELS ACCEPTED</div>
           </div>
         </div>
       </section>
@@ -441,6 +425,13 @@
         </select>
       </div>
 
+      <div class="tiers" id="tiers">
+        <button class="tier on" data-tier="all">ALL</button>
+        <button class="tier" data-tier="afford">CAN AFFORD</button>
+        <button class="tier" data-tier="under">UNDER 500</button>
+        <button class="tier" data-tier="over">500+</button>
+      </div>
+
       <div class="limited-banner" id="limited-banner" hidden>
         <span>MYSTERY MERCHANT IS IN TOWN —</span>
         <span class="tick" id="limited-tick"></span>
@@ -449,16 +440,22 @@
 
       <div class="spin" id="loading"></div>
       <div id="trophies"></div>
+      <div id="shop-list-h" hidden>
+        <div class="shop-section-h">
+          <span class="t">◆ THE PIXL SHOP</span>
+          <span class="s">Spend the pixels you've earned</span>
+        </div>
+      </div>
       <div class="grid" id="items"></div>
       <div class="empty-note" id="empty" hidden>
-        NOTHING IN STOCK.<br />CHECK BACK SOON!
+        NOTHING ON THE SHELVES YET.<br />SHIP A PROJECT AND CHECK BACK — NEW STOCK DROPS AS THE RESTORATION GOES ON.
       </div>
 
       <div class="marquee"><div id="marquee-inner"></div></div>
     </main>
 
     <div class="overlay" id="detail-overlay">
-      <div class="modal panel">
+      <div class="modal hud">
         <button class="modal-close" id="detail-close">✕</button>
         <div class="detail-row">
           <div id="detail-img"></div>
@@ -471,7 +468,7 @@
             <div>
               <div
                 class="muted"
-                style="font-size: 13.5px; margin-bottom: 6px"
+                style="font-size: 13px; margin-bottom: 6px; font-family: var(--pixel); letter-spacing: 0.5px"
                 id="afford-label"
               ></div>
               <div class="afford-bar"><div id="afford-fill"></div></div>
@@ -497,6 +494,7 @@
       let claimedIds = new Set();
       let buying = false;
       let optionPick = {};
+      let activeTier = "all";
 
       function optionGroups(item) {
         const named = [];
@@ -594,6 +592,13 @@
         return wallet && wallet.pixels >= Number(item.price);
       }
 
+      function tierMatch(item) {
+        if (activeTier === "afford") return canAfford(item);
+        if (activeTier === "under") return Number(item.price) < 500;
+        if (activeTier === "over") return Number(item.price) >= 500;
+        return true;
+      }
+
       function imgHtml(item, big = false) {
         const url = String(item.image_url || "");
         if (!url) return `<span class="ph"></span>`;
@@ -638,7 +643,7 @@
             .includes(q);
 
         const trophies = items.filter((i) => isTrophy(i) && match(i));
-        let list = items.filter((i) => !isTrophy(i) && match(i));
+        let list = items.filter((i) => !isTrophy(i) && match(i) && tierMatch(i));
         if (sort === "cheap")
           list = [...list].sort((a, b) => a.price - b.price);
         else if (sort === "pricey")
@@ -651,10 +656,14 @@
         $("trophies").innerHTML =
           trophies.length === 0
             ? ""
-            : `<div class="trophy-head">TROPHIES — EARNED, NOT BOUGHT</div>
+            : `<div class="shop-section-h rest">
+         <span class="t">✦ RESTORATION REWARDS</span>
+         <span class="s">Earned by leveling up — not for sale</span>
+       </div>
      <div class="grid">${trophies.map(trophyCard).join("")}</div>
      <div class="divider"></div>`;
 
+        $("shop-list-h").hidden = list.length === 0;
         $("empty").hidden = list.length + trophies.length > 0;
         $("items").innerHTML = list
           .map(
@@ -666,7 +675,7 @@
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
       <div class="item-foot">
         <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${Number(item.price)} PX</span>
-        <span class="afford-dot ${canAfford(item) ? "yes" : "no"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
+        <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
       </div>
     </div>`,
           )
@@ -721,7 +730,7 @@
             .flatMap((g) => g.choices)
             .map(
               (o) =>
-                `<span class="chip gold">${Pixl.esc(o.toUpperCase())}</span>`,
+                `<span class="chip teal">${Pixl.esc(o.toUpperCase())}</span>`,
             )
             .join("");
           const state = trophyState(selected);
@@ -731,7 +740,7 @@
             Math.min(100, (xp / Math.max(1, need)) * 100),
           );
           $("detail-limited").innerHTML =
-            `<span class="chip ${state === "locked" ? "" : "gold"}">LEVEL ${need} TROPHY — EARNED, NOT BOUGHT</span>`;
+            `<span class="chip ${state === "locked" ? "" : "teal"}">LEVEL ${need} TROPHY — EARNED, NOT BOUGHT</span>`;
           $("detail-price").innerHTML =
             state === "claimed"
               ? "CLAIMED"
@@ -741,7 +750,9 @@
           $("detail-price").classList.toggle("cant", state === "locked");
           $("afford-fill").style.width = pct + "%";
           $("afford-fill").style.background =
-            pct >= 100 ? "var(--good)" : "var(--gold)";
+            pct >= 100
+              ? "var(--good)"
+              : "repeating-linear-gradient(90deg,var(--teal) 0 7px,var(--teal-hover) 7px 14px)";
           $("afford-label").textContent =
             `YOU'RE AT ${Math.floor(xp)} / ${need} XP` +
             (pct >= 100
@@ -754,6 +765,7 @@
                 ? "CLAIM"
                 : "LOCKED";
           $("buy-btn").disabled = state !== "claimable";
+          $("buy-btn").classList.toggle("teal", state === "claimable");
           $("detail-overlay").classList.add("show");
           say(
             state === "claimable"
@@ -766,6 +778,7 @@
           return;
         }
 
+        $("buy-btn").classList.remove("teal");
         optionPick = {};
         renderOptions();
         $("detail-limited").innerHTML = selected.limited
@@ -783,7 +796,9 @@
         );
         $("afford-fill").style.width = pct + "%";
         $("afford-fill").style.background =
-          pct >= 100 ? "var(--good)" : "var(--gold)";
+          pct >= 100
+            ? "var(--good)"
+            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
         $("afford-label").textContent =
           `YOU HAVE ${Math.round(have)} / ${Number(selected.price)} PX` +
           (pct >= 100 ? "  —  EASY." : "");
@@ -871,6 +886,15 @@
 
       $("search").addEventListener("input", render);
       $("sort").addEventListener("change", render);
+
+      $("tiers").addEventListener("click", (e) => {
+        const b = e.target.closest(".tier");
+        if (!b) return;
+        activeTier = b.dataset.tier;
+        for (const t of $("tiers").querySelectorAll(".tier"))
+          t.classList.toggle("on", t === b);
+        render();
+      });
 
       function tickLimited() {
         const lim = items.filter((i) => i.limited && i.limited_until);
