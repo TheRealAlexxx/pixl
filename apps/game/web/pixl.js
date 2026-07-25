@@ -440,7 +440,7 @@ const Pixl = (() => {
     },
     {
       title: "That's it — go build",
-      body: "Not sure where to start? I wrote a step-by-step on making your first project.",
+      body: "Not sure where to start? I wrote a step-by-step on making your first project. Hit <b>Done</b> to head back into the game whenever you're ready.",
       extra: { label: "Build your first project →", href: "/docs/first-project" },
     },
   ];
@@ -515,10 +515,16 @@ const Pixl = (() => {
     const card = root.querySelector(".pt-card");
     let i = Math.max(0, Math.min(startAt, steps.length - 1));
 
-    function close() {
+    function close(completed) {
       root.remove();
       markOnboarded();
-      if (sync) { clearTourStep(); setOnboarding(2); } // dashboard leg done → fully onboarded
+      if (sync) {
+        clearTourStep();
+        setOnboarding(2); // dashboard leg done → fully onboarded
+        // Finishing the guided flow hands the player back to the game; skipping
+        // or dismissing just closes the tour and leaves them on the dashboard.
+        if (completed) location.href = GAME;
+      }
     }
     // While a synced tour is live, remember which step we're on so a detour into
     // the docs (and ◄ BACK to this page) resumes here instead of restarting.
@@ -552,7 +558,7 @@ const Pixl = (() => {
         </div>`;
       card.querySelector(".pt-btn").onclick = () => {
         try { step.onNext && step.onNext(); } catch (e) {}
-        if (i === steps.length - 1) close();
+        if (i === steps.length - 1) close(true);
         else advance(i + 1);
       };
       const back = card.querySelector(".pt-back");

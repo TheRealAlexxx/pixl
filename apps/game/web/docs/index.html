@@ -588,6 +588,26 @@ dist/</code></pre>
     else location.href = GAME_HREF;
   });
 
+  // When the player was reading these docs as a detour from the first-project
+  // walkthrough (pixl.js sets pixl_tour_step while the tour is live), float a
+  // persistent button that takes them back to the projects page, where the tour
+  // resumes from where it left off. Hidden for normal docs visits.
+  (function tourReturnButton() {
+    let inTour = false;
+    try { inTour = localStorage.getItem("pixl_tour_step") != null; } catch (e) {}
+    if (!inTour) return;
+    const btn = document.createElement("button");
+    btn.id = "tour-return";
+    btn.type = "button";
+    btn.textContent = "◄ Back to your project";
+    btn.style.cssText =
+      "position:fixed;top:14px;right:14px;z-index:100000;background:var(--gold,#ec4899);" +
+      "color:var(--btn-ink,#241710);border:0;border-radius:9px;padding:10px 16px;font-weight:700;" +
+      "font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4)";
+    btn.addEventListener("click", () => { location.href = "/projects/"; });
+    document.body.appendChild(btn);
+  })();
+
   // Theme toggle — shares the "pixl_theme" localStorage key with pixl.js so
   // the choice is consistent across the docs and the rest of the dash.
   const themeBtn = document.getElementById("docs-theme-btn");
