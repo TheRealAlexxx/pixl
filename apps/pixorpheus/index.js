@@ -1334,7 +1334,9 @@ app.event('reaction_added', async ({ event, client }) => {
   if (event.item.type !== 'message') return;
   try {
     await client.chat.delete({ channel: event.item.channel, ts: event.item.ts });
-  } catch (_) {}
+  } catch (e) {
+    console.error('[pixl-delete] failed to delete message', { channel: event.item.channel, ts: event.item.ts }, e.data || e.message);
+  }
 });
 
 // Post-launch welcome messages — swap these back in once pixl launches
