@@ -37,6 +37,7 @@ ProfileHud="*res://scripts/profile_hud.gd"
 FriendsHud="*res://scripts/friends_hud.gd"
 MinimapHud="*res://scripts/minimap_hud.gd"
 WebPages="*res://scripts/web_pages.gd"
+TouchControls="*res://scripts/touch_controls.gd"
 
 [display]
 
