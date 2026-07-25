@@ -67,6 +67,50 @@ router.get("/api/profile/wallet", async (req, res) => {
   });
 });
 
+// Coding-experience answer Pixo asks for during arrival. Drives the starter-
+// Trial recommendation (sidequests.ts) and how much the web first-project
+// walkthrough explains. null = never asked. See drizzle/0050.
+const EXPERIENCE_VALUES = ["beginner", "intermediate", "advanced"] as const;
+type Experience = (typeof EXPERIENCE_VALUES)[number];
+
+router.get("/api/profile/experience", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("coding_experience")
+    .eq("id", session.userId)
+    .maybeSingle();
+  // Before 0050 the column doesn't exist — treat as "not asked yet".
+  const raw = error ? null : (data?.coding_experience ?? null);
+  const experience = EXPERIENCE_VALUES.includes(raw as Experience)
+    ? (raw as Experience)
+    : null;
+  res.json({ ok: true, experience });
+});
+
+router.post("/api/profile/experience", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const value = typeof req.body?.experience === "string" ? req.body.experience : "";
+  if (!EXPERIENCE_VALUES.includes(value as Experience))
+    return res.status(400).json({ ok: false, error: "bad_experience" });
+
+  const { error } = await supabase
+    .from("users")
+    .update({ coding_experience: value })
+    .eq("id", session.userId);
+  if (error) {
+    console.error("[profile] experience update failed", error.message);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, experience: value });
+});
+
 // The player's own pixel ledger, newest first, with project names attached.
 router.get("/api/profile/transactions", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
