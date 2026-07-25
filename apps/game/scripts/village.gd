@@ -1,5 +1,10 @@
 extends "res://scripts/multiplayer_world.gd"
 
+# New Day-0 arrival flow (cinematic → Pixo greeting → naming → experience →
+# first Trial). Launched here on first arrival; the F1 manual (GuideHud) is
+# separate.
+const ONBOARDING := preload("res://scripts/onboarding.gd")
+
 var can_transition: bool = false
 var _npcs: Array = []
 var _npcs_by_id: Dictionary = {}
@@ -12,7 +17,26 @@ func _ready() -> void:
 		NetworkManager.npc_init.connect(_on_npc_init)
 	await get_tree().create_timer(0.3).timeout
 	can_transition = true
-	GuideHud.maybe_show_intro()
+	_maybe_start_arrival()
+
+# Decide whether to run the first-run arrival flow. Signed-in players are gated
+# on the server's shared onboarding counter (step 0 = never onboarded), so a
+# server-side reset re-triggers it. Signed-out / offline dev falls back to the
+# old once-per-device slide-deck guide.
+func _maybe_start_arrival() -> void:
+	if NetworkManager.session_token == "":
+		GuideHud.maybe_show_intro()
+		return
+	GuideHud.fetch_onboarding_step(func(step):
+		if step == 0:
+			_start_arrival()
+	)
+
+func _start_arrival() -> void:
+	var flow := ONBOARDING.new()
+	add_child(flow)
+	flow.finished.connect(func(): flow.queue_free())
+	flow.start()
 
 func _exit_tree() -> void:
 	_save_npcs()

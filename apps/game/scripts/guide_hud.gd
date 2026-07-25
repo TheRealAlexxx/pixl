@@ -84,6 +84,11 @@ func _mark_seen_file() -> void:
 		f.store_string("1")
 		f.close()
 
+# Public: read the shared onboarding step, then call cb(step). Used by the
+# village to decide whether to launch the first-run arrival flow (onboarding.gd).
+func fetch_onboarding_step(cb: Callable) -> void:
+	_fetch_onboarding(cb)
+
 # Read the player's shared onboarding step, then call cb(step). Silently does
 # nothing on any error (offline, pre-migration) — better to skip onboarding than
 # to spam it.
