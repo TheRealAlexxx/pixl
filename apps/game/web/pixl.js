@@ -393,45 +393,55 @@ const Pixl = (() => {
    *     img     URL of a .gif/.png to show in the card instead of a video
    * A step whose target isn't on the current page falls back to a centered card.
    */
+  // A hands-on "ship your first project" walkthrough — Pixo hands the player
+  // here from the game, and this drives them through the actual create→ship flow
+  // on the projects page (not a tour of the UI). Steps can carry:
+  //   target   CSS selector to spotlight (omit → centered card)
+  //   onNext   fn run when the player hits Next (e.g. open the editor for them)
+  //   extra    { label, href } secondary button — used to detour into the docs;
+  //            the tour is resumable so it picks back up when they return here.
   const ONBOARDING_STEPS = [
     {
-      title: "Welcome to Pixl 👋",
-      body: "Build something real, ship it, get rewarded for it. Take a 30-second tour , you can skip anytime.",
-      // video: "/img/onboarding/welcome.mp4",
-    },
-    {
-      title: "What even is this?",
-      body: "Long ago a world called <b>Origin</b> shattered into pixelated islands — now you're one of the <b>Builders</b> helping rebuild it as <b>Pixl</b>. You ship real projects, and the work you do repairs the world. You don't need the lore to play , just build stuff.",
-      // video: "/img/onboarding/intro.mp4",
-    },
-    {
-      target: ".nav",
-      title: "Getting around",
-      body: "Jump between the shop, explore, your projects and the docs from up here.",
-    },
-    {
-      target: ".nav a[href=\"/docs/\"]",
-      title: "New to all this?",
-      body: "The <b>DOCS</b> have the full guide , what Pixl is, how to build, how to ship, and how rewards work. Start there if you're lost.",
-    },
-    {
-      target: "#pixl-wallet",
-      title: "Your pixels",
-      body: "This is your wallet. 1 hour of shipped work = <b>50 pixels</b>. Spend them in the shop on real prizes, from stickers up to a MacBook Air.",
+      title: "Let's ship your first project",
+      body: "This is your <b>Builder Terminal</b> — where every project lives. I'll walk you through making your first one and shipping it. Skip anytime.",
     },
     {
       target: "#new-btn",
-      title: "Start a project",
-      body: "Create your first project here. Name it, link a repo + a demo, and track your time with Hackatime.",
+      title: "Open a new project",
+      body: "Hit <b>Next</b> and I'll open a fresh project for you.",
+      onNext: () => document.getElementById("new-btn")?.click(),
+    },
+    {
+      target: "#f-name",
+      title: "Name it",
+      body: "Say what you're building — like <b>“My portfolio site”</b> or <b>“Weather bot”</b>. Keep it short and real; you can rename it later.",
+    },
+    {
+      target: "#f-repo",
+      title: "Link your code",
+      body: "Paste your <b>GitHub repo</b> here (and a live demo link below, if you have one) so a reviewer can actually see what you built. No repo yet? There's a Git guide in the docs.",
+      extra: { label: "Git guide", href: "/docs/git" },
+    },
+    {
+      target: "#ht-connect",
+      title: "Track your time with Hackatime",
+      body: "This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so your time counts.",
+      extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
+    },
+    {
+      target: "#f-save",
+      title: "Create it",
+      body: "Save your project. Now go build it for real — come back whenever you've made progress and journal what you did.",
     },
     {
       target: "#s-ship",
-      title: "Ship it for review",
-      body: "When it's ready, ship it. A reviewer checks it out and credits you pixels + a prize. That's the whole loop.",
+      title: "Ship when it's ready",
+      body: "Once it runs and you've logged at least <b>1 hour</b> on Hackatime, ship it for review. A reviewer credits you pixels + the prize. That's the whole loop.",
     },
     {
-      title: "That's it , head back in 🚀",
-      body: "Now hop back into the game (the <b>BACK TO GAME</b> button up top) and start building. Full guide is in <b>DOCS</b>, and <b>#pixl</b> on Slack has your back if you're stuck.",
+      title: "That's it — go build",
+      body: "Not sure where to start? I wrote a step-by-step on making your first project.",
+      extra: { label: "Build your first project →", href: "/docs/first-project" },
     },
   ];
 
@@ -456,6 +466,8 @@ const Pixl = (() => {
       #pixl-tour .pt-skip{background:none;border:0;color:var(--faint,#8a8a93);cursor:pointer;font-size:12px;padding:6px}
       #pixl-tour .pt-btn{background:var(--gold,#ec4899);color:var(--btn-ink,#241710);border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
       #pixl-tour .pt-back{background:none;border:1px solid var(--stroke,#2a2a35);color:var(--dim,#cfcfd6);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px}
+      #pixl-tour .pt-extra{display:block;width:100%;margin-top:12px;background:none;border:1px solid var(--gold,#ec4899);color:var(--gold,#ec4899);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700}
+      #pixl-tour .pt-extra:hover{background:var(--gold,#ec4899);color:var(--btn-ink,#241710)}
     `;
     document.head.appendChild(s);
   }
@@ -473,6 +485,19 @@ const Pixl = (() => {
   function setOnboarding(step) {
     // Fire-and-forget; the counter is forward-only server-side so this is safe.
     send("POST", "/api/profile/onboarding", { step }).catch(() => {});
+  }
+
+  // Which tour step is in progress, so a docs detour resumes rather than restarts.
+  const TOUR_STEP_KEY = "pixl_tour_step";
+  function saveTourStep(n) { try { localStorage.setItem(TOUR_STEP_KEY, String(n)); } catch (e) {} }
+  function clearTourStep() { try { localStorage.removeItem(TOUR_STEP_KEY); } catch (e) {} }
+  function getTourStep() {
+    try {
+      const v = localStorage.getItem(TOUR_STEP_KEY);
+      if (v == null) return null;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    } catch (e) { return null; }
   }
 
   // `sync` marks the shared onboarding as complete when the tour ends — used for
@@ -493,7 +518,14 @@ const Pixl = (() => {
     function close() {
       root.remove();
       markOnboarded();
-      if (sync) setOnboarding(2); // dashboard leg done → fully onboarded
+      if (sync) { clearTourStep(); setOnboarding(2); } // dashboard leg done → fully onboarded
+    }
+    // While a synced tour is live, remember which step we're on so a detour into
+    // the docs (and ◄ BACK to this page) resumes here instead of restarting.
+    function advance(to) {
+      i = to;
+      if (sync) saveTourStep(i);
+      render();
     }
 
     function media(step) {
@@ -502,28 +534,54 @@ const Pixl = (() => {
       return "";
     }
 
+    let placeTries = 0;
     function render() {
       const step = steps[i];
-      const el = step.target ? document.querySelector(step.target) : null;
+      if (sync) saveTourStep(i);
       const dots = steps.map((_, n) => `<span class="pt-dot ${n === i ? "on" : ""}"></span>`).join("");
+      const extraBtn = step.extra ? `<button class="pt-extra">${esc(step.extra.label)}</button>` : "";
       card.innerHTML = `
         ${media(step)}
         <div class="pt-title">${esc(step.title)}</div>
         <div class="pt-body">${step.body}</div>
+        ${extraBtn}
         <div class="pt-foot">
           <div class="pt-dots">${dots}</div>
           ${i > 0 ? `<button class="pt-back">Back</button>` : `<button class="pt-skip">Skip</button>`}
           <button class="pt-btn">${i === steps.length - 1 ? "Done" : "Next"}</button>
         </div>`;
-      card.querySelector(".pt-btn").onclick = () => (i === steps.length - 1 ? close() : (i++, render()));
+      card.querySelector(".pt-btn").onclick = () => {
+        try { step.onNext && step.onNext(); } catch (e) {}
+        if (i === steps.length - 1) close();
+        else advance(i + 1);
+      };
       const back = card.querySelector(".pt-back");
-      if (back) back.onclick = () => { i--; render(); };
+      if (back) back.onclick = () => advance(i - 1);
       const skip = card.querySelector(".pt-skip");
       if (skip) skip.onclick = close;
+      const extra = card.querySelector(".pt-extra");
+      if (extra) extra.onclick = () => {
+        // Detour (usually into the docs). Persist the *next* step so we resume
+        // past this one when the player comes back to the projects page.
+        if (sync) saveTourStep(Math.min(i + 1, steps.length - 1));
+        if (step.extra.onClick) step.extra.onClick();
+        else location.href = step.extra.href;
+      };
 
+      placeTries = 0;
+      place(step);
+    }
+
+    // Position the spotlight. If the target isn't in the DOM yet (e.g. the editor
+    // form is still rendering after we clicked "+ NEW PROJECT"), poll briefly
+    // before falling back to a centered card.
+    function place(step) {
+      const el = step.target ? document.querySelector(step.target) : null;
+      if (step.target && (!el || !el.getClientRects().length)) {
+        if (placeTries++ < 20) { setTimeout(() => place(step), 100); return; }
+      }
       if (el && el.getClientRects().length) {
         el.scrollIntoView({ block: "center", behavior: "smooth" });
-        // wait a tick for the smooth scroll before measuring
         setTimeout(() => {
           const r = el.getBoundingClientRect();
           const pad = 6;
@@ -551,37 +609,26 @@ const Pixl = (() => {
     render();
   }
 
-  // Auto-run the dashboard leg of onboarding. When signed in, the server's
-  // shared counter is authoritative so the tour resumes across the game↔dash
-  // hop and doesn't replay once finished on another device. Falls back to the
-  // per-device localStorage guard when there's no account/server to ask.
-  // Index the tour should resume at when the player was handed off from the
-  // in-game arrival ("Open it in the Terminal"): the Builder-Terminal step, so
-  // we continue where Pixo left off instead of replaying the welcome + lore he
-  // already covered. Falls back to 0 if that step is ever renamed/removed.
-  function handoffStartIndex(steps) {
-    const i = steps.findIndex((s) => s.target === "#new-btn");
-    return i >= 0 ? i : 0;
-  }
-
+  // Auto-run the "ship your first project" walkthrough. It drives the real
+  // create→ship flow, so it only belongs on the projects page — that's also
+  // where the in-game hand-off (WebPages.open("projects?from=game")) lands. If a
+  // step is already saved (the player detoured into the docs and came back), we
+  // resume there instead of restarting.
   async function maybeOnboard(steps = ONBOARDING_STEPS) {
     if (!token) return; // signed-out (public docs) never auto-runs
-    // The in-game hand-off arrives as ?from=game (see web_pages.gd) — trust it
-    // even before the step=1 POST has landed, so we never replay the intro.
-    const fromGame = new URLSearchParams(location.search).get("from") === "game";
+    if (!/\/projects(\/|$)/.test(location.pathname)) return;
+    const saved = getTourStep();
     const ob = await getOnboarding();
     if (ob && ob.ok) {
-      if (ob.done) { markOnboarded(); return; }
-      // step 1 = handed off from the in-game arrival → continue from the Builder
-      // Terminal. step 0 = landed on the dashboard first → full tour from the top.
-      const startAt = (fromGame || ob.step >= 1) ? handoffStartIndex(steps) : 0;
+      if (ob.done) { markOnboarded(); clearTourStep(); return; }
+      const startAt = saved != null ? saved : 0;
       setTimeout(() => runTour(steps, startAt, true), 700);
       return;
     }
     // Server unreachable / pre-migration — fall back to the local guard.
     let done = true;
-    try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch {}
-    if (!done) setTimeout(() => runTour(steps, 0, true), 700);
+    try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch (e) {}
+    if (!done) setTimeout(() => runTour(steps, saved != null ? saved : 0, true), 700);
   }
 
   /* ─────────────────── custom confirm dialog ───────────────────
