@@ -1704,9 +1704,154 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
-// Mark a shop order shipped/handed over. Only flips a pending order so a repeat
-// click is a no-op, and drops the player a note so they know it's on the way.
-export async function fulfillOrder(formData: FormData): Promise<void> {
+// Claim an unclaimed (pending) order: the fulfiller has placed the real order
+// and now owns it. It moves into their queue at the 'ordered' stage (placed, not
+// yet credited by HCB) and nobody else advances it unless they reassign it.
+export async function claimOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "pending") {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const now = new Date().toISOString();
+  const { error } = await db
+    .from("shop_orders")
+    .update({
+      status: "ordered",
+      claimed_by: actorName(access),
+      claimed_by_slack: access.session.slackId,
+      claimed_at: now,
+      ordered_at: now,
+    })
+    .eq("id", id)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order placed! 📦",
+    body: `Your "${order.item_name}" order has been placed and is being fulfilled. We'll let you know when it ships.`,
+  });
+  revalidatePath("/fulfillment");
+}
+
+// Owner of an order re-checks the caller is the fulfiller who claimed it (or lets
+// a super take it over via reassignOrder). Advancing a claimed order past the
+// stage where someone else owns it would step on their queue.
+function ownsOrder(access: AdminAccess, claimedSlack: string): boolean {
+  return claimedSlack === access.session.slackId;
+}
+
+// HCB credited the card and the fulfiller uploaded the receipt: ordered ->
+// credited (paid, not shipped yet). Only the claiming fulfiller can advance it.
+export async function markOrderCredited(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("status, claimed_by_slack")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "ordered" || !ownsOrder(access, order.claimed_by_slack)) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { error } = await db
+    .from("shop_orders")
+    .update({ status: "credited", credited_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "ordered");
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
+// The order shipped: credited -> shipped with a tracking number. The number is
+// DM'd to the buyer by Pixo and also lands as an in-game notification. Only the
+// claiming fulfiller can ship it, and tracking is required.
+export async function shipOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  const tracking = String(formData.get("tracking") ?? "").trim().slice(0, 120);
+  if (!id) return;
+  if (!tracking) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status, claimed_by_slack")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "credited" || !ownsOrder(access, order.claimed_by_slack)) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { error } = await db
+    .from("shop_orders")
+    .update({
+      status: "shipped",
+      shipped_at: new Date().toISOString(),
+      fulfilled_at: new Date().toISOString(),
+      fulfilled_by: actorName(access),
+      tracking,
+    })
+    .eq("id", id)
+    .eq("status", "credited");
+  if (error) throw new Error(error.message);
+
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order shipped! 📦",
+    body: `Your "${order.item_name}" order shipped. Tracking: ${tracking}`,
+  });
+  // DM the tracking number to the buyer through Pixo. Best-effort , a missing
+  // Slack link shouldn't block shipping, and the in-game notification still lands.
+  const { data: buyer } = await db
+    .from("users")
+    .select("slack_id")
+    .eq("id", order.user_id)
+    .maybeSingle();
+  if (buyer?.slack_id) {
+    try {
+      await dmUser(
+        buyer.slack_id,
+        `📦 Your "${order.item_name}" order shipped! Tracking number: ${tracking}`,
+      );
+    } catch (err) {
+      console.error("shipOrder DM", err instanceof Error ? err.message : err);
+    }
+  }
+  revalidatePath("/fulfillment");
+}
+
+// Take over a claimed order that isn't yet shipped/cancelled. Escape hatch for
+// when the original fulfiller can't finish it , the caller becomes the new owner
+// and the order stays at its current stage.
+export async function reassignOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("shop_orders")
+    .update({ claimed_by: actorName(access), claimed_by_slack: access.session.slackId })
+    .eq("id", id)
+    .in("status", ["ordered", "credited"]);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
+// Cancel a live order (pending / ordered / credited) and refund the pixels , e.g.
+// a blocked Amazon account killed it. The refund + status flip happen inside
+// cancel_shop_order so they can't drift apart; it's idempotent, so a double-click
+// won't refund twice and a shipped order is a no-op.
+export async function cancelOrder(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const id = Number(formData.get("id") ?? 0);
   const note = String(formData.get("note") ?? "").trim().slice(0, 300);
@@ -1716,42 +1861,7 @@ export async function fulfillOrder(formData: FormData): Promise<void> {
     .select("user_id, item_name, status")
     .eq("id", id)
     .maybeSingle();
-  if (!order || order.status !== "pending") {
-    revalidatePath("/fulfillment");
-    return;
-  }
-  const { error } = await db
-    .from("shop_orders")
-    .update({
-      status: "fulfilled",
-      fulfilled_at: new Date().toISOString(),
-      fulfilled_by: actorName(access),
-      note,
-    })
-    .eq("id", id)
-    .eq("status", "pending");
-  if (error) throw new Error(error.message);
-  await db.from("notifications").insert({
-    user_id: order.user_id,
-    title: "Order on its way! 📦",
-    body: `Your "${order.item_name}" order has been fulfilled.${note ? ` ${note}` : ""}`,
-  });
-  revalidatePath("/fulfillment");
-}
-
-// Cancel a pending order and refund the pixels. The refund + status flip happen
-// inside cancel_shop_order so they can't drift apart; it's idempotent, so a
-// double-click won't refund twice.
-export async function cancelOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
-  const id = Number(formData.get("id") ?? 0);
-  if (!id) return;
-  const { data: order } = await db
-    .from("shop_orders")
-    .select("user_id, item_name, status")
-    .eq("id", id)
-    .maybeSingle();
-  if (!order || order.status !== "pending") {
+  if (!order || order.status === "shipped" || order.status === "cancelled") {
     revalidatePath("/fulfillment");
     return;
   }
@@ -1760,11 +1870,12 @@ export async function cancelOrder(formData: FormData): Promise<void> {
     p_by: actorName(access),
   });
   if (error) throw new Error(error.message);
+  if (note) await db.from("shop_orders").update({ note }).eq("id", id);
   const amount = Number(refunded ?? 0);
   await db.from("notifications").insert({
     user_id: order.user_id,
     title: "Order cancelled",
-    body: `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.`,
+    body: `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.${note ? ` ${note}` : ""}`,
   });
   revalidatePath("/fulfillment");
   revalidatePath("/pixels");

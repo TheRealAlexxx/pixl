@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAccess, canView, isReportViewer, isHelper } from "@/lib/guard";
-import { countPendingReviews, countOpenReports } from "@/lib/db";
+import { countPendingReviews, countOpenReports, countPendingOrders } from "@/lib/db";
 import { ticketStats } from "@/lib/tickets";
 import { Shell } from "@/app/_components/Shell";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -72,6 +72,7 @@ export default async function RootLayout({
       : 0;
   const reportCount = reportViewer ? await countOpenReports() : 0;
   const ticketCount = helper ? (await ticketStats()).open : 0;
+  const orderCount = nav?.fulfillment ? await countPendingOrders() : 0;
   return (
     <html
       lang="en"
@@ -149,6 +150,7 @@ export default async function RootLayout({
               reviewCount={reviewCount}
               reportCount={reportCount}
               ticketCount={ticketCount}
+              orderCount={orderCount}
             />
 
             <main className="flex-1 min-w-0 overflow-x-hidden flex flex-col gap-4">

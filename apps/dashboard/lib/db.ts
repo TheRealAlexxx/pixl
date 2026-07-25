@@ -1433,6 +1433,12 @@ export async function listShopItems(): Promise<ShopItemRow[]> {
   return (data ?? []) as ShopItemRow[];
 }
 
+export type OrderStatus = "pending" | "ordered" | "credited" | "shipped" | "cancelled";
+
+// Live stages an order can still be acted on, in pipeline order. Anything past
+// these (shipped / cancelled) is terminal.
+export const ORDER_STAGES: OrderStatus[] = ["pending", "ordered", "credited", "shipped"];
+
 export interface ShopOrderRow {
   id: number;
   user_id: string;
@@ -1440,11 +1446,20 @@ export interface ShopOrderRow {
   item_name: string;
   option: string;
   price: number;
-  status: "pending" | "fulfilled" | "cancelled";
+  status: OrderStatus;
   note: string;
   created_at: string;
   fulfilled_at: string | null;
   fulfilled_by: string;
+  // Pipeline: the one fulfiller who owns the order once it's claimed, plus a
+  // stamp per stage and the shipment tracking number DM'd to the buyer.
+  claimed_by: string;
+  claimed_by_slack: string;
+  claimed_at: string | null;
+  ordered_at: string | null;
+  credited_at: string | null;
+  shipped_at: string | null;
+  tracking: string;
   player_name: string;
   player_slack: string | null;
 }
