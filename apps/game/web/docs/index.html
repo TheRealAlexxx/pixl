@@ -65,39 +65,61 @@
   code { background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 6px; padding: 1px 6px; font-size: 13px; color: #f472a0; }
   :root[data-theme="light"] code { color: #be123c; }
 
-  /* Code blocks always render on a dark surface (à la Fumadocs) regardless
-     of the site theme — syntax themes are built for dark backgrounds. */
-  pre { position: relative; background: #0d1117; border: 1px solid #21262d; border-radius: 10px;
+  /* Code block theme — follows the site's light/dark toggle, same as Fumadocs'
+     dual shiki themes. GitHub Dark / GitHub Light palettes. */
+  :root {
+    --code-bg: #0d1117; --code-border: #21262d; --code-fg: #c9d1d9;
+    --code-keyword: #ff7b72; --code-title: #d2a8ff; --code-attr: #79c0ff;
+    --code-string: #a5d6ff; --code-built_in: #ffa657; --code-comment: #8b949e;
+    --code-tag: #7ee787; --code-section: #58a6ff; --code-bullet: #f2cc60;
+    --code-addition-fg: #aff5b4; --code-addition-bg: #033a16;
+    --code-deletion-fg: #ffdcd7; --code-deletion-bg: #67060c;
+    --copy-btn-fg: #c9d1d9; --copy-btn-bg: rgba(255,255,255,.06); --copy-btn-border: rgba(255,255,255,.14);
+    --copy-btn-bg-hover: rgba(255,255,255,.14); --copy-btn-border-hover: rgba(255,255,255,.26);
+  }
+  :root[data-theme="light"] {
+    --code-bg: #f6f8fa; --code-border: #d0d7de; --code-fg: #1f2328;
+    --code-keyword: #cf222e; --code-title: #8250df; --code-attr: #0550ae;
+    --code-string: #0a3069; --code-built_in: #953800; --code-comment: #6e7781;
+    --code-tag: #116329; --code-section: #0550ae; --code-bullet: #4d2d00;
+    --code-addition-fg: #116329; --code-addition-bg: #dafbe1;
+    --code-deletion-fg: #82071e; --code-deletion-bg: #ffebe9;
+    --copy-btn-fg: #57606a; --copy-btn-bg: rgba(0,0,0,.04); --copy-btn-border: rgba(0,0,0,.12);
+    --copy-btn-bg-hover: rgba(0,0,0,.08); --copy-btn-border-hover: rgba(0,0,0,.2);
+  }
+
+  pre { position: relative; background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 10px;
     overflow: hidden; margin: 18px 0; }
   pre code { display: block; background: none; border: none; padding: 16px 44px 16px 18px;
-    font-size: 13px; color: #c9d1d9; line-height: 1.65; overflow-x: auto; }
+    font-size: 13px; color: var(--code-fg); line-height: 1.65; overflow-x: auto; }
 
   .copy-btn { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 5px;
     padding: 5px 10px; font-family: var(--sans); font-size: 11.5px; letter-spacing: .2px;
-    color: #c9d1d9; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+    color: var(--copy-btn-fg); background: var(--copy-btn-bg); border: 1px solid var(--copy-btn-border);
     border-radius: 6px; cursor: pointer; opacity: 0;
     transition: opacity .15s ease, background .15s ease, border-color .15s ease; }
   pre:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
-  .copy-btn:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.26); }
-  .copy-btn.copied { color: #7ee787; border-color: rgba(126,231,135,.4); opacity: 1; }
+  .copy-btn:hover { background: var(--copy-btn-bg-hover); border-color: var(--copy-btn-border-hover); }
+  .copy-btn.copied { color: #1a7f37; border-color: rgba(26,127,55,.4); opacity: 1; }
+  :root[data-theme="dark"] .copy-btn.copied { color: #7ee787; border-color: rgba(126,231,135,.4); }
 
-  /* highlight.js tokens — GitHub Dark palette, same family Fumadocs ships. */
+  /* highlight.js tokens */
   .hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-template-tag,
-  .hljs-template-variable, .hljs-type, .hljs-variable.language_ { color: #ff7b72; }
-  .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: #d2a8ff; }
+  .hljs-template-variable, .hljs-type, .hljs-variable.language_ { color: var(--code-keyword); }
+  .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: var(--code-title); }
   .hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator,
-  .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: #79c0ff; }
-  .hljs-regexp, .hljs-string, .hljs-meta .hljs-string { color: #a5d6ff; }
-  .hljs-built_in, .hljs-symbol { color: #ffa657; }
-  .hljs-comment, .hljs-code, .hljs-formula { color: #8b949e; }
-  .hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo { color: #7ee787; }
-  .hljs-subst { color: #c9d1d9; }
-  .hljs-section { color: #58a6ff; font-weight: 600; }
-  .hljs-bullet { color: #f2cc60; }
+  .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: var(--code-attr); }
+  .hljs-regexp, .hljs-string, .hljs-meta .hljs-string { color: var(--code-string); }
+  .hljs-built_in, .hljs-symbol { color: var(--code-built_in); }
+  .hljs-comment, .hljs-code, .hljs-formula { color: var(--code-comment); }
+  .hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo { color: var(--code-tag); }
+  .hljs-subst { color: var(--code-fg); }
+  .hljs-section { color: var(--code-section); font-weight: 600; }
+  .hljs-bullet { color: var(--code-bullet); }
   .hljs-emphasis { font-style: italic; }
   .hljs-strong { font-weight: 700; }
-  .hljs-addition { color: #aff5b4; background-color: #033a16; }
-  .hljs-deletion { color: #ffdcd7; background-color: #67060c; }
+  .hljs-addition { color: var(--code-addition-fg); background-color: var(--code-addition-bg); }
+  .hljs-deletion { color: var(--code-deletion-fg); background-color: var(--code-deletion-bg); }
 
   .doc-foot { display: flex; gap: 14px; margin-top: 52px; }
   .doc-foot a { flex: 1; text-decoration: none; border: 1px solid var(--stroke); border-radius: 12px;
