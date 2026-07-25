@@ -149,7 +149,7 @@ async function checkFAQAndSimilar(event, client) {
 
 async function autoCloseOldTickets() {
   try {
-    const cutoff = new Date(Date.now() - 7 * 86400_000);
+    const cutoff = new Date(Date.now() - 5 * 86400_000);
     const { data: openTickets } = await db().from("tickets").select("*").eq("status", "open");
     const result = (openTickets || []).map(normalizeTicket).filter(t => {
       const msgDate = new Date(parseFloat(t.msg_ts) * 1000);
@@ -162,7 +162,7 @@ async function autoCloseOldTickets() {
         await app.client.chat.postMessage({
           channel: process.env.SLACK_HELP_CHANNEL,
           thread_ts: ticket.msg_ts,
-          text: "This ticket has been open for 7 days with no activity and is now automatically closed. If you still need help, just post a new message in this channel with the same question and a helper will get back to you.",
+          text: "This ticket has been open for 5 days with no activity and is now automatically closed. If you still need help, just post a new message in this channel with the same question and a helper will get back to you.",
         });
 
         await db().from("tickets").update({ status: "closed", closed_at: new Date().toISOString() }).eq("msg_ts", ticket.msg_ts);
@@ -173,7 +173,7 @@ async function autoCloseOldTickets() {
             await app.client.chat.update({
               channel: process.env.SLACK_TICKET_CHANNEL,
               ts: ticket.ticket_msg_ts,
-              text: 'Ticket auto-closed after 7 days of inactivity',
+              text: 'Ticket auto-closed after 5 days of inactivity',
               blocks: ticketBlocks(updatedTicket),
             });
           } catch (e) {}

@@ -275,7 +275,7 @@ Player-facing DMs sent from the dashboard (e.g. review results) are routed throu
 
 <img alt="Pixorpheus" src="https://github.com/user-attachments/assets/7c35eff3-3afb-4c61-965a-4993cc2bcce5" width="72" align="left">
 
-`apps/pixorpheus` is Pixl's Slack bot - part help-desk, part AI chat, part moderation tool, running on Slack Bolt v4. It owns the entire ticket lifecycle for the Pixl help channel (claim/resolve/reopen, auto-close after 7 days of inactivity, a Smart FAQ that checks past resolved tickets before a human ever gets pinged), plus an AI system with per-user memory, web search, custom emoji awareness, and a handful of very specific easter eggs.
+`apps/pixorpheus` is Pixl's Slack bot - part help-desk, part AI chat, part moderation tool, running on Slack Bolt v4. It owns the entire ticket lifecycle for the Pixl help channel (claim/resolve/reopen, auto-close after 5 days of inactivity, a Smart FAQ that checks past resolved tickets before a human ever gets pinged), plus an AI system with per-user memory, web search, custom emoji awareness, and a handful of very specific easter eggs.
 
 <br clear="left">
 
