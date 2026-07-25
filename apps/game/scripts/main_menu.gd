@@ -19,11 +19,22 @@ var _name_warn: Label
 var _name_save: Button
 
 func _ready() -> void:
-	# Menu is laid out for a 1600x900 desktop canvas — scale the whole thing
-	# up from its center on touch devices so it's actually legible.
+	# Menu is laid out for a 1600x900 desktop canvas — on touch devices, bump
+	# the theme's font sizes and the explicit control sizes below instead of
+	# Control.scale (a transform just blurs the already-rasterized pixel
+	# font instead of actually growing it).
 	if DisplayServer.is_touchscreen_available():
-		pivot_offset = get_viewport_rect().size / 2.0
-		scale = Vector2.ONE * 1.3
+		var factor := Settings.menu_scale_factor()
+		theme = Settings.touch_menu_theme(theme)
+		var vbox: VBoxContainer = $CenterContainer/VBoxContainer
+		vbox.custom_minimum_size *= factor
+		var logo: Control = $CenterContainer/VBoxContainer/TitleLogo
+		logo.custom_minimum_size *= factor
+		var footer: Control = $Footer
+		footer.offset_left *= factor
+		footer.offset_right *= factor
+		footer.offset_top *= factor
+		footer.offset_bottom *= factor
 	if NetworkManager.session_token == "":
 		get_tree().change_scene_to_file("res://scenes/login.tscn")
 		return

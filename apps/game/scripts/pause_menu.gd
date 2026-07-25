@@ -20,13 +20,12 @@ var _name_save: Button
 var _name_status: Label
 var _name_saving := false
 
-# Menus are laid out for a 1600x900 desktop canvas — scale up from center on
-# touch devices so text/buttons are actually legible on a phone screen.
-func _scale_for_touch(c: Control) -> void:
-	if not DisplayServer.is_touchscreen_available():
-		return
-	c.pivot_offset = get_viewport().get_visible_rect().size / 2.0
-	c.scale = Vector2.ONE * 1.3
+# Menus are laid out for a 1600x900 desktop canvas — on touch devices, use a
+# theme with bumped-up font sizes/constants/stylebox margins instead of
+# Control.scale (a transform just blurs the already-rasterized pixel font
+# instead of actually growing it — reads as the wrong font entirely).
+func _touch_theme() -> Theme:
+	return Settings.touch_menu_theme(THEME)
 
 func _ready() -> void:
 	layer = 100
@@ -35,6 +34,9 @@ func _ready() -> void:
 	_build_settings_ui()
 	_root.visible = false
 	NetworkManager.name_result.connect(_on_name_result)
+	Settings.font_scale_changed.connect(func():
+		_root.theme = _touch_theme()
+		_settings_root.theme = _touch_theme())
 
 func _make_modal(title: String, width: float) -> Dictionary:
 	var wrap := VBoxContainer.new()
@@ -89,8 +91,7 @@ func _make_modal(title: String, width: float) -> Dictionary:
 func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_root.theme = THEME
-	_scale_for_touch(_root)
+	_root.theme = _touch_theme()
 	add_child(_root)
 
 	var backdrop := ColorRect.new()
@@ -103,7 +104,7 @@ func _build_ui() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(center)
 
-	var modal := _make_modal("MENU", 400)
+	var modal := _make_modal("MENU", 400 * Settings.menu_scale_factor())
 	center.add_child(modal["root"])
 	var body: VBoxContainer = modal["body"]
 
@@ -131,9 +132,8 @@ func _build_ui() -> void:
 func _build_settings_ui() -> void:
 	_settings_root = Control.new()
 	_settings_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_settings_root.theme = THEME
+	_settings_root.theme = _touch_theme()
 	_settings_root.visible = false
-	_scale_for_touch(_settings_root)
 	add_child(_settings_root)
 
 	var backdrop := ColorRect.new()
@@ -146,7 +146,7 @@ func _build_settings_ui() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_root.add_child(center)
 
-	var modal := _make_modal("SETTINGS", 500)
+	var modal := _make_modal("SETTINGS", 500 * Settings.menu_scale_factor())
 	center.add_child(modal["root"])
 	var body: VBoxContainer = modal["body"]
 
