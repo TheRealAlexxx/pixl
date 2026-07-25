@@ -17,14 +17,14 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `hc-stickers` | Hack Club Sticker Pack | 3 h | 150 | Cheap if HQ stock; new custom stickers = big order (up to $500). Envelope ~$3 worldwide, ~$10 per pack total | `/shop/hc-stickers.png` |
 | `api-credits` | AI Credits | 3 h | 150 | **$10** HCB grant, no shipping. Fraudable like every grant | `/shop/api.png` |
 | `music-grant` | Music Grant | 3 h | 150 | **$10** stackable grant, instruments/plugins/samples/any music gear. Fraudable like every grant | `/shop/music-grant.png` (generated pixel-art icon: boombox) |
-| `soldering-grant` | Soldering Tools Grant | 3 h | 150 | **$10** stackable grant, soldering tools and supplies only | `/shop/soldering-grant.png` (generated pixel-art icon: coiled solder wire) |
+| `soldering-grant` | Soldering Tools Grant | 3 h | 150 | **$10** stackable grant, soldering tools and supplies only | `/shop/soldering-grant.png` |
 | `hardware-grant` | Hardware Grant | 3.5 h | 175 | **$10** stackable grant, any hardware for your projects | `/shop/hardware-grant.png` (real "$10 Hardware Grant Card" graphic w/ JLCPCB, Raspberry Pi, Micro Center, AliExpress, Creality, Bambu Lab, Adafruit) |
 | `domain-grant` | Domain Grant | 3.5 h | 175 | **$12** stackable grant, registering a domain. Already exists as a Sidequest too | `/shop/domain-grant.png` (generated pixel-art icon: globe) |
 | `hosting-grant` | Hosting Grant | 3.5 h | 175 | **$10** stackable grant, hosting (Railway, any cloud platform) | `/shop/hosting-grant.png` (generated pixel-art icon: cloud + server) |
 | `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.png` (generated pixel-art icon: ribboned mystery crate) |
 | `art-grant` | Art Supply Grant | 4 h | 200 | **$10** stackable grant, paints/pens/canvases/any art supplies. Fraudable like every grant | `/shop/art-grant.png` (generated pixel-art icon: palette + brush) |
 | `cookie-cutter` | PIXL Cookie Cutter | 4 h | 200 | Giant pixelated PIXL-letter cookie cutters, designed by @Ricky. Description has a small nod to sponsor Barnav ("our resident cookie muncher"). ~$5 to buy + printing legion, ~$10 shipping ≈ $15 (high estimate). **Niche item (star badge, red accent)** | `/shop/cookie-cutter.png` |
-| `soldering-iron` | Soldering Iron | 4 h | 200 | $15 on Amazon (iron + tips + flux). Useful for the Tamagotchi DIY kit and other hardware builds | `/shop/soldering-iron.png` (generated pixel-art icon) |
+| `soldering-iron` | Soldering Iron | 4 h | 200 | $15 on Amazon (iron + tips + flux). Useful for the Tamagotchi DIY kit and other hardware builds | `/shop/soldering-iron.png` |
 | `pixel-composer` | Pixel Composer License | 5 h | 250 | $15, no shipping, easy to send as gift | `/shop/pixel-composer.png` |
 | `pico8` | PICO-8 License | 5 h | 250 | $15, gift code, no fraud, in theme asf | `/shop/pico8.png` |
 | `pixl-poster` | PIXL Poster | 6 h | 300 | **$20** print grant (general poster or print grant at a local shop). Design by Ricky or community bounty? **//not sure** | `/shop/poster.png` |
@@ -32,7 +32,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `google-play` | Google Play Developer License | 7 h | 350 | **$25** grant for the one-time Google Play developer registration fee | `/shop/google-play.png` (generated pixel-art icon: play badge) |
 | `tamagotchi-kit` | Pixl Tamagotchi DIY Kit | 8 h | 400 | Parts ~$30 (PCB + screen + components via JLC, cheaper in batch on LCSC/JLCPCB) + reshipping ~$10 ≈ $40. Huge in-house hacker value. **Waiting on mangoman for exact price/hours** | `/shop/tamagotchi.png` |
 | `indie-game` | Indie Game of Your Choice | 8 h | 400 | Selection from the jame gam prize pool ($15–30 games), pay as if $25. Steam gift / Humble Bundle link, no shipping, no fraud | `/shop/indie-game.png` |
-| `screwdriver` | Electric Screwdriver Set | 8.5 h | 425 | $30 on Amazon | `/shop/screwdriver.png` (generated pixel-art icon) |
+| `screwdriver` | Electric Screwdriver Set | 8.5 h | 425 | $30 on Amazon | `/shop/screwdriver.png` |
 | `esp32-kit` | ESP32 Starter Kit | 10 h | 500 | ~$20 AliExpress / ~$30 Amazon US-EU, avg ~$25 + ~$8 shipping ≈ $33 | `/shop/esp32.png` |
 | `furycube` | FURYCUBE 68% | 10 h | 500 | $35 Amazon US, cheap hot-swap keyboard | `/shop/furycube.png` |
 | `godot-plush` | Godot Plush (Limited Edition) | 13 h | 650 | ~$30 + ~$10–15 small packet shipping ≈ $45 on Makeship, no reship needed | `/shop/godot-plush.png` |
