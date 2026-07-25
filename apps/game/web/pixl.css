@@ -6,7 +6,7 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
 :root{
   --ink:#ededf0;--dim:#a1a1aa;--faint:#71717a;--muted:#52525b;
   --panel:#151519;--panel-2:#1c1c22;--panel-deep:#0f0f13;
-  --gold:#f4b942;--gold-soft:#fad68a;--teal:#38bdf8;--teal-hover:#7dd3fc;
+  --gold:#ec4899;--gold-soft:#f472b6;--teal:#38bdf8;--teal-hover:#7dd3fc;
   --good:#08804a;--bad:#a02a2a;--stroke:#26262e;
   --btn-ink:#241710;
   /* Web surfaces (dash + docs) have their own identity — Space Grotesk for
@@ -51,7 +51,7 @@ img{display:block}
   transition:color .15s ease,background .15s ease,border-color .15s ease;
 }
 .nav a:hover{color:var(--gold);background:var(--panel-2);border-color:var(--stroke)}
-.nav a.active{color:var(--gold);background:rgba(244,185,66,.14);border-color:var(--gold);font-weight:600}
+.nav a.active{color:var(--gold);background:rgba(236,72,153,.14);border-color:var(--gold);font-weight:600}
 .topbar-right{display:flex;gap:10px;align-items:center;margin-left:auto}
 .wallet-chip{
   display:flex;align-items:center;gap:8px;
