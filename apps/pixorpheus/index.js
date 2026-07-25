@@ -62,6 +62,7 @@ const app = new App({
 });
 
 app.event('message', async ({ event, client }) => {
+  if (SILENCED_CHANNELS.has(event.channel)) return;
   const isHelpChannel = event.channel === process.env.SLACK_HELP_CHANNEL;
   const isTicketChannel = event.channel === process.env.SLACK_TICKET_CHANNEL;
 
@@ -1389,6 +1390,10 @@ const TRAINING_CHANNEL = 'C0BD7JSTQNM';
 let trainingMode = false;
 let trainingMessages = [];
 
+// Channels Pixo must never speak in — not even a mention, chime-in, or easter
+// egg. Checked first thing in the message handler, before anything else runs.
+const SILENCED_CHANNELS = new Set(['C0AUZ1LAMH6', 'C0AUZ1P2DEC', 'C0AU8AWD5BN', 'C0AUZ1X5QAU']);
+
 let kawaiiMode = false;
 let kawaiiChannel = null;
 let kawaiiMessages = [];
@@ -1946,6 +1951,7 @@ const lastOrphanThanksAt = new Map(); // channel -> timestamp, dedupes "thx orph
 const THREAD_TTL = 2 * 60 * 60 * 1000;
 
 app.message(async ({ message, client }) => {
+  if (SILENCED_CHANNELS.has(message.channel)) return;
   if (message.bot_id && message.bot_id === botAppId) return;
   if (message.subtype && message.subtype !== 'bot_message') return;
   if (message.ts && processedMsgTs.has(message.ts)) return;
@@ -2110,13 +2116,22 @@ app.message(async ({ message, client }) => {
   // Cooldown per channel: Orpheus replying "np"/"you're welcome" to our "thx orphan"
   // is itself a new Orpheus message, which would match again and ping-pong forever
   // without this — only say it once per channel every 10s.
+  // Only fires if Pixo is already a participant in that thread — Orpheus posting
+  // in a thread Pixo has nothing to do with shouldn't summon an unrelated "thx".
   if (message.bot_id && message.bot_id !== botAppId) {
     const otherBotName = (message.bot_profile?.name || message.username || '').toLowerCase();
     if (otherBotName.includes('orpheus')) {
       const lastAt = lastOrphanThanksAt.get(message.channel) || 0;
-      if (Date.now() - lastAt > 10 * 1000) {
-        lastOrphanThanksAt.set(message.channel, Date.now());
-        await client.chat.postMessage({ channel: message.channel, thread_ts: message.thread_ts, text: 'thx orphan' });
+      if (Date.now() - lastAt > 10 * 1000 && message.thread_ts) {
+        let pixoAlreadyInThread = false;
+        try {
+          const { messages } = await client.conversations.replies({ channel: message.channel, ts: message.thread_ts, limit: 200 });
+          pixoAlreadyInThread = (messages || []).some(m => m.user === botUserId || m.bot_id === botAppId);
+        } catch (e) {}
+        if (pixoAlreadyInThread) {
+          lastOrphanThanksAt.set(message.channel, Date.now());
+          await client.chat.postMessage({ channel: message.channel, thread_ts: message.thread_ts, text: 'thx orphan' });
+        }
       }
       return;
     }
@@ -2127,7 +2142,16 @@ app.message(async ({ message, client }) => {
 
   const trimmedText = text.trim().toUpperCase();
 
-  if (trimmedText === 'PIXOSTOP' && message.thread_ts) {
+  // Natural-language mute/unmute, alongside the exact PIXOSTOP/PIXOSTART
+  // keywords — "shut up pixo", "pixo be quiet", "you can talk pixo", etc.
+  // Only checked when the bot's actually being addressed (we're already past
+  // the mentionsBot/inActiveThread/isDM gate above), so a stray "shut up" in
+  // an unrelated thread never trips this.
+  const mentionsPixoName = /\b(pixo|pixorpheus|pix)\b/i.test(text);
+  const isNaturalStop = mentionsPixoName && /\b(shut\s*up|shut\s*it|be\s*quiet|quiet\s*down|stop\s*talking|hush|stfu)\b/i.test(text);
+  const isNaturalStart = mentionsPixoName && /\b(you\s*can\s*talk|talk\s*again|come\s*back|start\s*talking|unmute)\b/i.test(text);
+
+  if ((trimmedText === 'PIXOSTOP' || isNaturalStop) && message.thread_ts) {
     mutedThreads.add(message.thread_ts);
     const tm = threadMemory.get(message.thread_ts);
     if (tm) tm.botInvited = false;
@@ -2137,7 +2161,7 @@ app.message(async ({ message, client }) => {
     return;
   }
 
-  if (trimmedText === 'PIXOSTART' && message.thread_ts) {
+  if ((trimmedText === 'PIXOSTART' || isNaturalStart) && message.thread_ts) {
     mutedThreads.delete(message.thread_ts);
     const tm = threadMemory.get(message.thread_ts);
     if (tm) tm.botInvited = true;
