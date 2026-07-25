@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
 import { useLocale } from "./LocaleProvider";
 
 const ITEM_IMAGES = [
-  "/shop/signed-photo.svg",
+  "/shop/signed-photo.png",
   "/shop/assets-grant.png",
   "/shop/hc-stickers.png",
   "/shop/api.png",

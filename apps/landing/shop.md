@@ -12,12 +12,12 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 
 | ID | Name | Hours | Price (px) | Internal cost / fulfillment notes | Image |
 |---|---|---|---|---|---|
-| `signed-photo` | Signed Org Photo | 2 h | 100 | ~$3 shipping + ~$1 photo; envelope near-free if we buy ~20 per member at once | `/shop/signed-photo.svg` (placeholder) |
+| `signed-photo` | Signed Org Photo | 2 h | 100 | ~$3 shipping + ~$1 photo; envelope near-free if we buy ~20 per member at once | `/shop/signed-photo.png` (fanned polaroid of the 3 orgs' Slack pfps) |
 | `assets-grant` | Game Assets Grant | 3 h | 150 | **$10** HCB grant, stackable. Fraudable like every grant but it's about pixels so ok | `/shop/assets-grant.png` |
 | `hc-stickers` | Hack Club Sticker Pack | 3 h | 150 | Cheap if HQ stock; new custom stickers = big order (up to $500). Envelope ~$3 worldwide, ~$10 per pack total | `/shop/hc-stickers.png` |
 | `api-credits` | AI Credits | 3 h | 150 | **$10** HCB grant, no shipping. Fraudable like every grant | `/shop/api.png` |
 | `music-grant` | Music Grant | 3 h | 150 | **$10** stackable grant, instruments/plugins/samples/any music gear. Fraudable like every grant | `/shop/music-grant.png` (generated pixel-art icon: boombox) |
-| `hardware-grant` | Hardware Grant | 3.5 h | 175 | **$10** stackable grant, any hardware for your projects | `/shop/hardware-grant.png` (generated pixel-art icon: CPU chip) |
+| `hardware-grant` | Hardware Grant | 3.5 h | 175 | **$10** stackable grant, any hardware for your projects | `/shop/hardware-grant.png` (real "$10 Hardware Grant Card" graphic w/ JLCPCB, Raspberry Pi, Micro Center, AliExpress, Creality, Bambu Lab, Adafruit) |
 | `domain-grant` | Domain Grant | 3.5 h | 175 | **$12** stackable grant, registering a domain. Already exists as a Sidequest too | `/shop/domain-grant.png` (generated pixel-art icon: globe) |
 | `hosting-grant` | Hosting Grant | 3.5 h | 175 | **$10** stackable grant, hosting (Railway, any cloud platform) | `/shop/hosting-grant.png` (generated pixel-art icon: cloud + server) |
 | `mystery-object` | Random Desk Object | 4 h | 200 | Object is free (random PCB, stickers — Gabin has a lot). Signed letter included ;) Shipping max ~$10. **Only a few in stock** | `/shop/mystery-box.svg` (placeholder) |
@@ -96,7 +96,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 
 ## Placeholder / pending images
 
-- `signed-photo.svg`, `mystery-box.svg` are quick pixel-art SVG placeholders — swap them for real product photos when available.
+- `mystery-box.svg` is a quick pixel-art SVG placeholder — swap for a real product photo when available. `signed-photo.png` is a real image now (fanned polaroid composite).
 - All other images (including the 9 new grant/license icons — `hardware-grant`, `domain-grant`, `hosting-grant`, `cpu-grant`, `gpu-grant`, `ram-grant`, `google-play`, `steam-license`, `apple-dev` — and the real photos for `pencil-pro` and `ipad-air-m4`) are in place, no longer pending.
 
 ## Where to edit items
