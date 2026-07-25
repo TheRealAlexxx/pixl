@@ -62,9 +62,42 @@
   .callout .k { font-family: var(--pixel); font-weight: 600; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 5px; }
   .callout.warn .k { color: #ff8b8b; }
   .callout p { margin: 0; color: var(--ink); }
-  code { background: var(--panel-deep); border: 1px solid var(--stroke); border-radius: 6px; padding: 1px 6px; font-size: 13px; color: var(--gold-soft); }
-  pre { background: var(--panel-deep); border: 1px solid var(--stroke); border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 16px 0; }
-  pre code { background: none; border: none; padding: 0; font-size: 13px; color: var(--gold-soft); line-height: 1.6; }
+  code { background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 6px; padding: 1px 6px; font-size: 13px; color: #f472a0; }
+  :root[data-theme="light"] code { color: #be123c; }
+
+  /* Code blocks always render on a dark surface (à la Fumadocs) regardless
+     of the site theme — syntax themes are built for dark backgrounds. */
+  pre { position: relative; background: #0d1117; border: 1px solid #21262d; border-radius: 10px;
+    overflow: hidden; margin: 18px 0; }
+  pre code { display: block; background: none; border: none; padding: 16px 44px 16px 18px;
+    font-size: 13px; color: #c9d1d9; line-height: 1.65; overflow-x: auto; }
+
+  .copy-btn { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; font-family: var(--sans); font-size: 11.5px; letter-spacing: .2px;
+    color: #c9d1d9; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+    border-radius: 6px; cursor: pointer; opacity: 0;
+    transition: opacity .15s ease, background .15s ease, border-color .15s ease; }
+  pre:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
+  .copy-btn:hover { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.26); }
+  .copy-btn.copied { color: #7ee787; border-color: rgba(126,231,135,.4); opacity: 1; }
+
+  /* highlight.js tokens — GitHub Dark palette, same family Fumadocs ships. */
+  .hljs-doctag, .hljs-keyword, .hljs-meta .hljs-keyword, .hljs-template-tag,
+  .hljs-template-variable, .hljs-type, .hljs-variable.language_ { color: #ff7b72; }
+  .hljs-title, .hljs-title.class_, .hljs-title.class_.inherited__, .hljs-title.function_ { color: #d2a8ff; }
+  .hljs-attr, .hljs-attribute, .hljs-literal, .hljs-meta, .hljs-number, .hljs-operator,
+  .hljs-variable, .hljs-selector-attr, .hljs-selector-class, .hljs-selector-id { color: #79c0ff; }
+  .hljs-regexp, .hljs-string, .hljs-meta .hljs-string { color: #a5d6ff; }
+  .hljs-built_in, .hljs-symbol { color: #ffa657; }
+  .hljs-comment, .hljs-code, .hljs-formula { color: #8b949e; }
+  .hljs-name, .hljs-quote, .hljs-selector-tag, .hljs-selector-pseudo { color: #7ee787; }
+  .hljs-subst { color: #c9d1d9; }
+  .hljs-section { color: #58a6ff; font-weight: 600; }
+  .hljs-bullet { color: #f2cc60; }
+  .hljs-emphasis { font-style: italic; }
+  .hljs-strong { font-weight: 700; }
+  .hljs-addition { color: #aff5b4; background-color: #033a16; }
+  .hljs-deletion { color: #ffdcd7; background-color: #67060c; }
 
   .doc-foot { display: flex; gap: 14px; margin-top: 52px; }
   .doc-foot a { flex: 1; text-decoration: none; border: 1px solid var(--stroke); border-radius: 12px;
@@ -215,7 +248,7 @@
         <p>You don't need anything fancy. Open VS Code, make a new folder for your project, and create a file called <code>index.html</code>. That's it, that's your website.</p>
         <h2>The basics</h2>
         <p>Every HTML page starts with a bit of boilerplate:</p>
-        <pre><code>&lt;!DOCTYPE html&gt;
+        <pre><code class="language-html">&lt;!DOCTYPE html&gt;
 &lt;html&gt;
 &lt;head&gt;
   &lt;title&gt;My Site&lt;/title&gt;
@@ -237,7 +270,7 @@
         </ul>
         <h2>Making it not look terrible</h2>
         <p>HTML alone gives you the structure but no style. That's what CSS is for. You can either put styles in a separate <code>style.css</code> file and link it, or just throw a <code>&lt;style&gt;</code> tag in the <code>&lt;head&gt;</code>. Something like:</p>
-        <pre><code>&lt;style&gt;
+        <pre><code class="language-html">&lt;style&gt;
   body {
     font-family: sans-serif;
     background: #111;
@@ -266,7 +299,7 @@
         <p>Install the app to your workspace and grab your Bot User OAuth Token, it starts with <code>xoxb-</code>. Keep this secret, don't commit it to GitHub.</p>
         <h2>Actually running the bot</h2>
         <p>You'll want a small backend, Node with the <code>@slack/bolt</code> package is probably the easiest way in:</p>
-        <pre><code>const { App } = require('@slack/bolt');
+        <pre><code class="language-javascript">const { App } = require('@slack/bolt');
 
 const app = new App({
   token: process.env.SLACK_BOT_TOKEN,
@@ -303,7 +336,7 @@ app.start();</code></pre>
         </ul>
         <h2>Scripting basics</h2>
         <p>Roblox uses Lua, specifically a version called Luau. A simple script that gives a player a coin when they touch a part looks something like:</p>
-        <pre><code>local part = script.Parent
+        <pre><code class="language-lua">local part = script.Parent
 
 part.Touched:Connect(function(hit)
   local player = game.Players:GetPlayerFromCharacter(hit.Parent)
@@ -314,7 +347,7 @@ part.Touched:Connect(function(hit)
 end)</code></pre>
         <p>Put that inside a Script that's a child of the coin part, and touching the coin makes it disappear and prints a message. From there you'd build out an actual currency system, probably using leaderstats to show a score on the player list.</p>
         <h2>Leaderstats, the standard way to track score</h2>
-        <pre><code>game.Players.PlayerAdded:Connect(function(player)
+        <pre><code class="language-lua">game.Players.PlayerAdded:Connect(function(player)
   local stats = Instance.new("Folder")
   stats.Name = "leaderstats"
   stats.Parent = player
@@ -337,13 +370,13 @@ end)</code></pre>
         <p>Marco's traveler app is a good example of what this guide is for, a mobile app that actually does something, tracks stuff, sends notifications, works on your phone.</p>
         <h2>Setting up your project</h2>
         <p>The fastest way to get moving is Expo, it skips a lot of the native setup pain. Install it and start a new project:</p>
-        <pre><code>npx create-expo-app my-app
+        <pre><code class="language-bash">npx create-expo-app my-app
 cd my-app
 npx expo start</code></pre>
         <p>That last command gives you a QR code, scan it with the Expo Go app on your phone and your app shows up live, and updates as you save files.</p>
         <h2>The basic structure</h2>
         <p>Expo projects come with a file based router by default, every file inside the app folder becomes a screen. A simple screen looks like:</p>
-        <pre><code>import { View, Text, StyleSheet } from 'react-native';
+        <pre><code class="language-javascript">import { View, Text, StyleSheet } from 'react-native';
 
 export default function HomeScreen() {
   return (
@@ -359,13 +392,13 @@ const styles = StyleSheet.create({
 });</code></pre>
         <h2>Storing data locally</h2>
         <p>For something like tracking routes or logging inventory, AsyncStorage is the easiest starting point, it's basically a simple key value store on the device:</p>
-        <pre><code>import AsyncStorage from '@react-native-async-storage/async-storage';
+        <pre><code class="language-javascript">import AsyncStorage from '@react-native-async-storage/async-storage';
 
 await AsyncStorage.setItem('routes', JSON.stringify(routeList));
 const saved = await AsyncStorage.getItem('routes');</code></pre>
         <h2>Notifications</h2>
         <p>Expo has a notifications module built in. After asking the user for permission, you can schedule a local notification like this:</p>
-        <pre><code>import * as Notifications from 'expo-notifications';
+        <pre><code class="language-javascript">import * as Notifications from 'expo-notifications';
 
 await Notifications.scheduleNotificationAsync({
   content: { title: "New region reached", body: "You've arrived somewhere new" },
@@ -434,27 +467,27 @@ await Notifications.scheduleNotificationAsync({
         <p>If you're on Mac, Git is usually already there, open your terminal and type <code>git --version</code> to check. On Windows, grab Git for Windows from git-scm.com and install it with the default options. On Linux it's normally <code>sudo apt install git</code> or whatever your package manager uses.</p>
         <h2>Setting up your identity</h2>
         <p>Before your first commit, tell Git who you are:</p>
-        <pre><code>git config --global user.name "Your Name"
+        <pre><code class="language-bash">git config --global user.name "Your Name"
 git config --global user.email "you@example.com"</code></pre>
         <p>Use the same email as your GitHub account so your commits actually get linked to your profile.</p>
         <h2>Starting a new project</h2>
         <p>Inside your project folder:</p>
-        <pre><code>git init
+        <pre><code class="language-bash">git init
 git add .
 git commit -m "first commit"</code></pre>
         <p>Then head to GitHub, make a new repo, and it'll give you a couple lines to run that connect your local folder to it, something like:</p>
-        <pre><code>git remote add origin https://github.com/yourusername/yourproject.git
+        <pre><code class="language-bash">git remote add origin https://github.com/yourusername/yourproject.git
 git branch -M main
 git push -u origin main</code></pre>
         <h2>The everyday loop</h2>
         <p>Once it's set up, the loop you'll use constantly is:</p>
-        <pre><code>git add .
+        <pre><code class="language-bash">git add .
 git commit -m "what you changed"
 git push</code></pre>
         <p>Commit often, and write messages that actually describe what changed, "fixed navbar overflow on mobile" is a lot more useful later than "update."</p>
         <h2>A .gitignore is worth setting up early</h2>
         <p>You don't want to accidentally commit API keys, node_modules, or build files. Create a .gitignore file in your project root and add lines like:</p>
-        <pre><code>node_modules/
+        <pre><code class="language-plaintext">node_modules/
 .env
 dist/</code></pre>
         <p>GitHub has starter .gitignore templates for pretty much every language if you search "gitignore [your language] github."</p>
@@ -467,6 +500,7 @@ dist/</code></pre>
   </main>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
   // On play.* the game is at the root; under pixl.rsvp it lives at /play.
   document.getElementById("docs-brand").href =
@@ -541,6 +575,28 @@ dist/</code></pre>
 
   window.addEventListener("hashchange", () => show(location.hash.slice(1)));
   show(location.hash.slice(1) || IDS[0]);
+
+  // Syntax highlighting + a copy button on every code block.
+  if (window.hljs) hljs.highlightAll();
+  document.querySelectorAll("pre").forEach((pre) => {
+    const codeEl = pre.querySelector("code");
+    if (!codeEl) return;
+    const btn = document.createElement("button");
+    btn.className = "copy-btn";
+    btn.type = "button";
+    btn.textContent = "Copy";
+    btn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(codeEl.textContent);
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+      } catch (e) {
+        btn.textContent = "Failed";
+      }
+      setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 1600);
+    });
+    pre.appendChild(btn);
+  });
 </script>
 </body>
 </html>
