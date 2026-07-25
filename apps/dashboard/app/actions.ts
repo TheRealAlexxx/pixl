@@ -16,6 +16,7 @@ import {
   removeReportViewer,
   addHelper,
   removeHelper,
+  nextReviewId,
   EVENT_TYPES,
   type DashEventRow,
 } from "@/lib/db";
@@ -43,6 +44,31 @@ const DASH_URL = "https://pixl-dash.ridit.space";
 
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
+}
+
+// Where to send a reviewer after they finish a verdict: straight to the next
+// project in their queue if there is one, otherwise back to the list. `stage`
+// is the stage of the project they just closed, so we keep them in the same
+// pass (first vs final) when possible. Never throws — returns a path to redirect.
+async function nextReviewPath(
+  access: AdminAccess,
+  by: string,
+  stage: string,
+  justReviewedId: number,
+): Promise<string> {
+  try {
+    const nextId = await nextReviewId({
+      viewer: access.session.slackId,
+      by,
+      canSecondPass: access.canSecondPass,
+      isSuper: access.isSuper,
+      excludeId: justReviewedId,
+      prefer: stage === "second_review" ? "second_review" : "shipped",
+    });
+    return nextId ? `/review/${nextId}` : "/review";
+  } catch {
+    return "/review";
+  }
 }
 
 // XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
@@ -375,11 +401,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
-  // First pass on a freshly-shipped project: EVERY verdict (approve, request
-  // changes, ban) is only a PROPOSAL, regardless of the reviewer's own
-  // permissions. Hold the project in 'second_review' carrying what was
-  // proposed, so a different final reviewer confirms or overturns it.
-  if (stage === "shipped") {
+  // First pass on a freshly-shipped project: approve and ban are only PROPOSALS,
+  // regardless of the reviewer's own permissions — the project is held in
+  // 'second_review' carrying what was proposed so a different final reviewer
+  // confirms or overturns it. "Request changes" is the exception: it never needs
+  // a second pass, so it falls through to bounce straight back to the maker.
+  if (stage === "shipped" && verdict !== "needs_changes") {
     const proposedKey = verdict === "ban" ? "banned" : verdict;
     const { data: project, error } = await db
       .from("projects")
@@ -406,12 +433,15 @@ export async function reviewProject(formData: FormData): Promise<void> {
     await insertReviewAudit(formData, projectId, project.user_id, by, `first_pass_${proposedKey}`, note, claimedHours, approvedHours);
     if (!own) await recordPendingPayout(projectId, access, formData);
     await logModAction(project.user_id, "project_first_pass", `${project.name}: proposed ${proposedKey.replace("_", " ")} , ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
-    redirect("/review");
+    redirect(nextPath);
   }
 
-  // From here the project is always in 'second_review' , a final reviewer is
-  // confirming or overturning the first-pass proposal.
+  // From here the project is in 'second_review' (a final reviewer confirming or
+  // overturning the first-pass proposal) — or it's a first-pass "request changes"
+  // falling through to bounce straight back to the maker. These two guards only
+  // apply to the second_review case.
   if (stage === "second_review" && !access.canSecondPass)
     redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can decide this stage.")}`);
   if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
@@ -455,8 +485,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
       `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
     );
     await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
-    redirect("/review");
+    redirect(nextPath);
   }
 
   // Ban , a final reviewer confirms a proposed ban (or a senior bans outright).
@@ -487,9 +518,10 @@ export async function reviewProject(formData: FormData): Promise<void> {
     await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
     await dmOrEmail(project.user_id, "Project banned", banBody);
     await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
     revalidatePath("/", "layout");
-    redirect("/review");
+    redirect(nextPath);
   }
 
   const creditHours = approvedHours ?? claimedHours;
@@ -615,8 +647,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
     `${project.name}: ${deltaPx >= 0 ? "+" : ""}${deltaPx} pixels (total ${totalPx})`,
     by,
   );
+  const nextPath = await nextReviewPath(access, by, stage, projectId);
   revalidatePath("/review");
-  redirect("/review");
+  redirect(nextPath);
 }
 
 // Reviewers can re-grade the difficulty level (L1–L4) a maker self-assigned.

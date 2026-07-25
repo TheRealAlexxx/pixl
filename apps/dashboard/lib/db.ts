@@ -459,6 +459,39 @@ export async function listSecondReviewProjects(viewer?: string): Promise<Shipped
   return hydrateHours(visible as ShippedProject[]);
 }
 
+// The next project a reviewer should look at after finishing one, so the review
+// flow jumps straight to the next in queue instead of dumping them back on the
+// list page. Prefers the same stage they were just working (first pass vs final
+// pass), then falls back to the other queue. Skips the project they just closed
+// and anything they can't action (their own submission, or a final pass on a
+// project they first-passed). Returns null when the queue is empty for them.
+export async function nextReviewId(opts: {
+  viewer: string; // reviewer slack id
+  by: string; // actorName(access) — matches first_pass_by
+  canSecondPass: boolean;
+  isSuper: boolean;
+  excludeId: number;
+  prefer: "shipped" | "second_review";
+}): Promise<number | null> {
+  const { viewer, by, canSecondPass, isSuper, excludeId, prefer } = opts;
+
+  const firstPass = (await listShippedProjects(viewer)).filter(
+    (p) => p.id !== excludeId && (isSuper || !p.own),
+  );
+  const finalPass = canSecondPass
+    ? (await listSecondReviewProjects(viewer)).filter(
+        (p) =>
+          p.id !== excludeId &&
+          (isSuper || (p.users?.slack_id !== viewer && p.first_pass_by !== by)),
+      )
+    : [];
+
+  const order =
+    prefer === "second_review" ? [finalPass, firstPass] : [firstPass, finalPass];
+  for (const list of order) if (list[0]) return list[0].id;
+  return null;
+}
+
 // Credit a project's approval to the owner's pixel balance exactly once. The
 // atomic insert-and-increment lives in a Postgres function so the game can
 // never write pixels and repeats can't double-credit.
