@@ -776,15 +776,30 @@ app.action('reopen_ticket', async ({ ack, body, client }) => {
   const reopener = body.user.id;
   const channelId = body.channel.id;
 
+  let ticket;
+  try {
+    const { data } = await db().from("tickets").select("opened_by_slack_id").eq("msg_ts", msgTs).maybeSingle();
+    ticket = data;
+  } catch (e) {
+    await client.chat.postEphemeral({ channel: channelId, thread_ts: msgTs, user: reopener, text: "Database error — could not load the ticket." });
+    return;
+  }
+
+  if (!ticket) {
+    await client.chat.postEphemeral({ channel: channelId, thread_ts: msgTs, user: reopener, text: "No ticket found for this message." });
+    return;
+  }
+
   const isHelper = await checkIsHelper(reopener);
+  const isAuthor = ticket.opened_by_slack_id === reopener;
   const isInTicketChannel = await checkIsInTicketChannel(reopener, client);
 
-  if (!isHelper && !isInTicketChannel) {
+  if (!isHelper && !isAuthor && !isInTicketChannel) {
     await client.chat.postEphemeral({
       channel: channelId,
       thread_ts: msgTs,
       user: reopener,
-      text: "Only helpers or support team members can reopen tickets.",
+      text: "Only the ticket author, a helper, or a support team member can reopen tickets.",
     });
     return;
   }
