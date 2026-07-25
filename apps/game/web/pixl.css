@@ -73,11 +73,11 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
 body,html{
   cursor:url(/img/cursor/cursor-arrow.png) 2 0,auto;
 }
-a,button,.btn,.card,.chip.opt-choice,.tier,.tab,.theme-toggle,.rail-btn,
+a,button,label,.btn,.card,.chip.opt-choice,.tier,.tab,.theme-toggle,.rail-btn,
 .docs-group-head,.docs-nav a,.docs-toc a,.section-link,.modal-close,
 input[type="checkbox"],input[type="radio"],select,.level-btn,.md-btn,
 .jdel,.copy-btn,[onclick],[data-claim]{
-  cursor:url(/img/cursor/cursor-pointer.png) 16 16,pointer;
+  cursor:url(/img/cursor/cursor-pointer.png) 16 16,pointer!important;
 }
 /* typing fields keep the OS text-beam, not the pixel pointer (selects stay
    pointer — picking an option isn't typing) */
