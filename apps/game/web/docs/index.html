@@ -45,8 +45,10 @@
   .docs-group-head .count { font-size: 10px; color: var(--muted); font-weight: 600; }
   .docs-group-head .chev { font-size: 9px; opacity: .7; transition: transform .18s ease; }
   .docs-group.collapsed .docs-group-head .chev { transform: rotate(-90deg); }
-  .docs-group-items { display: flex; flex-direction: column; gap: 1px; padding-bottom: 6px; }
-  .docs-group.collapsed .docs-group-items { display: none; }
+  .docs-group-items { display: flex; flex-direction: column; gap: 1px; overflow: hidden;
+    max-height: 600px; opacity: 1; padding-bottom: 6px;
+    transition: max-height .24s ease, opacity .2s ease, padding-bottom .24s ease; }
+  .docs-group.collapsed .docs-group-items { max-height: 0; opacity: 0; padding-bottom: 0; }
   .docs-nav a.section-link { display: block; padding: 7px 12px 7px 20px; color: var(--dim);
     text-decoration: none; font-size: 14.5px; border-radius: 6px; line-height: 1.35;
     border-left: 2px solid transparent; }
@@ -89,30 +91,30 @@
   .callout .k { font-family: var(--pixel); font-weight: 600; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); display: block; margin-bottom: 5px; }
   .callout.warn .k { color: #ff8b8b; }
   .callout p { margin: 0; color: var(--ink); }
-  code { background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 6px; padding: 1px 6px; font-size: 13px; color: #f472a0; }
-  :root[data-theme="light"] code { color: #be123c; }
+  code { background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 6px; padding: 1px 6px; font-size: 13px; color: var(--gold-soft); }
+  :root[data-theme="light"] code { color: var(--gold); }
 
-  /* Code block theme — follows the site's light/dark toggle, same as Fumadocs'
-     dual shiki themes. GitHub Dark / GitHub Light palettes. */
+  /* Code block theme — follows the site's light/dark toggle, retinted to the
+     DUSK white+yellow wood palette instead of GitHub's blue/purple. */
   :root {
-    --code-bg: #0d1117; --code-border: #21262d; --code-fg: #c9d1d9;
-    --code-keyword: #ff7b72; --code-title: #d2a8ff; --code-attr: #79c0ff;
-    --code-string: #a5d6ff; --code-built_in: #ffa657; --code-comment: #8b949e;
-    --code-tag: #7ee787; --code-section: #58a6ff; --code-bullet: #f2cc60;
-    --code-addition-fg: #aff5b4; --code-addition-bg: #033a16;
-    --code-deletion-fg: #ffdcd7; --code-deletion-bg: #67060c;
-    --copy-btn-fg: #c9d1d9; --copy-btn-bg: rgba(255,255,255,.06); --copy-btn-border: rgba(255,255,255,.14);
+    --code-bg: #150f0a; --code-border: var(--stroke); --code-fg: #efe7da;
+    --code-keyword: #ffb454; --code-title: #ffd88a; --code-attr: #f0dba0;
+    --code-string: #d8c48a; --code-built_in: #ffa657; --code-comment: #8f7f68;
+    --code-tag: #e8c98a; --code-section: #ffcf70; --code-bullet: #f2cc60;
+    --code-addition-fg: #d8e8a0; --code-addition-bg: #2a3316;
+    --code-deletion-fg: #ffdcd7; --code-deletion-bg: #3a1616;
+    --copy-btn-fg: #efe7da; --copy-btn-bg: rgba(255,255,255,.06); --copy-btn-border: rgba(255,255,255,.14);
     --copy-btn-bg-hover: rgba(255,255,255,.14); --copy-btn-border-hover: rgba(255,255,255,.26);
   }
   :root[data-theme="light"] {
-    --code-bg: #f6f8fa; --code-border: #d0d7de; --code-fg: #1f2328;
-    --code-keyword: #cf222e; --code-title: #8250df; --code-attr: #0550ae;
-    --code-string: #0a3069; --code-built_in: #953800; --code-comment: #6e7781;
-    --code-tag: #116329; --code-section: #0550ae; --code-bullet: #4d2d00;
-    --code-addition-fg: #116329; --code-addition-bg: #dafbe1;
-    --code-deletion-fg: #82071e; --code-deletion-bg: #ffebe9;
-    --copy-btn-fg: #57606a; --copy-btn-bg: rgba(0,0,0,.04); --copy-btn-border: rgba(0,0,0,.12);
-    --copy-btn-bg-hover: rgba(0,0,0,.08); --copy-btn-border-hover: rgba(0,0,0,.2);
+    --code-bg: #2a2015; --code-border: #453522; --code-fg: #f4ebdd;
+    --code-keyword: #ffb454; --code-title: #f0c674; --code-attr: #e8d5a0;
+    --code-string: #cbb789; --code-built_in: #e8a05c; --code-comment: #a08f76;
+    --code-tag: #d8bd7c; --code-section: #f0c674; --code-bullet: #d8a94a;
+    --code-addition-fg: #c5d98c; --code-addition-bg: #2a3316;
+    --code-deletion-fg: #f0b0a8; --code-deletion-bg: #3a1e1a;
+    --copy-btn-fg: #f4ebdd; --copy-btn-bg: rgba(255,255,255,.06); --copy-btn-border: rgba(255,255,255,.14);
+    --copy-btn-bg-hover: rgba(255,255,255,.14); --copy-btn-border-hover: rgba(255,255,255,.26);
   }
 
   pre { position: relative; background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 10px;
@@ -170,6 +172,7 @@
       <a class="docs-brand" id="docs-brand" title="Back to the game"><img src="/index.icon.png" alt="">PIXL <span>DOCS</span></a>
       <button class="theme-toggle" id="docs-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>
     </div>
+    <button class="btn dark" id="docs-back" type="button" style="margin:0 6px 16px;justify-content:center">◄ BACK</button>
     <nav id="docs-nav-list"></nav>
   </aside>
 
@@ -554,8 +557,14 @@ dist/</code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script>
   // On play.* the game is at the root; under pixl.rsvp it lives at /play.
-  document.getElementById("docs-brand").href =
-    location.hostname.startsWith("play.") ? "/" : "/play";
+  const GAME_HREF = location.hostname.startsWith("play.") ? "/" : "/play";
+  document.getElementById("docs-brand").href = GAME_HREF;
+  // Real "back" — previous page in history, not always the game. Falls back
+  // to the game only when there's nowhere to go back to (e.g. a direct link).
+  document.getElementById("docs-back").addEventListener("click", () => {
+    if (history.length > 1) history.back();
+    else location.href = GAME_HREF;
+  });
 
   // Theme toggle — shares the "pixl_theme" localStorage key with pixl.js so
   // the choice is consistent across the docs and the rest of the dash.
@@ -647,9 +656,17 @@ dist/</code></pre>
   function updateTocActive() {
     if (!tocLinks.length) return;
     let cur = tocLinks[0].dataset.h;
-    for (const a of tocLinks) {
-      const el = document.getElementById(a.dataset.h);
-      if (el && el.getBoundingClientRect().top <= 96) cur = a.dataset.h;
+    // Scrolled to (or near) the bottom of the page — the last heading may never
+    // cross the 96px "active" line if its section is short, so pin it directly
+    // instead of leaving the previous heading stuck active.
+    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+    if (atBottom) {
+      cur = tocLinks[tocLinks.length - 1].dataset.h;
+    } else {
+      for (const a of tocLinks) {
+        const el = document.getElementById(a.dataset.h);
+        if (el && el.getBoundingClientRect().top <= 96) cur = a.dataset.h;
+      }
     }
     tocLinks.forEach((a) => a.classList.toggle("active", a.dataset.h === cur));
   }

@@ -21,27 +21,28 @@
 html{font-size:15px;-webkit-text-size-adjust:100%}
 
 :root{
-  /* EMBER — a forge at night. Warm plum-black surfaces lit by torchlight, no
-     teal anywhere: PIXELS burn ember-orange, RESTORATION ENERGY glows arcane
-     violet. (Token names --gold/--teal are kept for compatibility; they now
-     carry the ember + violet accents.) */
-  /* warm cream text on plum */
-  --ink:#f4e7dd;--dim:#c3ac9f;--faint:#8f7a70;--muted:#6a5850;
-  /* ember-lit plum surfaces (never indigo, never pure black) */
-  --panel:#241620;--panel-2:#301d29;--panel-deep:#170e13;
-  /* PIXELS — ember orange, "coins you spend" */
-  --gold:#ff9d3c;--gold-soft:#ffb968;
-  /* RESTORATION ENERGY — restoration-green glow, "world-repair", not money */
-  --teal:#2ecf6f;--teal-hover:#5be08f;
+  /* DUSK — a warm-wood outpost under a golden dawn sky. Dark chocolate-brown
+     surfaces, all-gold: a white+yellow palette, no blue/teal/purple anywhere.
+     (Token names --gold/--teal are kept for compatibility; --teal now carries
+     a paler straw-gold so Restoration Energy still reads slightly distinct.) */
+  /* warm cream text on wood */
+  --ink:#efe7da;--dim:#b4a691;--faint:#897b67;--muted:#665a49;
+  /* dark warm-brown surfaces */
+  --panel:#241a12;--panel-2:#30241a;--panel-deep:#150f0a;
+  /* PIXELS — gold/amber, "coins you spend" */
+  --gold:#f4b942;--gold-soft:#ffd270;
+  /* second accent — pale straw/white-gold, keeping the palette white + yellow */
+  --teal:#fff3c9;--teal-hover:#ffe9a3;
   /* states */
-  --good:#5ec46a;--bad:#ff4d5e;--stroke:#3a2532;
-  --btn-ink:#1a0d06;
+  --good:#54c06a;--bad:#e0555f;--stroke:#3a2c1d;
+  --btn-ink:#1a1206;
   /* Pixelify Sans is the blocky pixel/retro display face — labels, nav,
      buttons, headings. Rubik carries all body copy + data-dense areas.
      --pixel stays the var name for the display face (used everywhere). */
   --sans:'Rubik',system-ui,-apple-system,sans-serif;
   --pixel:'Pixelify Sans',ui-monospace,system-ui,sans-serif;
-  --drop:0 2px 0 rgba(0,0,0,.35);
+  /* neo-brutalist hard offset shadows (no blur) — the block "pop" */
+  --drop:2px 2px 0 rgba(0,0,0,.4);--drop-lg:4px 4px 0 rgba(0,0,0,.45);
   --radius:4px;--radius-sm:3px;
   /* dithered-scanline texture layered onto panels — cheap, no image assets */
   --dither:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);
@@ -55,45 +56,59 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
   --sidebar:212px;--toprail:54px;
 }
 
-/* Light mode — warm parchment, the forge in daylight. Cream/paper surfaces,
-   darker ember + violet so the accents read as text. Not a cool white flip. */
+/* Light mode — warm parchment in daylight. Cream/paper surfaces, darker gold
+   so the accent reads as text. White + yellow throughout, not a cool flip. */
 :root[data-theme="light"]{
-  --ink:#2a1a20;--dim:#5c4a44;--faint:#8a7269;--muted:#b0a099;
-  --panel:#fffaf5;--panel-2:#f5ebe1;--panel-deep:#faf3ec;
-  --gold:#c26a12;--gold-soft:#dd8320;--teal:#1f9d57;--teal-hover:#17864a;
-  --good:#2f9e57;--bad:#d13048;--stroke:#ece0d5;
-  --btn-ink:#fff7ef;
-  --drop:0 2px 0 rgba(60,30,20,.08);
-  --dither:repeating-linear-gradient(0deg,rgba(80,40,30,.02) 0 1px,transparent 1px 3px);
+  --ink:#2a1f16;--dim:#5c4d3d;--faint:#8a7962;--muted:#b0a08c;
+  --panel:#fffaf2;--panel-2:#f4ebdd;--panel-deep:#faf4ea;
+  --gold:#b5791a;--gold-soft:#cf8f22;--teal:#8a6a1a;--teal-hover:#6f5514;
+  --good:#2f9e57;--bad:#cc3a48;--stroke:#e9ddca;
+  --btn-ink:#fff7ea;
+  --drop:2px 2px 0 rgba(70,45,20,.16);--drop-lg:4px 4px 0 rgba(70,45,20,.2);
+  --dither:repeating-linear-gradient(0deg,rgba(80,50,20,.02) 0 1px,transparent 1px 3px);
 }
 
-body{
-  background:var(--panel-deep);color:var(--ink);
-  font-family:var(--sans);line-height:1.5;overflow-y:scroll;
-  transition:background .15s ease,color .15s ease;
+/* Kenney pixel cursor pack (CC0) — the arrow replaces the OS pointer everywhere
+   in the web shell + docs, the pointing hand shows on anything clickable. */
+body,html{
+  cursor:url(/img/cursor/cursor-arrow.png) 2 0,auto;
 }
-/* faint starfield over the Void — fixed, static, a few radial dots (no image) */
+a,button,.btn,.card,.chip.opt-choice,.tier,.tab,.theme-toggle,.rail-btn,
+.docs-group-head,.docs-nav a,.docs-toc a,.section-link,.modal-close,
+input[type="checkbox"],input[type="radio"],select,.level-btn,.md-btn,
+.jdel,.copy-btn,[onclick],[data-claim]{
+  cursor:url(/img/cursor/cursor-pointer.png) 16 16,pointer;
+}
+/* typing fields keep the OS text-beam, not the pixel pointer (selects stay
+   pointer — picking an option isn't typing) */
+.field:not(select),textarea,input:not([type="checkbox"]):not([type="radio"]){cursor:text}
+
+body{
+  background-color:var(--panel-deep);
+  /* golden dawn glow across the top of every page — fixed, fades into the wood */
+  background-image:linear-gradient(180deg,rgba(244,185,66,.35),rgba(200,140,40,.14) 13%,transparent 28%);
+  background-repeat:no-repeat;background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--sans);line-height:1.5;overflow-y:scroll;
+  transition:color .15s ease;
+}
+/* faint grid texture over the wood — fixed, cheap, no image */
 body::before{
   content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-  /* drifting embers/sparks over the forge — warm specks, a couple of cool stars */
-  background:
-    radial-gradient(1px 1px at 12% 18%,rgba(255,180,90,.55),transparent),
-    radial-gradient(1px 1px at 82% 26%,rgba(255,150,70,.4),transparent),
-    radial-gradient(1px 1px at 27% 72%,rgba(255,200,120,.35),transparent),
-    radial-gradient(1px 1px at 66% 82%,rgba(255,160,80,.45),transparent),
-    radial-gradient(1px 1px at 47% 42%,rgba(230,210,240,.3),transparent),
-    radial-gradient(1px 1px at 91% 63%,rgba(255,180,90,.35),transparent),
-    radial-gradient(1px 1px at 8% 88%,rgba(230,210,240,.25),transparent);
-  opacity:.6;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:30px 30px;
+  opacity:.5;
+}
+:root[data-theme="light"] body{
+  background-image:linear-gradient(180deg,rgba(120,180,240,.4),rgba(120,170,230,.14) 13%,transparent 28%);
 }
 :root[data-theme="light"] body::before{
-  background:
-    radial-gradient(1px 1px at 12% 18%,rgba(200,120,40,.5),transparent),
-    radial-gradient(1px 1px at 82% 26%,rgba(200,120,40,.35),transparent),
-    radial-gradient(1px 1px at 27% 72%,rgba(200,120,40,.3),transparent),
-    radial-gradient(1px 1px at 66% 82%,rgba(200,120,40,.4),transparent),
-    radial-gradient(1px 1px at 47% 42%,rgba(200,120,40,.25),transparent);
-  opacity:.35;
+  background-image:
+    linear-gradient(rgba(70,45,20,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(70,45,20,.05) 1px,transparent 1px);
+  opacity:.6;
 }
 a{color:var(--gold);text-decoration:none}
 a:hover{color:var(--gold-soft)}
@@ -236,15 +251,16 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
 .chip.red{background:var(--bad);color:#fff;border-color:transparent}
 
 .card{
-  cursor:pointer;border:1px solid var(--stroke);border-radius:var(--radius);
+  cursor:pointer;border:2px solid var(--stroke);border-radius:var(--radius);
   background:var(--panel);background-image:var(--dither);box-shadow:var(--drop);
-  transition:border-color .13s ease,background-color .13s ease,box-shadow .13s ease,transform .13s ease;
+  transition:border-color .13s ease,background-color .13s ease,box-shadow .12s ease,transform .12s ease;
 }
-.card:hover{border-color:var(--gold);box-shadow:0 8px 20px rgba(0,0,0,.3),var(--drop);transform:translateY(-3px)}
-.card:active{transform:translateY(-1px)}
+/* brutalist pop: lift toward the light + grow the hard shadow, snap down on press */
+.card:hover{border-color:var(--gold);box-shadow:var(--drop-lg);transform:translate(-2px,-2px)}
+.card:active{transform:translate(0,0);box-shadow:var(--drop)}
 
-.panel{border:1px solid var(--stroke);border-radius:var(--radius);background:var(--panel);background-image:var(--dither);box-shadow:var(--drop)}
-.panel-deep{border:1px solid var(--stroke);border-radius:var(--radius);background:var(--panel-deep);box-shadow:var(--drop)}
+.panel{border:2px solid var(--stroke);border-radius:var(--radius);background:var(--panel);background-image:var(--dither);box-shadow:var(--drop)}
+.panel-deep{border:2px solid var(--stroke);border-radius:var(--radius);background:var(--panel-deep);box-shadow:var(--drop)}
 
 /* HUD panel — the "Game Boy menu window" hero surface with true pixel-stepped
    corners. Double-layer so the notch keeps a crisp border. Direct children ride
@@ -293,10 +309,10 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
 
 .field{
   font-family:var(--sans);background:var(--panel-deep);color:var(--ink);
-  border:1px solid var(--stroke);border-radius:var(--radius-sm);padding:10px 14px;font-size:15px;
-  outline:none;transition:border-color .13s ease,box-shadow .13s ease;
+  border:2px solid var(--stroke);border-radius:var(--radius-sm);padding:10px 14px;font-size:15px;
+  outline:none;transition:border-color .13s ease,box-shadow .12s ease;
 }
-.field:focus{border-color:var(--gold);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 18%,transparent)}
+.field:focus{border-color:var(--gold);box-shadow:var(--drop)}
 .field::placeholder{color:var(--muted)}
 select.field{cursor:pointer}
 

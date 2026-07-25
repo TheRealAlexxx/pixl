@@ -120,6 +120,9 @@
         transition: color 0.13s ease, border-color 0.13s ease, background 0.13s ease;
       }
       .tier:hover { color: var(--ink); border-color: var(--faint); }
+      /* explicit, so the selected chip's hover never falls back to a
+         same-specificity source-order tie and washes the text into the fill */
+      .tier.on:hover { color: var(--btn-ink); border-color: transparent; }
       .tier.on {
         color: var(--btn-ink);
         background: var(--gold);
