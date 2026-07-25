@@ -24,7 +24,7 @@
           var(--gold) 0 34px,
           #f4e3c2 34px 68px
         );
-        border-bottom: 4px solid var(--stroke);
+        border-bottom: 1px solid var(--stroke);
       }
       .shop-hero-inner {
         display: flex;
@@ -68,8 +68,9 @@
         position: relative;
         background: #f4ead4;
         color: #241710;
-        border: 3px solid var(--stroke);
-        box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
+        box-shadow: var(--drop);
         padding: 12px 16px 10px;
         font-size: 15px;
         max-width: 330px;
@@ -84,8 +85,8 @@
         width: 10px;
         height: 10px;
         background: #f4ead4;
-        border-left: 3px solid var(--stroke);
-        border-bottom: 3px solid var(--stroke);
+        border-left: 1px solid var(--stroke);
+        border-bottom: 1px solid var(--stroke);
         transform: rotate(45deg);
       }
       .shop-title-box {
@@ -109,9 +110,10 @@
         flex-wrap: wrap;
         padding: 12px 18px 10px;
         margin-bottom: 18px;
-        background: rgba(255, 209, 102, 0.1);
-        border: 3px solid var(--stroke);
-        box-shadow: 4px 4px 0 var(--stroke);
+        background: rgba(244, 185, 66, 0.1);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
+        box-shadow: var(--drop);
         color: var(--ink);
         font-size: 15px;
       }
@@ -125,27 +127,21 @@
         gap: 10px;
       }
       .item-card.limited {
-        box-shadow:
-          inset 0 0 0 3px var(--gold),
-          5px 5px 0 var(--stroke);
+        border-color: var(--gold);
+        box-shadow: var(--drop), 0 0 0 1px var(--gold);
       }
       .item-img {
         height: 150px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background:
-          radial-gradient(
-            circle at 50% 34%,
-            rgba(255, 209, 102, 0.08),
-            transparent 62%
-          ),
-          linear-gradient(var(--panel), var(--panel-deep));
-        border: 3px solid var(--stroke);
+        background: var(--panel-deep);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         overflow: hidden;
       }
       .item-img .ph {
-        filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.4));
+        filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
         opacity: 0.9;
       }
       .item-img img {
@@ -196,7 +192,8 @@
         right: 10px;
         background: var(--gold);
         color: var(--btn-ink);
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 6px;
         font-size: 11px;
         letter-spacing: 1px;
         padding: 4px 8px 3px;
@@ -210,7 +207,8 @@
       .afford-dot {
         width: 10px;
         height: 10px;
-        border: 2px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 50%;
       }
       .afford-dot.yes {
         background: var(--good);
@@ -225,14 +223,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background:
-          repeating-conic-gradient(
-              rgba(22, 22, 30, 0.05) 0% 25%,
-              transparent 0% 50%
-            )
-            0 0 / 26px 26px,
-          var(--panel-deep);
-        border: 3px solid var(--stroke);
+        background: var(--panel-deep);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius);
         overflow: hidden;
       }
       #detail-img img {
@@ -254,7 +247,6 @@
       #detail-name {
         font-size: 27px;
         color: var(--gold);
-        text-shadow: 3px 3px 0 var(--stroke);
       }
       #detail-desc {
         font-size: 15px;
@@ -289,23 +281,24 @@
       .opt-choice.on {
         color: var(--btn-ink);
         background: var(--gold);
-        border-color: var(--stroke);
+        border-color: transparent;
       }
       .afford-bar {
         height: 14px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
         background: var(--panel-deep);
+        overflow: hidden;
       }
       .afford-bar > div {
         height: 100%;
         background: var(--gold);
-        transition: width 0.3s steps(6);
+        transition: width 0.3s ease;
       }
       .trophy-head {
         font-size: 20px;
         color: var(--gold);
         letter-spacing: 2px;
-        text-shadow: 2px 2px 0 var(--stroke);
         margin: 6px 0 16px;
       }
       .trophy-card {
@@ -319,31 +312,21 @@
         filter: saturate(0.55) brightness(0.82);
       }
       .trophy-card.claimable {
-        box-shadow:
-          inset 0 0 0 3px var(--gold),
-          5px 5px 0 var(--stroke);
-        animation: trophy-glow 1.4s steps(2) infinite;
+        border-color: var(--gold);
+        box-shadow: var(--drop), 0 0 0 1px var(--gold);
+        animation: trophy-glow 1.4s ease infinite;
       }
       @keyframes trophy-glow {
         50% {
-          box-shadow:
-            inset 0 0 0 3px var(--gold-soft),
-            7px 7px 0 var(--stroke);
+          box-shadow: var(--drop), 0 0 0 1px var(--gold-soft), 0 0 14px rgba(244, 185, 66, 0.35);
         }
       }
       .trophy-card.claimed {
-        box-shadow:
-          inset 0 0 0 3px var(--good),
-          5px 5px 0 var(--stroke);
+        border-color: var(--good);
+        box-shadow: var(--drop), 0 0 0 1px var(--good);
       }
       .trophy-img {
-        background:
-          repeating-conic-gradient(
-              rgba(255, 209, 102, 0.07) 0% 25%,
-              transparent 0% 50%
-            )
-            0 0 / 22px 22px,
-          radial-gradient(circle at 50% 40%, #ffe9b0, var(--panel-deep));
+        background: var(--panel-deep);
       }
       .trophy-tag {
         position: absolute;
@@ -352,7 +335,8 @@
         font-size: 11px;
         letter-spacing: 1px;
         padding: 4px 8px 3px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 6px;
         background: var(--panel-deep);
         color: var(--dim);
       }
@@ -370,18 +354,15 @@
       }
       .trophy-progress {
         height: 12px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
         background: var(--panel-deep);
         overflow: hidden;
       }
       .trophy-progress > div {
         height: 100%;
-        background: repeating-linear-gradient(
-          90deg,
-          var(--gold) 0 8px,
-          var(--gold-soft) 8px 16px
-        );
-        transition: width 0.5s steps(8);
+        background: var(--gold);
+        transition: width 0.5s ease;
       }
       .trophy-need {
         font-size: 14px;
@@ -398,8 +379,8 @@
       .marquee {
         overflow: hidden;
         white-space: nowrap;
-        border-top: 4px solid var(--stroke);
-        border-bottom: 4px solid var(--stroke);
+        border-top: 1px solid var(--stroke);
+        border-bottom: 1px solid var(--stroke);
         background: var(--panel-deep);
         color: var(--faint);
         font-size: 13px;
@@ -675,7 +656,7 @@
         $("items").innerHTML = list
           .map(
             (item, idx) => `
-    <div class="card panel item-card ${item.limited ? "limited" : ""}" data-id="${item.id}" style="animation: toast-in .2s steps(4) both; animation-delay:${Math.min(idx * 30, 400)}ms">
+    <div class="card panel item-card ${item.limited ? "limited" : ""}" data-id="${item.id}" style="animation: toast-in .2s ease both; animation-delay:${Math.min(idx * 30, 400)}ms">
       ${item.limited ? `<div class="limited-tag">LIMITED</div>` : ""}
       <div class="item-img">${imgHtml(item)}</div>
       <div class="item-name">${Pixl.esc(item.name)}</div>

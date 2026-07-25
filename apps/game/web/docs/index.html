@@ -3,6 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Applied before first paint so there's no flash of the default theme.
+  // Shares the "pixl_theme" key with pixl.js's own init so the choice is
+  // consistent between the docs and the rest of the dash.
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("pixl_theme") || "dark";
+  } catch (e) {
+    document.documentElement.dataset.theme = "dark";
+  }
+</script>
 <title>Pixl · Docs</title>
 <link rel="icon" href="/index.icon.png">
 <link rel="stylesheet" href="/pixl.css">
@@ -15,9 +25,10 @@
 
   .docs-nav { position: sticky; top: 0; height: 100vh; overflow-y: auto;
     border-right: 1px solid var(--stroke); background: var(--panel); padding: 22px 14px 32px; }
+  .docs-nav-head { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 2px 6px 18px 8px; }
   .docs-brand { display: flex; align-items: center; gap: 9px; text-decoration: none;
-    font-family: var(--pixel); font-weight: 700; font-size: 17px; letter-spacing: .3px; color: var(--ink);
-    padding: 2px 8px 18px; }
+    font-family: var(--pixel); font-weight: 700; font-size: 17px; letter-spacing: .3px; color: var(--ink); }
   .docs-brand img { width: 24px; height: 24px; image-rendering: pixelated; }
   .docs-brand span { color: var(--gold); }
   .docs-group { margin-top: 22px; }
@@ -44,11 +55,6 @@
   .doc li::before { content: ""; position: absolute; left: 3px; top: 13px; width: 6px; height: 6px; background: var(--gold); border-radius: 2px; }
   .doc a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
   .doc b, .doc strong { color: var(--ink); font-weight: 600; }
-
-  .hero { padding: 30px 32px; border: 1px solid var(--stroke); border-radius: 16px; margin-top: 2px;
-    background: radial-gradient(120% 130% at 0% -10%, rgba(244,185,66,.12), transparent 55%), var(--panel); }
-  .hero .eyebrow { color: var(--gold-soft); }
-  .hero h1 { color: var(--gold); }
 
   .callout { border: 1px solid var(--stroke); border-left: 3px solid var(--gold); border-radius: 10px;
     background: var(--panel); padding: 14px 18px; margin: 22px 0; }
@@ -78,19 +84,22 @@
 <body>
 <div class="docs">
   <aside class="docs-nav">
-    <a class="docs-brand" id="docs-brand" title="Back to the game"><img src="/index.icon.png" alt="">PIXL <span>DOCS</span></a>
+    <div class="docs-nav-head">
+      <a class="docs-brand" id="docs-brand" title="Back to the game"><img src="/index.icon.png" alt="">PIXL <span>DOCS</span></a>
+      <button class="theme-toggle" id="docs-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>
+    </div>
     <nav id="docs-nav-list"></nav>
   </aside>
 
   <main class="docs-main">
     <article class="doc">
-      <div class="hero doc-page" id="welcome">
+      <section class="doc-page" id="welcome">
         <div class="eyebrow">Start here</div>
         <h1>Welcome to Pixl</h1>
         <p class="lead">So here's the deal. Pixl is a YSWS (you ship, we ship) from Hack Club, and the whole thing is wrapped in a story. Origin used to be a huge digital civilization until something called the Great Static tore it apart into floating islands. The people who lived there found their way to Hack Clubbers, and together you're rebuilding it under a new name: Pixl.</p>
         <p>But you don't actually need to care about any of that to play. Strip away the story and Pixl is really just this: build real stuff, ship it, get real rewards. NPCs across the game world hand out sidequests, which are basically project prompts with a bit of flavor text attached. You pick one, build it (or build something totally different that you thought of yourself), submit it, and you get pixels plus whatever prize is attached.</p>
         <p>You explore a retro 2D world with your own character, run into NPCs, take on quests, and every hour you spend building something real adds up. It's not a race against other people either. Whatever you ship is yours to keep, no matter how the rest of the community is doing.</p>
-      </div>
+      </section>
 
       <section class="doc-page" id="get">
         <div class="eyebrow">Start here</div>
@@ -462,6 +471,22 @@ dist/</code></pre>
   // On play.* the game is at the root; under pixl.rsvp it lives at /play.
   document.getElementById("docs-brand").href =
     location.hostname.startsWith("play.") ? "/" : "/play";
+
+  // Theme toggle — shares the "pixl_theme" localStorage key with pixl.js so
+  // the choice is consistent across the docs and the rest of the dash.
+  const themeBtn = document.getElementById("docs-theme-btn");
+  function syncThemeBtn() {
+    const light = document.documentElement.dataset.theme === "light";
+    themeBtn.textContent = light ? "☾" : "☀";
+    themeBtn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
+  }
+  themeBtn.onclick = () => {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("pixl_theme", next); } catch (e) {}
+    syncThemeBtn();
+  };
+  syncThemeBtn();
 
   // Grouped nav → one section per "page", routed by URL hash.
   const GROUPS = [

@@ -33,7 +33,8 @@
       .ht-dot {
         width: 12px;
         height: 12px;
-        border: 2px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 50%;
       }
       .ht-dot.on {
         background: var(--good);
@@ -63,7 +64,8 @@
       }
       .bar {
         height: 14px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
         background: var(--panel-deep);
         overflow: hidden;
       }
@@ -78,13 +80,13 @@
       .section-h {
         font-size: 20px;
         color: var(--gold);
-        text-shadow: 2px 2px 0 var(--stroke);
         margin: 26px 0 16px;
         letter-spacing: 1px;
       }
       .proj-thumb {
         height: 140px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -132,7 +134,8 @@
         flex-shrink: 0;
         align-self: stretch;
         min-height: 120px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -197,8 +200,9 @@
         font-size: 13.5px;
         line-height: 1.6;
         padding: 10px 12px;
-        border: 2px solid var(--stroke);
-        background: rgba(255, 209, 102, 0.1);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: rgba(244, 185, 66, 0.1);
         color: var(--gold);
       }
       .note-strip.teal {
@@ -265,7 +269,8 @@
         line-height: 1.6;
         margin-top: 6px;
         padding: 8px 11px;
-        border: 2px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         color: var(--ink);
         white-space: pre-wrap;
@@ -339,7 +344,8 @@
       }
       .level-btn {
         cursor: pointer;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         color: var(--dim);
         font-size: 15px;
@@ -369,7 +375,8 @@
       .thumb-preview {
         width: 200px;
         height: 130px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -394,7 +401,8 @@
         gap: 6px;
         max-height: 220px;
         overflow-y: auto;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         padding: 10px;
       }
@@ -437,12 +445,13 @@
         flex-direction: column;
         gap: 10px;
         padding: 15px 17px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
       }
       .disclosure.update {
-        background: rgba(255, 209, 102, 0.06);
-        box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.25);
+        background: rgba(244, 185, 66, 0.06);
+        border-color: rgba(244, 185, 66, 0.35);
       }
       .disclosure-check {
         display: flex;
@@ -555,8 +564,9 @@
         flex-wrap: wrap;
         padding: 7px 8px;
         background: var(--panel-deep);
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
         border-bottom-width: 0;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
       }
       .md-btn {
         font-family: var(--pixel);
@@ -571,24 +581,20 @@
         gap: 5px;
         background: var(--panel);
         color: var(--ink);
-        border: 2px solid var(--stroke);
-        box-shadow: 2px 2px 0 var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 6px;
         cursor: pointer;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
       }
       .md-btn:hover {
         background: var(--gold);
         color: var(--btn-ink);
-        transform: translate(-1px, -1px);
-        box-shadow: 3px 3px 0 var(--stroke);
-      }
-      .md-btn:active {
-        transform: translate(1px, 1px);
-        box-shadow: 1px 1px 0 var(--stroke);
+        border-color: var(--gold);
       }
       .md-btn.active {
         background: var(--gold);
         color: var(--btn-ink);
-        box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25);
+        border-color: var(--gold);
       }
       .md-btn i {
         font-style: italic;
@@ -601,9 +607,10 @@
         opacity: 0.3;
       }
       .md-preview {
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
         border-top-width: 0;
-        background: #20160e;
+        border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+        background: var(--panel-deep);
         padding: 12px 14px;
         min-height: 140px;
         font-size: 15.5px;
@@ -671,7 +678,6 @@
       .connect-card h2 {
         color: var(--gold);
         font-size: 24px;
-        text-shadow: 3px 3px 0 var(--stroke);
         margin-bottom: 12px;
       }
       .connect-card p {

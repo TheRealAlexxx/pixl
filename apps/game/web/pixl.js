@@ -1,4 +1,29 @@
 const Pixl = (() => {
+  // Applied as early as possible (top of the IIFE) to minimize the flash of
+  // the default theme before this loads. Shares the "pixl_theme" key with the
+  // docs app's own inline head script so the choice is consistent across both.
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("pixl_theme") || "dark";
+  } catch {
+    document.documentElement.dataset.theme = "dark";
+  }
+
+  function syncThemeToggles() {
+    const light = document.documentElement.dataset.theme === "light";
+    document.querySelectorAll(".theme-toggle").forEach((btn) => {
+      btn.textContent = light ? "☾" : "☀";
+      btn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
+      btn.onclick = toggleTheme;
+    });
+  }
+
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("pixl_theme", next); } catch {}
+    syncThemeToggles();
+  }
+
   const API = "https://server.pixl.rsvp";
   // On the standalone play.* host the game is at the root; when the same build
   // is served under pixl.rsvp (via rewrites) it lives at /play. Keep the
@@ -122,16 +147,17 @@ const Pixl = (() => {
     ).join("");
     // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
     // topbar: no wallet, no tour replay, and the button invites them into the game.
+    const themeBtn = `<button class="theme-toggle" id="pixl-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>`;
     const right = token
-      ? `<button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
-            style="background:none;border:2px solid var(--stroke);color:var(--gold);width:32px;height:32px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0">?</button>
+      ? `${themeBtn}<button id="pixl-help-btn" title="New here? Replay the tour" aria-label="Replay the tour"
+            style="background:none;border:1px solid var(--stroke);color:var(--gold);width:32px;height:32px;border-radius:8px;cursor:pointer;font-weight:700;flex-shrink:0">?</button>
           <div class="wallet-chip" id="pixl-wallet" title="Your pixels">
             <img src="/img/pixel.png" alt="px">
             <span class="px">—</span>
             <span class="lv"></span>
           </div>
           <a class="btn dark" href="${GAME}">BACK TO GAME</a>`
-      : `<a class="btn" href="${GAME}">ENTER THE GAME</a>`;
+      : `${themeBtn}<a class="btn" href="${GAME}">ENTER THE GAME</a>`;
     document.body.insertAdjacentHTML("afterbegin", `
       <header class="topbar">
         <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
@@ -140,6 +166,7 @@ const Pixl = (() => {
       </header>`);
     const help = document.getElementById("pixl-help-btn");
     if (help) help.onclick = () => runTour();
+    syncThemeToggles();
     // Auto-run the walkthrough once, on whichever dash page a newcomer lands on.
     maybeOnboard();
   }
@@ -561,5 +588,5 @@ const Pixl = (() => {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog };
+  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
 })();

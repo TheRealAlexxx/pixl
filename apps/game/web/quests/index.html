@@ -14,13 +14,13 @@
     background:
       repeating-linear-gradient(rgba(0,0,0,.10) 0 3px, transparent 3px 34px),
       linear-gradient(#d59a53, #c07f38);
-    border: 3px solid var(--stroke);
+    border: 1px solid var(--stroke); border-radius: var(--radius);
     box-shadow: inset 0 3px 0 rgba(255,246,224,.35), var(--drop);
   }
   .progress-box { margin-left: auto; text-align: right; }
   .progress-label { font-size: 13px; color: #3a2410; margin-bottom: 7px; letter-spacing: 1px; }
-  .progress-bar { width: 240px; max-width: 60vw; height: 18px; border: 3px solid var(--stroke); background: var(--panel-deep); }
-  .progress-bar > div { height: 100%; background: var(--gold); transition: width .5s steps(10); }
+  .progress-bar { width: 240px; max-width: 60vw; height: 18px; border: 1px solid var(--stroke); border-radius: 999px; background: var(--panel-deep); overflow: hidden; }
+  .progress-bar > div { height: 100%; background: var(--gold); transition: width .5s ease; }
   .quest-list { display: flex; flex-direction: column; gap: 16px; max-width: 860px; margin-top: 26px; }
   .quest {
     display: flex; gap: 18px;
@@ -28,10 +28,10 @@
     position: relative;
   }
   .quest.locked { filter: saturate(.6) brightness(.98); opacity: .72; }
-  .quest.unlocked { box-shadow: inset 0 0 0 3px var(--gold), 5px 5px 0 var(--stroke); }
+  .quest.unlocked { box-shadow: inset 0 0 0 2px var(--gold), var(--drop); }
   .quest-icon {
     width: 58px; height: 58px; flex-shrink: 0;
-    border: 3px solid var(--stroke);
+    border: 1px solid var(--stroke); border-radius: var(--radius-sm);
     background: var(--panel-deep);
     display: flex; align-items: center; justify-content: center;
     font-size: 26px;
@@ -46,7 +46,7 @@
   .stamp {
     position: absolute; top: 14px; right: 16px;
     font-size: 12px; letter-spacing: 2px;
-    border: 3px solid;
+    border: 2px solid; border-radius: 6px;
     padding: 4px 9px 3px;
     transform: rotate(4deg);
   }
@@ -108,7 +108,7 @@ async function boot() {
 
   const sorted = [...quests].sort((a, b) => Number(b.unlocked) - Number(a.unlocked));
   document.getElementById("quests").innerHTML = sorted.map((q, i) => `
-    <div class="quest panel ${q.unlocked ? "unlocked" : "locked"}" style="animation: toast-in .2s steps(4) both; animation-delay:${Math.min(i * 40, 500)}ms">
+    <div class="quest panel ${q.unlocked ? "unlocked" : "locked"}" style="animation: toast-in .2s ease both; animation-delay:${Math.min(i * 40, 500)}ms">
       <div class="quest-icon">${q.unlocked ? ICONS[q.id % ICONS.length] : ""}</div>
       <div class="quest-main">
         <div class="quest-name">${Pixl.esc(q.name)}</div>
