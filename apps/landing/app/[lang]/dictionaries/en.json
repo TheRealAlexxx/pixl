@@ -13,7 +13,8 @@
     "alreadyIn": "you’re already in",
     "viewYourRsvp": "view your RSVP",
     "errorNoEmail": "yo, drop your email first 👀",
-    "errorInvalidEmail": "that doesn't look like a real email lol"
+    "errorInvalidEmail": "that doesn't look like a real email lol",
+    "scrollHint": "keep scrolling"
   },
   "description": {
     "title": "What is Pixl?",

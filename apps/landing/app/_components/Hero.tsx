@@ -182,6 +182,31 @@ export function Hero() {
             </AnimatePresence>
           </motion.div>
         </div>
+        <motion.div
+          className="absolute bottom-6 sm:bottom-10 flex flex-col items-center gap-1.5 select-none pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.4 }}
+        >
+          <p className="font-pixel text-white text-[10px] sm:text-xs tracking-widest uppercase" style={{ textShadow: "var(--pixl-shadow)" }}>
+            {t.scrollHint}
+          </p>
+          <motion.svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ filter: "drop-shadow(0 2px 0 #000)" }}
+            animate={{ y: [0, 6, 0] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </motion.svg>
+        </motion.div>
       </div>
     </div>
   );
