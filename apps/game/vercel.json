@@ -3,6 +3,9 @@
   "buildCommand": null,
   "installCommand": null,
   "outputDirectory": ".",
+  "rewrites": [
+    { "source": "/docs/:slug", "destination": "/docs/index.html" }
+  ],
   "headers": [
     {
       "source": "/((?!shop|vault|explore|quests|timeline|projects|report|hackatime|fonts|img|pixl).*)",

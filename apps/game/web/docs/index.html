@@ -570,7 +570,7 @@ dist/</code></pre>
     for (const [id, label] of g.items) {
       const a = document.createElement("a");
       a.className = "section-link";
-      a.href = "#" + id;
+      a.href = "/docs/" + id;
       a.textContent = label;
       group.appendChild(a);
       linkById[id] = a;
@@ -584,7 +584,7 @@ dist/</code></pre>
   function footLink(entry, dir) {
     if (!entry) return "";
     const cls = dir === "Next" ? "next" : "prev";
-    return `<a class="${cls}" href="#${entry[0]}"><span class="dir">${dir}</span><span class="ttl">${entry[1]}</span></a>`;
+    return `<a class="${cls}" href="/docs/${entry[0]}"><span class="dir">${dir}</span><span class="ttl">${entry[1]}</span></a>`;
   }
 
   function show(id) {
@@ -597,8 +597,40 @@ dist/</code></pre>
     window.scrollTo(0, 0);
   }
 
-  window.addEventListener("hashchange", () => show(location.hash.slice(1)));
-  show(location.hash.slice(1) || IDS[0]);
+  // Path-based routing (/docs/<id>) — pushState on nav clicks so it feels
+  // like an SPA, with a real rewrite (vercel.json) backing direct loads.
+  function idFromPath() {
+    const id = location.pathname.replace(/^\/docs\/?/, "");
+    return id || IDS[0];
+  }
+
+  function navigate(id, replace) {
+    if (!linkById[id]) id = IDS[0];
+    const path = "/docs/" + id;
+    if (location.pathname !== path) {
+      history[replace ? "replaceState" : "pushState"](null, "", path);
+    }
+    show(id);
+  }
+
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") || "";
+    if (!href.startsWith("/docs/")) return;
+    e.preventDefault();
+    navigate(href.slice("/docs/".length));
+  });
+
+  window.addEventListener("popstate", () => show(idFromPath()));
+
+  // Old bookmarks/links used #id — redirect those to the real path once.
+  const legacyHashId = location.hash.slice(1);
+  if (legacyHashId && linkById[legacyHashId]) {
+    navigate(legacyHashId, true);
+  } else {
+    show(idFromPath());
+  }
 
   // Syntax highlighting + a copy button on every code block.
   if (window.hljs) hljs.highlightAll();
