@@ -195,11 +195,11 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
 }
 .wallet-chip .slot img{width:16px;height:16px}
 .wallet-chip{border-color:color-mix(in srgb,var(--gold) 40%,var(--stroke))}
-.wallet-chip .px{color:var(--gold);font-family:var(--pixel);font-weight:600;font-size:16px;letter-spacing:.5px}
+.wallet-chip .px{color:var(--gold);font-family:var(--sans);font-weight:700;font-size:16px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
 .wallet-chip .lv{color:var(--faint);font-size:11px;letter-spacing:.5px}
 .rest-chip{border-color:color-mix(in srgb,var(--teal) 40%,var(--stroke))}
 .rest-chip .slot svg{width:15px;height:15px}
-.rest-chip .re{color:var(--teal);font-family:var(--pixel);font-weight:600;font-size:16px;letter-spacing:.5px}
+.rest-chip .re{color:var(--teal);font-family:var(--sans);font-weight:700;font-size:16px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
 .rest-chip .rl{color:var(--faint);font-size:11px;letter-spacing:.5px}
 @media (max-width:560px){
   .wallet-chip .lv,.rest-chip .rl{display:none}
@@ -239,9 +239,13 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
 .btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:0 3px 0 color-mix(in srgb,var(--gold) 55%,#000)}
 .btn:disabled:hover{background:var(--gold);transform:none}
 
+/* Chips carry a lot of numbers (hours, levels, px earned) — normal type
+   reads faster here than the pixel display face, which blurs digits together
+   at 12px. Weight + letter-spacing keep the "badge" feel without the blur. */
 .chip{
   display:inline-flex;align-items:center;gap:5px;
-  font-family:var(--pixel);font-size:12px;letter-spacing:.5px;font-weight:600;
+  font-family:var(--sans);font-size:12.5px;letter-spacing:.2px;font-weight:700;
+  font-variant-numeric:tabular-nums;
   padding:4px 9px;border:1px solid var(--stroke);border-radius:var(--radius-sm);
   background:var(--panel-deep);color:var(--dim);
 }
