@@ -1831,6 +1831,22 @@ export async function shipOrder(formData: FormData): Promise<void> {
   revalidatePath("/fulfillment");
 }
 
+// Close a shipped order out: shipped -> done, once the buyer has it in hand.
+// Any super can mark it done (it's the final administrative close, not a queue
+// advance), and it's a no-op on anything that isn't shipped.
+export async function markOrderDone(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("shop_orders")
+    .update({ status: "done", done_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "shipped");
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
 // Take over a claimed order that isn't yet shipped/cancelled. Escape hatch for
 // when the original fulfiller can't finish it , the caller becomes the new owner
 // and the order stays at its current stage.
@@ -1861,7 +1877,12 @@ export async function cancelOrder(formData: FormData): Promise<void> {
     .select("user_id, item_name, status")
     .eq("id", id)
     .maybeSingle();
-  if (!order || order.status === "shipped" || order.status === "cancelled") {
+  if (
+    !order ||
+    order.status === "shipped" ||
+    order.status === "done" ||
+    order.status === "cancelled"
+  ) {
     revalidatePath("/fulfillment");
     return;
   }

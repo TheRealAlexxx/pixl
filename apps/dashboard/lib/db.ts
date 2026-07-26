@@ -1433,11 +1433,16 @@ export async function listShopItems(): Promise<ShopItemRow[]> {
   return (data ?? []) as ShopItemRow[];
 }
 
-export type OrderStatus = "pending" | "ordered" | "credited" | "shipped" | "cancelled";
+export type OrderStatus =
+  | "pending"
+  | "ordered"
+  | "credited"
+  | "shipped"
+  | "done"
+  | "cancelled";
 
-// Live stages an order can still be acted on, in pipeline order. Anything past
-// these (shipped / cancelled) is terminal.
-export const ORDER_STAGES: OrderStatus[] = ["pending", "ordered", "credited", "shipped"];
+// The pipeline stages in order, for the stepper. 'cancelled' is off to the side.
+export const ORDER_STAGES: OrderStatus[] = ["pending", "ordered", "credited", "shipped", "done"];
 
 export interface ShopOrderRow {
   id: number;
@@ -1459,6 +1464,7 @@ export interface ShopOrderRow {
   ordered_at: string | null;
   credited_at: string | null;
   shipped_at: string | null;
+  done_at: string | null;
   tracking: string;
   player_name: string;
   player_slack: string | null;

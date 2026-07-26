@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSuper } from "@/lib/guard";
 import { listShopOrders, ORDER_STAGES, type ShopOrderRow, type OrderStatus } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
-import { claimOrder, markOrderCredited, shipOrder, reassignOrder, cancelOrder } from "@/app/actions";
+import { claimOrder, markOrderCredited, shipOrder, markOrderDone, reassignOrder, cancelOrder } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,15 +17,17 @@ const STATUS_BADGE: Record<OrderStatus, "secondary" | "success" | "destructive" 
   ordered: "warning",
   credited: "warning",
   shipped: "success",
+  done: "success",
   cancelled: "destructive",
 };
 
-// Human labels for the four live stages, in pipeline order.
+// Human labels for each stage.
 const STAGE_LABEL: Record<OrderStatus, string> = {
   pending: "New",
   ordered: "Ordered",
   credited: "Credited",
   shipped: "Shipped",
+  done: "Done",
   cancelled: "Cancelled",
 };
 
@@ -33,7 +35,7 @@ function slackLink(id: string): string {
   return `https://slack.com/app_redirect?channel=${id}`;
 }
 
-const TAB_KEYS = ["pending", "ordered", "credited", "shipped", "cancelled", "all"] as const;
+const TAB_KEYS = ["pending", "ordered", "credited", "shipped", "done", "cancelled", "all"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 export default async function FulfillmentPage({
@@ -61,6 +63,7 @@ export default async function FulfillmentPage({
     { key: "ordered", label: "Ordered" },
     { key: "credited", label: "Credited" },
     { key: "shipped", label: "Shipped" },
+    { key: "done", label: "Done" },
     { key: "cancelled", label: "Cancelled" },
     { key: "all", label: "All" },
   ];
@@ -171,7 +174,8 @@ function fmtDate(iso: string | null): string {
 }
 
 function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: string; mine: boolean }) {
-  const live = o.status !== "shipped" && o.status !== "cancelled";
+  // Terminal orders are read-only; everything else still has an action.
+  const actionable = o.status !== "done" && o.status !== "cancelled";
   return (
     <Card className="p-4 gap-3">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -203,13 +207,18 @@ function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: s
           </div>
           {o.claimed_by && o.status !== "pending" && (
             <div className="text-xs text-muted-foreground mt-1">
-              {o.status === "cancelled" ? "Handled" : o.status === "shipped" ? "Fulfilled" : "Claimed"} by{" "}
-              <span className="text-foreground">{o.claimed_by}</span>
-              {mine && live ? " (you)" : ""}
-              {o.status === "shipped" && o.shipped_at ? ` · shipped ${fmtDate(o.shipped_at)}` : ""}
+              {o.status === "cancelled"
+                ? "Handled"
+                : o.status === "shipped" || o.status === "done"
+                  ? "Fulfilled"
+                  : "Claimed"}{" "}
+              by <span className="text-foreground">{o.claimed_by}</span>
+              {mine && actionable ? " (you)" : ""}
+              {o.shipped_at ? ` · shipped ${fmtDate(o.shipped_at)}` : ""}
+              {o.status === "done" && o.done_at ? ` · done ${fmtDate(o.done_at)}` : ""}
             </div>
           )}
-          {o.status === "shipped" && o.tracking && (
+          {(o.status === "shipped" || o.status === "done") && o.tracking && (
             <div className="text-xs text-muted-foreground mt-1">
               Tracking: <span className="text-foreground font-mono">{o.tracking}</span> · DM&apos;d to buyer
             </div>
@@ -221,7 +230,7 @@ function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: s
         <StageSteps status={o.status} />
       </div>
 
-      {live && <OrderActions order={o} mine={mine} />}
+      {actionable && <OrderActions order={o} mine={mine} />}
     </Card>
   );
 }
@@ -240,6 +249,20 @@ function OrderActions({ order: o, mine }: { order: ShopOrderRow; mine: boolean }
       </PendingButton>
     </form>
   );
+
+  // Shipped: the only thing left is the final close, which any super can do.
+  if (o.status === "shipped") {
+    return (
+      <div className="flex items-end gap-2 flex-wrap">
+        <form action={markOrderDone}>
+          <input type="hidden" name="id" value={o.id} />
+          <PendingButton className="bg-brand text-white border-transparent" pendingText="Closing…">
+            Mark done
+          </PendingButton>
+        </form>
+      </div>
+    );
+  }
 
   // Claimed by someone else: offer to take it over rather than acting on their queue.
   if (!mine && o.status !== "pending") {
