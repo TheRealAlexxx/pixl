@@ -13,8 +13,11 @@ import {
   createLobby,
   renameLobby,
   setLobbyVisibility,
+  setLobbyTheme,
   deleteLobby,
   lobbyInfoFor,
+  VILLAGE_THEMES,
+  themePrice,
 } from "./lobbies.js";
 
 interface ConnectedPlayer {
@@ -178,6 +181,16 @@ function baseSceneName(room: string): string {
   if (room.startsWith("village:")) return "village";
   if (lobbyIdFromScene(room)) return "open_world";
   return room;
+}
+
+// Tells a client entering a lobby scene which cosmetic theme the village is
+// wearing, so every entry path (fresh connect, cross-scene walk, reconnect)
+// applies the tint without depending on the lobby_joined reply.
+function sendLobbyTheme(p: ConnectedPlayer) {
+  const lid = lobbyIdFromScene(p.scene);
+  const lobby = lid ? lobbies.get(lid) : undefined;
+  if (!lobby || p.ws.readyState !== WebSocket.OPEN) return;
+  p.ws.send(JSON.stringify({ type: "lobby_theme", theme: lobby.theme }));
 }
 
 // Sends the player their saved NPC positions for a scene so the client can
@@ -477,6 +490,7 @@ export function attachWebSocketServer(httpServer: Server) {
       );
 
       void sendNpcInit(player, baseSceneName(player.scene));
+      sendLobbyTheme(player);
 
       broadcastToScene(
         player.scene,
@@ -625,6 +639,7 @@ export function attachWebSocketServer(httpServer: Server) {
           );
 
           void sendNpcInit(leaving, baseSceneName(newScene));
+          sendLobbyTheme(leaving);
 
           broadcastToScene(
             newScene,
@@ -966,6 +981,72 @@ export function attachWebSocketServer(httpServer: Server) {
           setLobbyVisibility(lobby, !!msg.isPublic);
         } else if (action === "delete") {
           closeLobby(lobby.id);
+        } else if (action === "theme") {
+          const theme = String(msg.theme ?? "");
+          if (!setLobbyTheme(lobby, theme)) {
+            ws.send(
+              JSON.stringify({
+                type: "lobby_denied",
+                reason: "Your village hasn't unlocked that theme yet.",
+              }),
+            );
+            return;
+          }
+          // Everyone standing in the village updates live.
+          broadcastToScene(lobbyScene(lobby.id), {
+            type: "lobby_theme",
+            theme: lobby.theme,
+          });
+        } else if (action === "buy_theme") {
+          const theme = String(msg.theme ?? "");
+          const price = themePrice(theme);
+          if (!VILLAGE_THEMES[theme] || price <= 0) {
+            ws.send(
+              JSON.stringify({
+                type: "lobby_denied",
+                reason: "That theme isn't available.",
+              }),
+            );
+            return;
+          }
+          void (async () => {
+            const { data, error } = await supabase.rpc("buy_village_theme", {
+              p_user_id: player.userId,
+              p_lobby_id: lobby.id,
+              p_theme: theme,
+              p_price: price,
+            });
+            if (error) {
+              console.error("[village] buy_village_theme failed", error);
+              ws.send(
+                JSON.stringify({
+                  type: "lobby_denied",
+                  reason: "Couldn't complete that purchase.",
+                }),
+              );
+              return;
+            }
+            const result = data as { ok?: boolean; error?: string };
+            if (!result?.ok) {
+              const reason =
+                result?.error === "insufficient"
+                  ? "You don't have enough pixels for that theme."
+                  : result?.error === "owned"
+                    ? "Your village already owns that theme."
+                    : "Couldn't complete that purchase.";
+              ws.send(JSON.stringify({ type: "lobby_denied", reason }));
+              return;
+            }
+            lobby.themesUnlocked.add(theme);
+            if (ws.readyState === WebSocket.OPEN)
+              ws.send(
+                JSON.stringify({
+                  type: "lobby_list",
+                  lobbies: lobbyListFor(player.userId),
+                }),
+              );
+          })().catch(console.error);
+          return;
         } else {
           return;
         }

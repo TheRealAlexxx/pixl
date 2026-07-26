@@ -8,6 +8,8 @@ export interface Lobby {
   capacity: number;
   ownerId: string;
   createdAt: number;
+  theme: string;
+  themesUnlocked: Set<string>;
 }
 
 export interface LobbyInfo {
@@ -16,13 +18,29 @@ export interface LobbyInfo {
   isPublic: boolean;
   count: number;
   capacity: number;
+  theme: string;
   mine?: boolean;
   password?: string;
+  themesUnlocked?: string[];
 }
 
 export const LOBBY_SCENE_PREFIX = "lobby:";
 export const LOBBY_CAPACITY = 16;
 const MAX_LOBBIES = 200;
+
+// Cosmetic village themes — the first village upgrade. Each is a tint the whole
+// village sees; it composes with the day/night cycle client-side (the client
+// holds the matching colours). '' is the always-owned default (no tint).
+export const VILLAGE_THEMES: Record<string, { name: string; price: number }> = {
+  autumn: { name: "Autumn", price: 500 },
+  blossom: { name: "Blossom", price: 500 },
+  verdant: { name: "Verdant", price: 500 },
+  dusk: { name: "Dusk", price: 750 },
+};
+
+export function themePrice(id: string): number {
+  return VILLAGE_THEMES[id]?.price ?? 0;
+}
 
 export const lobbies = new Map<string, Lobby>();
 
@@ -51,7 +69,22 @@ export async function loadLobbies() {
       capacity: LOBBY_CAPACITY,
       ownerId: (r.owner_id as string) ?? "",
       createdAt: Date.parse(r.created_at as string) || Date.now(),
+      theme: (r.theme as string) ?? "",
+      themesUnlocked: new Set<string>(),
     });
+  }
+
+  // Fold permanent unlocks into each lobby so the owner's picker knows what's
+  // already bought without a per-lobby round trip.
+  const { data: upgrades, error: upgradeError } = await supabase
+    .from("village_upgrades")
+    .select("lobby_id, upgrade_key");
+  if (upgradeError) {
+    console.error("Failed to load village upgrades", upgradeError);
+  } else {
+    for (const u of upgrades ?? []) {
+      lobbies.get(u.lobby_id as string)?.themesUnlocked.add(u.upgrade_key as string);
+    }
   }
   console.log(`[lobbies] loaded ${lobbies.size} persisted lobbies`);
 }
@@ -67,6 +100,7 @@ function persistLobby(l: Lobby) {
       password: l.password,
       owner_id: l.ownerId,
       created_at: new Date(l.createdAt).toISOString(),
+      theme: l.theme,
     })
     .then(({ error }) => {
       if (error) console.error("Failed to persist lobby", error);
@@ -106,6 +140,8 @@ export function createLobby(opts: {
     capacity: LOBBY_CAPACITY,
     ownerId: opts.ownerId,
     createdAt: Date.now(),
+    theme: "",
+    themesUnlocked: new Set<string>(),
   };
   lobbies.set(id, lobby);
   persistLobby(lobby);
@@ -122,6 +158,15 @@ export function setLobbyVisibility(l: Lobby, isPublic: boolean) {
   l.isPublic = isPublic;
   l.password = isPublic ? "" : l.password || gen4DigitPassword();
   persistLobby(l);
+}
+
+// Apply an already-owned theme (or clear it with ''). Buying an unlock is
+// separate — this only swaps between what the village already owns.
+export function setLobbyTheme(l: Lobby, theme: string): boolean {
+  if (theme !== "" && !l.themesUnlocked.has(theme)) return false;
+  l.theme = theme;
+  persistLobby(l);
+  return true;
 }
 
 export function deleteLobby(id: string) {
@@ -146,9 +191,11 @@ export function lobbyInfoFor(
     isPublic: l.isPublic,
     count,
     capacity: l.capacity,
+    theme: l.theme,
   };
   if (l.ownerId && l.ownerId === userId) {
     info.mine = true;
+    info.themesUnlocked = [...l.themesUnlocked];
     if (!l.isPublic) info.password = l.password;
   }
   return info;

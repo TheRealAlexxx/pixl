@@ -17,6 +17,7 @@ signal lobby_list_received(lobbies: Array)
 signal lobby_joined(lobby: Dictionary)
 signal lobby_denied(reason: String)
 signal village_invited(invite_id: int, from_name: String, lobby_name: String)
+signal lobby_theme_changed(theme: String)
 signal name_result(ok: bool, text: String)
 
 const DEV_SERVER_URL = "http://localhost:4728"
@@ -38,6 +39,7 @@ var ban_message: String = ""
 var local_skin: String = "cvc:1"
 var current_scene_name: String = "village"
 var current_lobby_id: String = ""
+var current_lobby_theme: String = ""
 var _socket: WebSocketPeer = WebSocketPeer.new()
 var _connected: bool = false
 const TOKEN_SAVE_PATH = "user://session.dat"
@@ -299,13 +301,18 @@ func _handle_message(raw: String) -> void:
 		"lobby_joined":
 			var lobby: Dictionary = json.get("lobby", {})
 			current_lobby_id = String(lobby.get("id", ""))
+			current_lobby_theme = String(lobby.get("theme", ""))
 			emit_signal("lobby_joined", lobby)
 		"lobby_denied":
 			emit_signal("lobby_denied", String(json.get("reason", "")))
+		"lobby_theme":
+			current_lobby_theme = String(json.get("theme", ""))
+			emit_signal("lobby_theme_changed", current_lobby_theme)
 		"village_invited":
 			emit_signal("village_invited", int(json.get("inviteId", 0)), String(json.get("fromName", "")), String(json.get("lobbyName", "")))
 		"lobby_closed":
 			current_lobby_id = ""
+			current_lobby_theme = ""
 			var cs = get_tree().current_scene
 			if cs and cs.scene_file_path == "res://scenes/open_world.tscn":
 				Loader.change_scene("res://scenes/village.tscn", "Lobby closed, heading home")
@@ -408,6 +415,7 @@ func send_scene_change(scene_name: String) -> void:
 		actual = "lobby:" + current_lobby_id
 	elif scene_name != "open_world":
 		current_lobby_id = ""
+		current_lobby_theme = ""
 	current_scene_name = actual
 	if _is_socket_open():
 		_socket.send_text(JSON.stringify({ "type": "change_scene", "scene": actual }))
@@ -448,6 +456,16 @@ func send_lobby_delete(id: String) -> void:
 	if not _is_socket_open():
 		return
 	_socket.send_text(JSON.stringify({"type": "lobby_manage", "id": id, "action": "delete"}))
+
+func send_lobby_theme(id: String, theme: String) -> void:
+	if not _is_socket_open():
+		return
+	_socket.send_text(JSON.stringify({"type": "lobby_manage", "id": id, "action": "theme", "theme": theme}))
+
+func send_buy_village_theme(id: String, theme: String) -> void:
+	if not _is_socket_open():
+		return
+	_socket.send_text(JSON.stringify({"type": "lobby_manage", "id": id, "action": "buy_theme", "theme": theme}))
 
 func is_connected_to_server() -> bool:
 	return _connected
