@@ -9,6 +9,7 @@ var music_enabled := true
 var music_volume := 0.6
 var font_scale := 1.0
 var zoom_level := 1.0
+var day_night_enabled := true
 
 func _ready() -> void:
 	# HUD text is sized for a 1600x900 desktop canvas — bump the default on
@@ -32,6 +33,7 @@ func _load() -> void:
 	music_volume = float(data.get("music_volume", music_volume))
 	font_scale = clampf(float(data.get("font_scale", font_scale)), 1.0, 1.6)
 	zoom_level = clampf(float(data.get("zoom_level", zoom_level)), 0.6, 1.4)
+	day_night_enabled = bool(data.get("day_night_enabled", day_night_enabled))
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -42,6 +44,7 @@ func save() -> void:
 		"music_volume": music_volume,
 		"font_scale": font_scale,
 		"zoom_level": zoom_level,
+		"day_night_enabled": day_night_enabled,
 	}))
 	f.close()
 
@@ -105,6 +108,10 @@ func touch_menu_theme(base: Theme) -> Theme:
 				sb.content_margin_right *= factor
 				sb.content_margin_bottom *= factor
 	return t
+
+func set_day_night_enabled(on: bool) -> void:
+	day_night_enabled = on
+	save()
 
 func set_zoom_level(v: float) -> void:
 	zoom_level = clampf(v, 0.6, 1.4)

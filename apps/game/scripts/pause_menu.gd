@@ -164,6 +164,12 @@ func _build_settings_ui() -> void:
 	music_check.toggled.connect(Settings.set_music_enabled)
 	body.add_child(music_check)
 
+	var daynight_check := CheckButton.new()
+	daynight_check.text = "Day/night cycle"
+	daynight_check.button_pressed = Settings.day_night_enabled
+	daynight_check.toggled.connect(Settings.set_day_night_enabled)
+	body.add_child(daynight_check)
+
 	var vol_label := Label.new()
 	vol_label.text = "Music volume"
 	vol_label.theme_type_variation = &"InfoText"
