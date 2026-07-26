@@ -232,10 +232,25 @@
       }
       .tl-dot {
         position: absolute;
-        left: -2px;
-        top: 0;
-        font-size: 17px;
-        line-height: 1;
+        left: 3px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--faint);
+        box-shadow: 0 0 0 3px var(--panel);
+      }
+      .tl-dot.ok {
+        background: var(--good);
+      }
+      .tl-dot.rev {
+        background: var(--teal);
+      }
+      .tl-dot.warn {
+        background: var(--gold);
+      }
+      .tl-dot.bad {
+        background: var(--bad);
       }
       .tl-head {
         display: flex;
@@ -1356,16 +1371,18 @@
         renderProject(p.id);
       }
 
+      // [dot colour class, title]. The dot is a small node on the rail — the
+      // event title already names the verdict, so no status word in the marker.
       const VERDICTS = {
-        approved: ["APPROVED", "Approved"],
-        first_pass_approved: ["REVIEWED", "Passed first review"],
-        needs_changes: ["CHANGES", "Sent back for changes"],
-        rejected: ["REJECTED", "Rejected"],
+        approved: ["ok", "Approved"],
+        first_pass_approved: ["rev", "Passed first review"],
+        needs_changes: ["warn", "Sent back for changes"],
+        rejected: ["bad", "Rejected"],
       };
 
-      function tlItem(icon, title, at, extra, note) {
+      function tlItem(dotClass, title, at, extra, note) {
         return `<div class="tl-item">
-    <span class="tl-dot">${icon}</span>
+    <span class="tl-dot ${dotClass}"></span>
     <div class="tl-content">
       <div class="tl-head"><span class="tl-title">${title}</span><span class="tl-time">${Pixl.timeAgo(at)}</span></div>
       ${extra || ""}${note || ""}
@@ -1378,7 +1395,7 @@
           return tlItem("", "Project created", e.at, "", "");
         if (e.kind === "shipped")
           return tlItem("", "Shipped for review", e.at, "", "");
-        const [icon, title] = VERDICTS[e.verdict] || ["REVIEWED", "Reviewed"];
+        const [icon, title] = VERDICTS[e.verdict] || ["rev", "Reviewed"];
         let hours = "";
         if (e.approvedHours != null) {
           const claimed = Number(e.claimedHours || 0);
