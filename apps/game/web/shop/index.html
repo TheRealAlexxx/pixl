@@ -246,81 +246,6 @@
       }
       @keyframes limited-blink { 50% { background: var(--gold-soft); } }
 
-      /* ── detail modal ── */
-      #detail-img {
-        width: 240px;
-        height: 240px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--img-slot);
-        border: 1px solid var(--stroke);
-        border-radius: 3px;
-        overflow: hidden;
-        image-rendering: pixelated;
-      }
-      #detail-img img { max-width: 100%; max-height: 100%; }
-      .detail-row { display: flex; gap: 24px; flex-wrap: wrap; }
-      .detail-info {
-        flex: 1;
-        min-width: 240px;
-        display: flex;
-        flex-direction: column;
-        gap: 13px;
-      }
-      #detail-name {
-        font-family: var(--pixel);
-        font-size: 26px;
-        letter-spacing: 0.5px;
-        color: var(--gold);
-      }
-      #detail-desc {
-        font-size: 15px;
-        line-height: 1.7;
-        color: var(--ink);
-        white-space: pre-wrap;
-      }
-      .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
-      .opt-group { display: flex; flex-direction: column; gap: 6px; }
-      .opt-group-name {
-        font-family: var(--pixel);
-        font-size: 11px;
-        letter-spacing: 1px;
-        color: var(--dim);
-      }
-      .opt-choices { display: flex; gap: 8px; flex-wrap: wrap; }
-      .opt-choice { user-select: none; }
-      .opt-choice.on {
-        color: var(--btn-ink);
-        background: var(--gold);
-        border-color: transparent;
-      }
-      .cfg-delta { opacity: 0.7; font-size: 0.9em; }
-      .opt-choice.on .cfg-delta { opacity: 0.85; }
-      .cfg-ref-note {
-        font-size: 13px;
-        color: var(--dim);
-        background: var(--panel-2);
-        border: 1px solid var(--stroke);
-        border-radius: var(--radius-sm);
-        padding: 9px 12px;
-        margin-bottom: 4px;
-      }
-      .cfg-ref-note a { color: var(--gold); text-decoration: underline; }
-      .afford-bar {
-        height: 14px;
-        border: 1px solid var(--stroke);
-        border-radius: 2px;
-        background: var(--panel-deep);
-        overflow: hidden;
-      }
-      .afford-bar > div {
-        height: 100%;
-        background: repeating-linear-gradient(90deg, var(--gold) 0 7px, var(--gold-soft) 7px 14px);
-        transition: width 0.3s ease;
-      }
-
       /* ── trophies / restoration rewards ── */
       .trophy-card {
         display: flex;
@@ -471,34 +396,6 @@
       <div class="marquee"><div id="marquee-inner"></div></div>
     </main>
 
-    <div class="overlay" id="detail-overlay">
-      <div class="modal hud">
-        <button class="modal-close" id="detail-close">✕</button>
-        <div class="detail-row">
-          <div id="detail-img"></div>
-          <div class="detail-info">
-            <div id="detail-name"></div>
-            <div id="detail-limited"></div>
-            <div class="price" id="detail-price" style="font-size: 22px"></div>
-            <div id="detail-desc"></div>
-            <div class="options-row" id="detail-options"></div>
-            <div>
-              <div
-                class="muted"
-                style="font-size: 13px; margin-bottom: 6px; font-family: var(--sans); font-weight: 700; letter-spacing: 0.2px"
-                id="afford-label"
-              ></div>
-              <div class="afford-bar"><div id="afford-fill"></div></div>
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 6px">
-              <button class="btn" id="buy-btn">BUY</button>
-              <button class="btn dark" id="detail-back">KEEP BROWSING</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <script src="/pixl.js"></script>
     <script>
       Pixl.mountTopbar("shop");
@@ -506,168 +403,12 @@
       const $ = (id) => document.getElementById(id);
       let items = [];
       let wallet = null;
-      let selected = null;
       let xp = 0;
       let claimedIds = new Set();
-      let buying = false;
-      let optionPick = {};
-      let configPick = {};
       let activeTier = "all";
-
-      // ── real price-varying configurator (Framework 13/16 DIY etc.) ──
-      // Only used when item.config_options is set; every other item keeps
-      // using the plain optionGroups()/renderOptions() below unchanged.
-      function computeConfigPrice(item, picks) {
-        const cfg = item.config_options;
-        if (!cfg) return Number(item.price);
-        let total = Number(cfg.base_price) || 0;
-        for (const g of cfg.groups || []) {
-          if (g.type === "multi") {
-            const chosen = new Set(picks[g.name] || []);
-            for (const c of g.choices) if (chosen.has(c.label)) total += Number(c.price) || 0;
-          } else {
-            const pick = picks[g.name] ?? g.choices[0]?.label;
-            const c = g.choices.find((c) => c.label === pick) ?? g.choices[0];
-            total += Number(c?.price) || 0;
-          }
-        }
-        return total;
-      }
 
       function basePrice(item) {
         return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
-      }
-
-      function renderConfigurator() {
-        const cfg = selected.config_options;
-        const refNote = cfg.reference_url
-          ? `<div class="cfg-ref-note">Want the exact spec sheet (all language/layout variants, full details)? <a href="${Pixl.esc(cfg.reference_url)}" target="_blank" rel="noopener">Check the real configurator ↗</a> then pick the matching options below.</div>`
-          : "";
-        $("detail-options").innerHTML =
-          refNote +
-          cfg.groups
-            .map((g) => {
-              const isMulti = g.type === "multi";
-              const chosen = isMulti
-                ? new Set(configPick[g.name] || [])
-                : new Set([configPick[g.name] ?? g.choices[0]?.label]);
-              const chips = g.choices
-                .map((c) => {
-                  const on = chosen.has(c.label);
-                  const priceTag = c.price ? ` <span class="cfg-delta">+${c.price}px</span>` : "";
-                  return `<span class="chip opt-choice ${on ? "on" : ""}" data-g="${Pixl.esc(g.name)}" data-c="${Pixl.esc(c.label)}" ${isMulti ? 'data-multi="1"' : ""}>${Pixl.esc(c.label)}${priceTag}</span>`;
-                })
-                .join("");
-              return `<div class="opt-group"><div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}${isMulti ? " (pick any)" : ""}</div><div class="opt-choices">${chips}</div></div>`;
-            })
-            .join("");
-        for (const chip of $("detail-options").querySelectorAll(".opt-choice")) {
-          chip.addEventListener("click", () => {
-            const g = chip.dataset.g;
-            const c = chip.dataset.c;
-            if (chip.dataset.multi) {
-              const set = new Set(configPick[g] || []);
-              if (set.has(c)) set.delete(c);
-              else set.add(c);
-              configPick[g] = [...set];
-            } else {
-              configPick[g] = c;
-            }
-            renderConfigurator();
-            updateConfigPriceUI();
-          });
-        }
-      }
-
-      function updateConfigPriceUI() {
-        const price = computeConfigPrice(selected, configPick);
-        const afford = wallet && wallet.pixels >= price;
-        $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS`;
-        $("detail-price").classList.toggle("cant", !afford);
-        $("buy-btn").disabled = !afford;
-        $("buy-btn").textContent = "BUY";
-        const have = wallet ? wallet.pixels : 0;
-        const pct = Math.max(0, Math.min(100, (have / Math.max(1, price)) * 100));
-        $("afford-fill").style.width = pct + "%";
-        $("afford-fill").style.background =
-          pct >= 100
-            ? "var(--good)"
-            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
-        $("afford-label").textContent =
-          `YOU HAVE ${Math.round(have)} / ${price.toLocaleString()} PX` + (pct >= 100 ? "  —  EASY." : "");
-      }
-
-      function optionGroups(item) {
-        const named = [];
-        const loose = [];
-        for (const raw of Array.isArray(item.options) ? item.options : []) {
-          const o = String(raw);
-          const idx = o.indexOf(":");
-          if (idx > 0) {
-            const name = o.slice(0, idx).trim();
-            const choices = o
-              .slice(idx + 1)
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            if (choices.length) named.push({ name, choices });
-          } else if (o.trim()) {
-            loose.push(o.trim());
-          }
-        }
-        if (loose.length) named.unshift({ name: "", choices: loose });
-        return named;
-      }
-
-      function optionSummary() {
-        if (!selected) return "";
-        if (selected.config_options) {
-          return (selected.config_options.groups || [])
-            .map((g) => {
-              if (g.type === "multi") {
-                const picks = configPick[g.name] || [];
-                return picks.length ? `${g.name}: ${picks.join(", ")}` : null;
-              }
-              const pick = configPick[g.name] ?? g.choices[0]?.label;
-              return `${g.name}: ${pick}`;
-            })
-            .filter(Boolean)
-            .join(" · ");
-        }
-        return optionGroups(selected)
-          .map((g, gi) => {
-            const pick = optionPick[gi] ?? g.choices[0];
-            return g.name ? `${g.name}: ${pick}` : pick;
-          })
-          .join(" · ");
-      }
-
-      function renderOptions() {
-        const groups = optionGroups(selected);
-        $("detail-options").innerHTML = groups
-          .map((g, gi) => {
-            const pick = optionPick[gi] ?? g.choices[0];
-            const chips = g.choices
-              .map(
-                (c) =>
-                  `<span class="chip opt-choice ${c === pick ? "on" : ""}" data-g="${gi}" data-c="${Pixl.esc(c)}">${Pixl.esc(c.toUpperCase())}</span>`,
-              )
-              .join("");
-            const label = g.name
-              ? `<div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}</div>`
-              : "";
-            return `<div class="opt-group">${label}<div class="opt-choices">${chips}</div></div>`;
-          })
-          .join("");
-        for (const chip of $("detail-options").querySelectorAll(
-          ".opt-choice",
-        )) {
-          chip.addEventListener("click", () => {
-            optionPick[Number(chip.dataset.g)] = chip.dataset.c;
-            renderOptions();
-          });
-        }
       }
 
       function isTrophy(item) {
@@ -698,7 +439,6 @@
       }
 
       setInterval(() => {
-        if ($("detail-overlay").classList.contains("show")) return;
         greetIdx = (greetIdx + 1) % GREETS.length;
         $("bubble").textContent = GREETS[greetIdx];
       }, 7000);
@@ -799,7 +539,7 @@
         for (const card of $("trophies").querySelectorAll(".card")) {
           card.addEventListener("click", (e) => {
             if (e.target.closest("[data-claim]")) return;
-            openDetail(Number(card.dataset.id));
+            location.href = `/shop/item?id=${card.dataset.id}`;
           });
         }
         for (const btn of $("trophies").querySelectorAll("[data-claim]")) {
@@ -809,9 +549,9 @@
           });
         }
         for (const card of $("items").querySelectorAll(".card")) {
-          card.addEventListener("click", () =>
-            openDetail(Number(card.dataset.id)),
-          );
+          card.addEventListener("click", () => {
+            location.href = `/shop/item?id=${card.dataset.id}`;
+          });
         }
       }
 
@@ -822,7 +562,6 @@
           Pixl.toast("🏆 TROPHY CLAIMED! The team will reach out.");
           say("A LEGEND CLAIMS THEIR PRIZE!", 4000);
           render();
-          if (selected && selected.id === id) openDetail(id);
         } else if (r.error === "not_eligible") {
           Pixl.toast(
             `Not yet — you're at ${Math.floor(r.xp)} / ${r.need} XP.`,
@@ -830,189 +569,6 @@
           );
         } else {
           Pixl.toast("Couldn't claim that right now.", true);
-        }
-      }
-
-      function openDetail(id) {
-        selected = items.find((i) => i.id === id);
-        if (!selected) return;
-        $("detail-img").innerHTML = imgHtml(selected, true);
-        $("detail-name").textContent = selected.name;
-        $("detail-desc").innerHTML = Pixl.bbcode(selected.description || "");
-
-        if (isTrophy(selected)) {
-          $("detail-options").innerHTML = optionGroups(selected)
-            .flatMap((g) => g.choices)
-            .map(
-              (o) =>
-                `<span class="chip teal">${Pixl.esc(o.toUpperCase())}</span>`,
-            )
-            .join("");
-          const state = trophyState(selected);
-          const need = Number(selected.unlock_xp);
-          const pct = Math.max(
-            0,
-            Math.min(100, (xp / Math.max(1, need)) * 100),
-          );
-          $("detail-limited").innerHTML =
-            `<span class="chip ${state === "locked" ? "" : "teal"}">LEVEL ${need} TROPHY — EARNED, NOT BOUGHT</span>`;
-          $("detail-price").innerHTML =
-            state === "claimed"
-              ? "CLAIMED"
-              : state === "claimable"
-                ? "READY TO CLAIM!"
-                : `LOCKED — REACH ${need} XP`;
-          $("detail-price").classList.toggle("cant", state === "locked");
-          $("afford-fill").style.width = pct + "%";
-          $("afford-fill").style.background =
-            pct >= 100
-              ? "var(--good)"
-              : "repeating-linear-gradient(90deg,var(--teal) 0 7px,var(--teal-hover) 7px 14px)";
-          $("afford-label").textContent =
-            `YOU'RE AT ${Math.floor(xp)} / ${need} XP` +
-            (pct >= 100
-              ? "  —  EARNED!"
-              : `  ·  ${need - Math.floor(xp)} to go`);
-          $("buy-btn").textContent =
-            state === "claimed"
-              ? "CLAIMED"
-              : state === "claimable"
-                ? "CLAIM"
-                : "LOCKED";
-          $("buy-btn").disabled = state !== "claimable";
-          $("buy-btn").classList.toggle("teal", state === "claimable");
-          $("detail-overlay").classList.add("show");
-          say(
-            state === "claimable"
-              ? "YOU EARNED THAT ONE!"
-              : state === "claimed"
-                ? "A TRUE LEGEND."
-                : "SHIP MORE TO EARN IT!",
-            4000,
-          );
-          return;
-        }
-
-        $("buy-btn").classList.remove("teal");
-
-        if (selected.config_options) {
-          configPick = {};
-          renderConfigurator();
-          $("detail-limited").innerHTML =
-            `<span class="chip gold">FULLY CUSTOM — PRICE UPDATES AS YOU PICK</span>`;
-          updateConfigPriceUI();
-          $("detail-overlay").classList.add("show");
-          say("LET'S BUILD YOUR DREAM MACHINE.", 4000);
-          return;
-        }
-
-        optionPick = {};
-        renderOptions();
-        $("detail-limited").innerHTML = selected.limited
-          ? `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`
-          : "";
-        $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${Number(selected.price)} PIXELS`;
-        $("detail-price").classList.toggle("cant", !canAfford(selected));
-        $("buy-btn").textContent = "BUY";
-        $("buy-btn").disabled = !canAfford(selected);
-        const have = wallet ? wallet.pixels : 0;
-        const pct = Math.max(
-          0,
-          Math.min(100, (have / Math.max(1, selected.price)) * 100),
-        );
-        $("afford-fill").style.width = pct + "%";
-        $("afford-fill").style.background =
-          pct >= 100
-            ? "var(--good)"
-            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
-        $("afford-label").textContent =
-          `YOU HAVE ${Math.round(have)} / ${Number(selected.price)} PX` +
-          (pct >= 100 ? "  —  EASY." : "");
-        $("detail-overlay").classList.add("show");
-        say(
-          canAfford(selected)
-            ? "OOH, GOOD EYE."
-            : "BIT PRICEY FOR YOU… FOR NOW.",
-          4000,
-        );
-      }
-
-      function closeDetail() {
-        $("detail-overlay").classList.remove("show");
-      }
-
-      $("detail-close").addEventListener("click", closeDetail);
-      $("detail-back").addEventListener("click", closeDetail);
-      $("detail-overlay").addEventListener("click", (e) => {
-        if (e.target === e.currentTarget) closeDetail();
-      });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeDetail();
-      });
-
-      $("buy-btn").addEventListener("click", () => {
-        if (!selected) return;
-        if (isTrophy(selected)) {
-          if (trophyState(selected) === "claimable") {
-            closeDetail();
-            claimTrophy(selected.id);
-          }
-          return;
-        }
-        const price = selected.config_options
-          ? computeConfigPrice(selected, configPick)
-          : Number(selected.price);
-        if (!wallet || wallet.pixels < price) {
-          Pixl.toast("BIT PRICEY FOR YOU, FOR NOW.", true);
-          say("SHIP A FEW MORE PROJECTS\nAND COME BACK!", 3600);
-          nudgeKeeper();
-          return;
-        }
-        buyItem(selected.id);
-      });
-
-      function nudgeKeeper() {
-        const k = $("keeper");
-        k.style.animation = "none";
-        void k.offsetWidth;
-        k.style.animation = "";
-      }
-
-      async function buyItem(id) {
-        if (buying) return;
-        buying = true;
-        $("buy-btn").disabled = true;
-        $("buy-btn").textContent = "BUYING...";
-        const option = optionSummary();
-        const body = { option };
-        if (selected && selected.config_options) body.config = configPick;
-        const r = await Pixl.send("POST", `/api/shop/buy/${id}`, body);
-        buying = false;
-        if (r.ok) {
-          if (wallet && typeof r.balance === "number")
-            wallet.pixels = r.balance;
-          const el = document.getElementById("pixl-wallet");
-          if (el && typeof r.balance === "number")
-            el.querySelector(".px").textContent = Math.round(
-              r.balance,
-            ).toLocaleString();
-          closeDetail();
-          Pixl.toast("ORDER PLACED! The team will reach out.");
-          say("GREAT PICK! WE'LL BE IN TOUCH\nABOUT GETTING IT TO YOU.", 4500);
-          render();
-        } else if (r.error === "insufficient") {
-          Pixl.toast("Not enough pixels for that.", true);
-          $("buy-btn").disabled = false;
-          $("buy-btn").textContent = "BUY";
-        } else if (r.error === "not_for_sale") {
-          Pixl.toast("That one isn't for sale.", true);
-          $("buy-btn").disabled = false;
-          $("buy-btn").textContent = "BUY";
-        } else {
-          Pixl.toast("Couldn't place that order right now.", true);
-          $("buy-btn").disabled = false;
-          $("buy-btn").textContent = "BUY";
         }
       }
 
