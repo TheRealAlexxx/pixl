@@ -10,6 +10,12 @@ const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 @export var eat_chance: float = 0.2
 @export var route_path: NodePath
 
+## How many pets it takes to befriend the animal, and how long it tags along
+## before wandering off again (petting it while it follows tops the timer back up).
+@export var befriend_pets: int = 3
+@export var follow_duration: float = 25.0
+@export var follow_speed_mult: float = 1.8
+
 var _spawn_pos: Vector2
 var _target_pos: Vector2
 var _state: String = "idle"
@@ -20,8 +26,15 @@ var _stuck_time: float = 0.0
 var _last_pos: Vector2
 
 var _player_in_range := false
+var _player: Node2D = null
 var _prompt: Label
 var _prompt_y: float = -38.0
+
+var _affection: int = 0
+var _follow_time: float = 0.0
+var _heart_time: float = 0.0
+var _companion_heart: Sprite2D = null
+const FOLLOW_STOP_DIST := 22.0
 
 func _ready() -> void:
 	_spawn_pos = global_position
@@ -36,6 +49,9 @@ func _ready() -> void:
 	_wait_then_move()
 
 func _process(_delta: float) -> void:
+	if _companion_heart and _companion_heart.visible:
+		var hbob := sin(Time.get_ticks_msec() / 300.0) * 1.5
+		_companion_heart.position = Vector2(0, _prompt_y - 4.0 + hbob)
 	if _prompt == null:
 		return
 	var show := _player_in_range and not Dialogue.is_open and not ChatHud.is_typing()
@@ -45,6 +61,9 @@ func _process(_delta: float) -> void:
 		_prompt.position = Vector2(round(-_prompt.size.x * _prompt.scale.x / 2.0), round(_prompt_y + bob))
 
 func _physics_process(delta: float) -> void:
+	if _state == "follow":
+		_process_follow(delta)
+		return
 	if _state == "walk":
 		var direction = (_target_pos - global_position)
 		_walk_timeout -= delta
@@ -92,6 +111,8 @@ func _wait_then_move() -> void:
 	_pick_new_target()
 
 func _pick_new_target() -> void:
+	if _state == "follow":
+		return
 	if _route:
 		var length := _route.curve.get_baked_length()
 		var step := randf_range(20.0, 60.0) * (1.0 if randf() < 0.7 else -1.0)
@@ -152,6 +173,7 @@ func _interact_key_label() -> String:
 func _on_pet_body_entered(body: Node2D) -> void:
 	if body.has_method("player") and body.is_local:
 		_player_in_range = true
+		_player = body
 
 func _on_pet_body_exited(body: Node2D) -> void:
 	if body.has_method("player") and body.is_local:
@@ -166,6 +188,67 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func pet() -> void:
 	_pop_heart()
+	if _state == "follow":
+		# already a companion — a fresh pet just keeps it around longer
+		_follow_time = follow_duration
+		return
+	_affection += 1
+	if _affection >= befriend_pets and _player != null and is_instance_valid(_player):
+		_start_following()
+
+func _start_following() -> void:
+	_state = "follow"
+	_follow_time = follow_duration
+	_heart_time = 0.0
+	_show_companion_marker(true)
+	_pop_heart()
+
+func _stop_following() -> void:
+	_affection = 0
+	_spawn_pos = global_position
+	velocity = Vector2.ZERO
+	_state = "idle"
+	_show_companion_marker(false)
+	_play_idle()
+	_wait_then_move()
+
+func _show_companion_marker(on: bool) -> void:
+	if not on:
+		if _companion_heart:
+			_companion_heart.visible = false
+		return
+	if _companion_heart == null:
+		var tex := EmoteHud.texture_for("heart")
+		if tex == null:
+			return
+		_companion_heart = Sprite2D.new()
+		_companion_heart.texture = tex
+		_companion_heart.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_companion_heart.z_index = 30
+		var h := float(maxi(tex.get_height(), 1))
+		_companion_heart.scale = Vector2.ONE * (9.0 / h)
+		add_child(_companion_heart)
+	_companion_heart.visible = true
+
+func _process_follow(delta: float) -> void:
+	_follow_time -= delta
+	if _player == null or not is_instance_valid(_player) or _follow_time <= 0.0:
+		_stop_following()
+		return
+	_heart_time -= delta
+	if _heart_time <= 0.0:
+		_pop_heart()
+		_heart_time = randf_range(2.5, 4.0)
+	var to_player := _player.global_position - global_position
+	if to_player.length() > FOLLOW_STOP_DIST:
+		var direction := to_player.normalized()
+		velocity = direction * speed * follow_speed_mult
+		$AnimatedSprite2D.flip_h = direction.x < 0
+		$AnimatedSprite2D.play("walk")
+	else:
+		velocity = Vector2.ZERO
+		$AnimatedSprite2D.play("idle")
+	move_and_slide()
 
 func _pop_heart() -> void:
 	var tex := EmoteHud.texture_for("heart")
