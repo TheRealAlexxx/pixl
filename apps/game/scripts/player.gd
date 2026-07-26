@@ -89,6 +89,7 @@ func _physics_process(delta: float) -> void:
 func player_movement(delta: float)-> void:
 	if ChatHud.is_typing() or global.ui_blocked():
 		velocity = Vector2.ZERO
+		play_anim(0)
 		move_and_slide()
 		return
 	var before := global_position
