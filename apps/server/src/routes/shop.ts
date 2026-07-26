@@ -9,7 +9,8 @@ const router = Router();
 
 // Base columns plus unlock_xp (trophies). unlock_xp arrives with migration 0032
 // — fall back gracefully before it's applied so the catalog keeps loading.
-const ITEM_COLUMNS = "id, name, description, price, image_url, options, unlock_xp";
+const ITEM_COLUMNS =
+  "id, name, description, price, image_url, options, unlock_xp, config_options";
 const ITEM_COLUMNS_FALLBACK = "id, name, description, price, image_url, options";
 
 async function fetchItems(filterIds?: number[]) {
@@ -27,6 +28,7 @@ async function fetchItems(filterIds?: number[]) {
       data: ((second.data ?? []) as unknown as Record<string, unknown>[]).map((i) => ({
         ...i,
         unlock_xp: 0,
+        config_options: null,
       })),
     };
   }
@@ -162,11 +164,16 @@ router.post("/api/shop/buy/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
   const option = typeof req.body?.option === "string" ? req.body.option.slice(0, 80) : "";
+  // Structured picks for items with a real price-varying configurator
+  // (config_options). Ignored by buy_shop_item for every other item.
+  const config =
+    req.body?.config && typeof req.body.config === "object" ? req.body.config : null;
 
   const { data, error } = await supabase.rpc("buy_shop_item", {
     p_user_id: session.userId,
     p_item_id: id,
     p_option: option,
+    p_config: config,
   });
   if (error) {
     console.error("[shop] buy failed", error);

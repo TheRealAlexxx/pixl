@@ -296,6 +296,18 @@
         background: var(--gold);
         border-color: transparent;
       }
+      .cfg-delta { opacity: 0.7; font-size: 0.9em; }
+      .opt-choice.on .cfg-delta { opacity: 0.85; }
+      .cfg-ref-note {
+        font-size: 13px;
+        color: var(--dim);
+        background: var(--panel-2);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        padding: 9px 12px;
+        margin-bottom: 4px;
+      }
+      .cfg-ref-note a { color: var(--gold); text-decoration: underline; }
       .afford-bar {
         height: 14px;
         border: 1px solid var(--stroke);
@@ -499,7 +511,92 @@
       let claimedIds = new Set();
       let buying = false;
       let optionPick = {};
+      let configPick = {};
       let activeTier = "all";
+
+      // ── real price-varying configurator (Framework 13/16 DIY etc.) ──
+      // Only used when item.config_options is set; every other item keeps
+      // using the plain optionGroups()/renderOptions() below unchanged.
+      function computeConfigPrice(item, picks) {
+        const cfg = item.config_options;
+        if (!cfg) return Number(item.price);
+        let total = Number(cfg.base_price) || 0;
+        for (const g of cfg.groups || []) {
+          if (g.type === "multi") {
+            const chosen = new Set(picks[g.name] || []);
+            for (const c of g.choices) if (chosen.has(c.label)) total += Number(c.price) || 0;
+          } else {
+            const pick = picks[g.name] ?? g.choices[0]?.label;
+            const c = g.choices.find((c) => c.label === pick) ?? g.choices[0];
+            total += Number(c?.price) || 0;
+          }
+        }
+        return total;
+      }
+
+      function basePrice(item) {
+        return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
+      }
+
+      function renderConfigurator() {
+        const cfg = selected.config_options;
+        const refNote = cfg.reference_url
+          ? `<div class="cfg-ref-note">Want the exact spec sheet (all language/layout variants, full details)? <a href="${Pixl.esc(cfg.reference_url)}" target="_blank" rel="noopener">Check the real configurator ↗</a> then pick the matching options below.</div>`
+          : "";
+        $("detail-options").innerHTML =
+          refNote +
+          cfg.groups
+            .map((g) => {
+              const isMulti = g.type === "multi";
+              const chosen = isMulti
+                ? new Set(configPick[g.name] || [])
+                : new Set([configPick[g.name] ?? g.choices[0]?.label]);
+              const chips = g.choices
+                .map((c) => {
+                  const on = chosen.has(c.label);
+                  const priceTag = c.price ? ` <span class="cfg-delta">+${c.price}px</span>` : "";
+                  return `<span class="chip opt-choice ${on ? "on" : ""}" data-g="${Pixl.esc(g.name)}" data-c="${Pixl.esc(c.label)}" ${isMulti ? 'data-multi="1"' : ""}>${Pixl.esc(c.label)}${priceTag}</span>`;
+                })
+                .join("");
+              return `<div class="opt-group"><div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}${isMulti ? " (pick any)" : ""}</div><div class="opt-choices">${chips}</div></div>`;
+            })
+            .join("");
+        for (const chip of $("detail-options").querySelectorAll(".opt-choice")) {
+          chip.addEventListener("click", () => {
+            const g = chip.dataset.g;
+            const c = chip.dataset.c;
+            if (chip.dataset.multi) {
+              const set = new Set(configPick[g] || []);
+              if (set.has(c)) set.delete(c);
+              else set.add(c);
+              configPick[g] = [...set];
+            } else {
+              configPick[g] = c;
+            }
+            renderConfigurator();
+            updateConfigPriceUI();
+          });
+        }
+      }
+
+      function updateConfigPriceUI() {
+        const price = computeConfigPrice(selected, configPick);
+        const afford = wallet && wallet.pixels >= price;
+        $("detail-price").innerHTML =
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS`;
+        $("detail-price").classList.toggle("cant", !afford);
+        $("buy-btn").disabled = !afford;
+        $("buy-btn").textContent = "BUY";
+        const have = wallet ? wallet.pixels : 0;
+        const pct = Math.max(0, Math.min(100, (have / Math.max(1, price)) * 100));
+        $("afford-fill").style.width = pct + "%";
+        $("afford-fill").style.background =
+          pct >= 100
+            ? "var(--good)"
+            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
+        $("afford-label").textContent =
+          `YOU HAVE ${Math.round(have)} / ${price.toLocaleString()} PX` + (pct >= 100 ? "  —  EASY." : "");
+      }
 
       function optionGroups(item) {
         const named = [];
@@ -525,6 +622,19 @@
 
       function optionSummary() {
         if (!selected) return "";
+        if (selected.config_options) {
+          return (selected.config_options.groups || [])
+            .map((g) => {
+              if (g.type === "multi") {
+                const picks = configPick[g.name] || [];
+                return picks.length ? `${g.name}: ${picks.join(", ")}` : null;
+              }
+              const pick = configPick[g.name] ?? g.choices[0]?.label;
+              return `${g.name}: ${pick}`;
+            })
+            .filter(Boolean)
+            .join(" · ");
+        }
         return optionGroups(selected)
           .map((g, gi) => {
             const pick = optionPick[gi] ?? g.choices[0];
@@ -594,13 +704,13 @@
       }, 7000);
 
       function canAfford(item) {
-        return wallet && wallet.pixels >= Number(item.price);
+        return wallet && wallet.pixels >= basePrice(item);
       }
 
       function tierMatch(item) {
         if (activeTier === "afford") return canAfford(item);
-        if (activeTier === "under") return Number(item.price) < 500;
-        if (activeTier === "over") return Number(item.price) >= 500;
+        if (activeTier === "under") return basePrice(item) < 500;
+        if (activeTier === "over") return basePrice(item) >= 500;
         return true;
       }
 
@@ -650,9 +760,9 @@
         const trophies = items.filter((i) => isTrophy(i) && match(i));
         let list = items.filter((i) => !isTrophy(i) && match(i) && tierMatch(i));
         if (sort === "cheap")
-          list = [...list].sort((a, b) => a.price - b.price);
+          list = [...list].sort((a, b) => basePrice(a) - basePrice(b));
         else if (sort === "pricey")
-          list = [...list].sort((a, b) => b.price - a.price);
+          list = [...list].sort((a, b) => basePrice(b) - basePrice(a));
         else if (sort === "name")
           list = [...list].sort((a, b) =>
             String(a.name).localeCompare(String(b.name)),
@@ -679,7 +789,7 @@
       <div class="item-name">${Pixl.esc(item.name)}</div>
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
       <div class="item-foot">
-        <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${Number(item.price)} PX</span>
+        <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${item.config_options ? `FROM ${basePrice(item).toLocaleString()}` : basePrice(item).toLocaleString()} PX</span>
         <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
       </div>
     </div>`,
@@ -784,6 +894,18 @@
         }
 
         $("buy-btn").classList.remove("teal");
+
+        if (selected.config_options) {
+          configPick = {};
+          renderConfigurator();
+          $("detail-limited").innerHTML =
+            `<span class="chip gold">FULLY CUSTOM — PRICE UPDATES AS YOU PICK</span>`;
+          updateConfigPriceUI();
+          $("detail-overlay").classList.add("show");
+          say("LET'S BUILD YOUR DREAM MACHINE.", 4000);
+          return;
+        }
+
         optionPick = {};
         renderOptions();
         $("detail-limited").innerHTML = selected.limited
@@ -838,7 +960,10 @@
           }
           return;
         }
-        if (!canAfford(selected)) {
+        const price = selected.config_options
+          ? computeConfigPrice(selected, configPick)
+          : Number(selected.price);
+        if (!wallet || wallet.pixels < price) {
           Pixl.toast("BIT PRICEY FOR YOU, FOR NOW.", true);
           say("SHIP A FEW MORE PROJECTS\nAND COME BACK!", 3600);
           nudgeKeeper();
@@ -860,7 +985,9 @@
         $("buy-btn").disabled = true;
         $("buy-btn").textContent = "BUYING...";
         const option = optionSummary();
-        const r = await Pixl.send("POST", `/api/shop/buy/${id}`, { option });
+        const body = { option };
+        if (selected && selected.config_options) body.config = configPick;
+        const r = await Pixl.send("POST", `/api/shop/buy/${id}`, body);
         buying = false;
         if (r.ok) {
           if (wallet && typeof r.balance === "number")
@@ -935,7 +1062,7 @@
         const names =
           items
             .filter((i) => !isTrophy(i))
-            .map((i) => `${Pixl.esc(i.name)} · ${i.price} PX`)
+            .map((i) => `${Pixl.esc(i.name)} · ${i.config_options ? "FROM " : ""}${basePrice(i)} PX`)
             .join("  ◆  ") || "THE SHELVES ARE BARE TODAY";
         $("marquee-inner").innerHTML =
           `<span>${names}  ◆  ${names}  ◆  </span>`;
