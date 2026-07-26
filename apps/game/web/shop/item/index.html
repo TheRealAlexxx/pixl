@@ -135,13 +135,29 @@
       }
       .price img { width: 20px; height: 20px; }
       .price.cant { color: var(--bad); }
-      .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
-      .opt-group { display: flex; flex-direction: column; gap: 6px; }
+      /* option groups as tidy, separated cards tiled across the width */
+      .options-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 14px;
+        align-items: start;
+        margin-top: 26px;
+      }
+      .options-row:empty { display: none; }
+      .opt-group {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+        background: var(--panel-2);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        padding: 13px 15px 15px;
+      }
       .opt-group-name {
         font-family: var(--pixel);
-        font-size: 11px;
-        letter-spacing: 1px;
-        color: var(--dim);
+        font-size: 12px;
+        letter-spacing: 1.5px;
+        color: var(--teal);
       }
       .opt-choices { display: flex; gap: 8px; flex-wrap: wrap; }
       .opt-choice { user-select: none; }
@@ -153,15 +169,36 @@
       .cfg-delta { opacity: 0.7; font-size: 0.9em; }
       .opt-choice.on .cfg-delta { opacity: 0.85; }
       .cfg-ref-note {
+        grid-column: 1 / -1;
         font-size: 13px;
         color: var(--dim);
         background: var(--panel-2);
         border: 1px solid var(--stroke);
         border-radius: var(--radius-sm);
-        padding: 9px 12px;
-        margin-bottom: 4px;
+        padding: 11px 14px;
       }
       .cfg-ref-note a { color: var(--gold); text-decoration: underline; }
+
+      /* checkout bar pinned to the bottom of the card */
+      .buy-bar {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 26px;
+        padding-top: 20px;
+        border-top: 1px solid var(--stroke);
+      }
+      .buy-bar .price { font-size: 24px; }
+      .afford-wrap { flex: 1; min-width: 220px; }
+      .afford-label {
+        font-size: 13px;
+        margin-bottom: 6px;
+        font-family: var(--sans);
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        color: var(--dim);
+      }
       .afford-bar {
         height: 14px;
         border: 1px solid var(--stroke);
@@ -174,7 +211,7 @@
         background: repeating-linear-gradient(90deg, var(--gold) 0 7px, var(--gold-soft) 7px 14px);
         transition: width 0.3s ease;
       }
-      .btn-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+      .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
     </style>
   </head>
   <body>
@@ -200,21 +237,21 @@
             <div class="detail-info">
               <div id="detail-name"></div>
               <div id="detail-limited"></div>
-              <div class="price" id="detail-price"></div>
               <div id="detail-desc"></div>
-              <div class="options-row" id="detail-options"></div>
-              <div>
-                <div
-                  class="muted"
-                  style="font-size: 13px; margin-bottom: 6px; font-family: var(--sans); font-weight: 700; letter-spacing: 0.2px"
-                  id="afford-label"
-                ></div>
-                <div class="afford-bar"><div id="afford-fill"></div></div>
-              </div>
-              <div class="btn-row">
-                <button class="btn" id="buy-btn">BUY</button>
-                <a class="btn dark" href="/shop/">KEEP BROWSING</a>
-              </div>
+            </div>
+          </div>
+
+          <div class="options-row" id="detail-options"></div>
+
+          <div class="buy-bar">
+            <div class="price" id="detail-price"></div>
+            <div class="afford-wrap">
+              <div class="afford-label" id="afford-label"></div>
+              <div class="afford-bar"><div id="afford-fill"></div></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="buy-btn">BUY</button>
+              <a class="btn dark" href="/shop/">KEEP BROWSING</a>
             </div>
           </div>
         </section>
@@ -423,10 +460,13 @@
         document.title = `Pixl · ${selected.name}`;
 
         if (isTrophy(selected)) {
-          $("detail-options").innerHTML = optionGroups(selected)
+          const tChips = optionGroups(selected)
             .flatMap((g) => g.choices)
             .map((o) => `<span class="chip teal">${Pixl.esc(o.toUpperCase())}</span>`)
             .join("");
+          $("detail-options").innerHTML = tChips
+            ? `<div class="opt-group"><div class="opt-choices">${tChips}</div></div>`
+            : "";
           const state = trophyState(selected);
           const need = Number(selected.unlock_xp);
           const pct = Math.max(0, Math.min(100, (xp / Math.max(1, need)) * 100));
