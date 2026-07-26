@@ -14,6 +14,7 @@ const OUTDOOR := ["village", "open_world"]
 const CYCLE_SECONDS := 720.0
 
 var _grad: Gradient
+var _glow_tex: GradientTexture2D
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -43,3 +44,28 @@ func _process(delta: float) -> void:
 func _is_outdoor() -> bool:
 	var cur := get_tree().current_scene
 	return cur != null and OUTDOOR.has(cur.scene_file_path.get_file().get_basename())
+
+# 0.0 in broad daylight -> 1.0 at deep night, following the same phase as the
+# sky. Returns 0.0 whenever the cycle is off or we're indoors/in a menu, so
+# night-only ambience (fireflies, lit windows) can just multiply by this.
+func night_amount() -> float:
+	if not Settings.day_night_enabled or not _is_outdoor():
+		return 0.0
+	var phase := fposmod(Time.get_unix_time_from_system() / CYCLE_SECONDS, 1.0)
+	var lum := _grad.sample(phase).get_luminance()
+	return clampf((1.0 - lum) / 0.5, 0.0, 1.0)
+
+# A shared soft round glow, built once and reused by lanterns and fireflies.
+func glow_texture() -> Texture2D:
+	if _glow_tex == null:
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 1.0])
+		g.colors = PackedColorArray([Color(1, 1, 1, 1), Color(1, 1, 1, 0)])
+		_glow_tex = GradientTexture2D.new()
+		_glow_tex.gradient = g
+		_glow_tex.width = 64
+		_glow_tex.height = 64
+		_glow_tex.fill = GradientTexture2D.FILL_RADIAL
+		_glow_tex.fill_from = Vector2(0.5, 0.5)
+		_glow_tex.fill_to = Vector2(1.0, 0.5)
+	return _glow_tex
