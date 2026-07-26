@@ -120,6 +120,36 @@ router.post("/api/shop/claim/:id", async (req, res) => {
   res.json({ ok: true, claimed: true });
 });
 
+// The player's own orders, newest first, for the Orders tab in the dash. Reads
+// the fulfillment-pipeline columns (status/tracking/stage stamps) but falls back
+// to the base columns so it keeps working before migration 0052 is applied.
+const ORDER_COLUMNS =
+  "id, item_name, option, price, status, note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
+const ORDER_COLUMNS_FALLBACK =
+  "id, item_name, option, price, status, note, created_at, fulfilled_at";
+
+router.get("/api/shop/orders", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const build = (cols: string) =>
+    supabase
+      .from("shop_orders")
+      .select(cols)
+      .eq("user_id", session.userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+  let { data, error } = await build(ORDER_COLUMNS);
+  if (error) ({ data, error } = await build(ORDER_COLUMNS_FALLBACK));
+  if (error) {
+    console.error("[shop] orders failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, orders: data ?? [] });
+});
+
 // Buy a priced item with pixels. All the real checks (item on sale, affordable,
 // pixels deducted) happen inside buy_shop_item under a row lock, so a
 // double-click can't overspend. On success we open a pending order the team

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixl · Orders</title>
+    <link rel="icon" href="/index.icon.png" />
+    <link rel="stylesheet" href="/pixl.css" />
+    <style>
+      /* ── order rows: a panel per order with a fulfilment stage tracker ── */
+      .orders-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 22px;
+      }
+      .order {
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .order-head {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .order-name {
+        font-family: var(--pixel);
+        font-size: 17px;
+        letter-spacing: 0.5px;
+        color: var(--ink);
+      }
+      .order-price {
+        color: var(--gold);
+        font-family: var(--sans);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: 15px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .order-price img { width: 14px; height: 14px; }
+      .order-when { margin-left: auto; color: var(--faint); font-size: 13px; }
+
+      /* stage tracker — dots + connectors, current one lit */
+      .track {
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+      }
+      .track .step {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        min-width: 0;
+      }
+      /* connector line to the next step, drawn from this dot's center rightward */
+      .track .step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: var(--stroke);
+      }
+      .track .step.filled:not(:last-child)::after { background: var(--teal); }
+      .track .step .bead {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--panel-deep);
+        border: 2px solid var(--stroke);
+        position: relative;
+        z-index: 1;
+      }
+      .track .step.filled .bead { background: var(--teal); border-color: var(--teal); }
+      .track .step.current .bead {
+        background: var(--gold);
+        border-color: var(--gold);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 30%, transparent);
+      }
+      .track .step .lbl {
+        font-family: var(--pixel);
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--faint);
+        text-align: center;
+      }
+      .track .step.filled .lbl { color: var(--dim); }
+      .track .step.current .lbl { color: var(--gold); }
+
+      .order-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-size: 13.5px;
+        color: var(--dim);
+      }
+      .order-track {
+        font-family: var(--sans);
+        font-variant-numeric: tabular-nums;
+        color: var(--ink);
+        background: var(--panel-deep);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        padding: 2px 8px;
+        letter-spacing: 0.3px;
+      }
+      .order.cancelled { opacity: 0.72; }
+      .order-note { color: var(--faint); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1 class="page-title">YOUR ORDERS</h1>
+      <div class="page-sub">
+        Everything you've spent pixels on, and where it is in fulfilment. We'll DM you the tracking
+        number the moment it ships.
+      </div>
+
+      <div class="spin" id="loading"></div>
+      <div class="orders-list" id="list"></div>
+      <div class="empty-note" id="empty" hidden>
+        NO ORDERS YET.<br />HEAD TO THE SHOP AND SPEND SOME OF THOSE HARD-EARNED PIXELS.
+      </div>
+    </main>
+
+    <script src="/pixl.js"></script>
+    <script>
+      Pixl.mountTopbar("orders");
+      const $ = (id) => document.getElementById(id);
+
+      // The happy-path stages in order, plus how each status reads as a badge.
+      const STAGES = [
+        ["pending", "NEW"],
+        ["ordered", "ORDERED"],
+        ["credited", "PAID"],
+        ["shipped", "SHIPPED"],
+        ["done", "DONE"],
+      ];
+      const BADGE = {
+        pending: ["AWAITING", ""],
+        ordered: ["ORDERED", "gold"],
+        credited: ["PAID", "gold"],
+        shipped: ["SHIPPED", "teal"],
+        done: ["DELIVERED", "green"],
+        cancelled: ["CANCELLED · REFUNDED", "red"],
+      };
+
+      function tracker(status) {
+        const idx = STAGES.findIndex(([s]) => s === status);
+        return `<div class="track">${STAGES.map(([, lbl], i) => {
+          const cls = i < idx ? "filled" : i === idx ? "filled current" : "";
+          return `<div class="step ${cls}"><span class="bead"></span><span class="lbl">${lbl}</span></div>`;
+        }).join("")}</div>`;
+      }
+
+      function orderCard(o) {
+        const [badgeText, badgeCls] = BADGE[o.status] || ["", ""];
+        const badge = `<span class="chip ${badgeCls}">${badgeText}</span>`;
+        const option = o.option ? `<span class="chip">${Pixl.esc(o.option)}</span>` : "";
+        const when = o.created_at
+          ? `<span class="order-when">${Pixl.timeAgo(o.created_at)}</span>`
+          : "";
+
+        const body =
+          o.status === "cancelled"
+            ? `<div class="order-note">Refunded to your wallet.${o.note ? " " + Pixl.esc(o.note) : ""}</div>`
+            : tracker(o.status);
+
+        const tracking =
+          (o.status === "shipped" || o.status === "done") && o.tracking
+            ? `<div class="order-meta">Tracking <span class="order-track">${Pixl.esc(o.tracking)}</span><span class="muted">· DM'd to you</span></div>`
+            : "";
+
+        return `
+      <div class="panel order ${o.status === "cancelled" ? "cancelled" : ""}">
+        <div class="order-head">
+          <span class="order-name">${Pixl.esc(o.item_name || "Item")}</span>
+          <span class="order-price"><img src="/img/pixel.png" alt="">${Number(o.price)} PX</span>
+          ${badge}${option}${when}
+        </div>
+        ${body}
+        ${tracking}
+      </div>`;
+      }
+
+      async function boot() {
+        if (!Pixl.hasToken) return;
+        let orders = [];
+        try {
+          const data = await Pixl.api("/api/shop/orders");
+          orders = data.orders || [];
+        } catch (e) {
+          if (e.message !== "unauthorized")
+            Pixl.toast("Couldn't load your orders right now.", true);
+        }
+        $("loading").remove();
+        if (orders.length === 0) {
+          $("empty").hidden = false;
+          return;
+        }
+        $("list").innerHTML = orders.map(orderCard).join("");
+      }
+      boot();
+    </script>
+  </body>
+</html>
