@@ -266,6 +266,21 @@ export function listOnlinePlayers(): {
   }));
 }
 
+// Push a one-off frame to a specific player's socket if they're connected.
+// Returns whether it was delivered — callers (e.g. village invites) fall back
+// to the inbox for offline players. Best-effort: never throws.
+export function sendToUser(userId: string, payload: unknown): boolean {
+  const p = players.get(userId);
+  if (!p || p.ws.readyState !== WebSocket.OPEN) return false;
+  try {
+    p.ws.send(JSON.stringify(payload));
+    return true;
+  } catch (e) {
+    console.error("sendToUser failed", e);
+    return false;
+  }
+}
+
 // Filter hit: log it, warn from the 3rd violation, auto-ban at the 7th.
 async function punishChat(
   player: ConnectedPlayer,
@@ -784,6 +799,63 @@ export function attachWebSocketServer(httpServer: Server) {
             JSON.stringify({
               type: "lobby_joined",
               lobby: lobbyInfoFor(lobby, lobbyMemberCount(lid), asking.userId),
+            }),
+          );
+        })().catch(console.error);
+      }
+
+      if (msg.type === "lobby_accept_invite") {
+        const inviteId = Number(msg.inviteId ?? 0);
+        const asking = player;
+        void (async () => {
+          const deny = (reason: string) =>
+            ws.send(JSON.stringify({ type: "lobby_denied", reason }));
+          if (!inviteId) return deny("That invite is no longer valid.");
+          const { data, error } = await supabase
+            .from("village_invites")
+            .select("*")
+            .eq("id", inviteId)
+            .limit(1);
+          if (error) {
+            console.error("[village] accept lookup failed", error);
+            return deny("Couldn't reach the village right now.");
+          }
+          const invite = (data ?? [])[0] as
+            | {
+                lobby_id: string;
+                to_user_id: string;
+                status: string;
+                expires_at: string;
+              }
+            | undefined;
+          if (!invite || invite.to_user_id !== asking.userId)
+            return deny("That invite is no longer valid.");
+          if (invite.status !== "pending")
+            return deny("You've already responded to that invite.");
+          if (Date.parse(invite.expires_at) <= Date.now())
+            return deny("That invite has expired.");
+          const lobby = lobbies.get(invite.lobby_id);
+          if (!lobby) return deny("That village no longer exists.");
+          if (lobbyMemberCount(lobby.id, asking.userId) >= lobby.capacity)
+            return deny("That village is full.");
+          const { error: updateError } = await supabase
+            .from("village_invites")
+            .update({ status: "accepted" })
+            .eq("id", inviteId)
+            .eq("status", "pending");
+          if (updateError) {
+            console.error("[village] accept update failed", updateError);
+            return deny("Couldn't reach the village right now.");
+          }
+          asking.lobbyGrant = lobby.id;
+          ws.send(
+            JSON.stringify({
+              type: "lobby_joined",
+              lobby: lobbyInfoFor(
+                lobby,
+                lobbyMemberCount(lobby.id),
+                asking.userId,
+              ),
             }),
           );
         })().catch(console.error);

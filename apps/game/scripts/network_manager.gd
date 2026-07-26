@@ -16,6 +16,7 @@ signal npc_init(scene: String, npcs: Array)
 signal lobby_list_received(lobbies: Array)
 signal lobby_joined(lobby: Dictionary)
 signal lobby_denied(reason: String)
+signal village_invited(invite_id: int, from_name: String, lobby_name: String)
 signal name_result(ok: bool, text: String)
 
 const DEV_SERVER_URL = "http://localhost:4728"
@@ -301,6 +302,8 @@ func _handle_message(raw: String) -> void:
 			emit_signal("lobby_joined", lobby)
 		"lobby_denied":
 			emit_signal("lobby_denied", String(json.get("reason", "")))
+		"village_invited":
+			emit_signal("village_invited", int(json.get("inviteId", 0)), String(json.get("fromName", "")), String(json.get("lobbyName", "")))
 		"lobby_closed":
 			current_lobby_id = ""
 			var cs = get_tree().current_scene
@@ -393,6 +396,11 @@ func send_join_friend(friend_user_id: String) -> void:
 	if not _is_socket_open():
 		return
 	_socket.send_text(JSON.stringify({"type": "lobby_join_friend", "userId": friend_user_id}))
+
+func send_accept_village_invite(invite_id: int) -> void:
+	if not _is_socket_open():
+		return
+	_socket.send_text(JSON.stringify({"type": "lobby_accept_invite", "inviteId": invite_id}))
 
 func send_scene_change(scene_name: String) -> void:
 	var actual := scene_name

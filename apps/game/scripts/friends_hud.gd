@@ -13,6 +13,7 @@ var _search_edit: LineEdit
 var _search_results: VBoxContainer
 var _open := false
 var _joining := false
+var _invites: Array = []
 
 func _readable_theme() -> Theme:
 	var f := SystemFont.new()
@@ -29,6 +30,7 @@ func _ready() -> void:
 	_root.visible = false
 	NetworkManager.lobby_joined.connect(_on_lobby_joined)
 	NetworkManager.lobby_denied.connect(_on_lobby_denied)
+	NetworkManager.village_invited.connect(_on_village_invited)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _open and event.is_action_pressed("ui_cancel"):
@@ -76,7 +78,18 @@ func close() -> void:
 
 func refresh() -> void:
 	_status_label.text = ""
-	_api(HTTPClient.METHOD_GET, "/api/friends", {}, _on_list)
+	# Pull village invites first, then the friends list renders both together.
+	_api(HTTPClient.METHOD_GET, "/api/village/invites", {}, func(code, json):
+		if code == 200 and typeof(json) == TYPE_DICTIONARY and json.get("ok", false):
+			_invites = json.get("invites", [])
+		else:
+			_invites = []
+		_api(HTTPClient.METHOD_GET, "/api/friends", {}, _on_list)
+	)
+
+func _on_village_invited(_invite_id: int, _from_name: String, _lobby_name: String) -> void:
+	if _open:
+		refresh()
 
 func _build_ui() -> void:
 	_root = Control.new()
@@ -205,8 +218,13 @@ func _on_list(code: int, json: Variant) -> void:
 	var friends: Array = json.get("friends", [])
 	var incoming: Array = json.get("incoming", [])
 	var outgoing: Array = json.get("outgoing", [])
+	if not _invites.is_empty():
+		_list.add_child(_header("VILLAGE INVITES"))
+		for inv in _invites:
+			_list.add_child(_invite_row(inv))
 	if friends.is_empty() and incoming.is_empty() and outgoing.is_empty():
-		_list.add_child(_muted("No friends yet. Search above or click a player in the world!"))
+		if _invites.is_empty():
+			_list.add_child(_muted("No friends yet. Search above or click a player in the world!"))
 		return
 	if not incoming.is_empty():
 		_list.add_child(_header("REQUESTS"))
@@ -279,6 +297,55 @@ func _friend_row(f: Dictionary) -> Control:
 		where.theme_type_variation = &"InfoText"
 		where.text = "in your lobby" if lobby_id != "" else "in the village"
 		row.add_child(where)
+	# When you're in a village, offer to pull any friend who isn't already there.
+	if NetworkManager.current_lobby_id != "" and lobby_id != NetworkManager.current_lobby_id:
+		var uid := String(f.get("userId", ""))
+		var invite := Button.new()
+		invite.theme_type_variation = &"SmallButton"
+		invite.text = "Invite"
+		invite.pressed.connect(func():
+			invite.disabled = true
+			invite.text = "Inviting"
+			_api(HTTPClient.METHOD_POST, "/api/village/invite", {"userId": uid}, func(code, json):
+				var ok: bool = code == 200 and typeof(json) == TYPE_DICTIONARY and json.get("ok", false)
+				invite.text = "Invited" if ok else "Failed"
+				if not ok:
+					invite.disabled = false
+			)
+		)
+		row.add_child(invite)
+	return shell
+
+func _invite_row(inv: Dictionary) -> Control:
+	var shell := _row_shell()
+	var row := row_body(shell)
+	row.add_child(_dot(COLOR_ONLINE))
+	var main := VBoxContainer.new()
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main.add_theme_constant_override("separation", 0)
+	main.add_child(_row_name(String(inv.get("lobbyName", "a village")), Color(0.956863, 0.890196, 0.760784)))
+	var from := Label.new()
+	from.theme_type_variation = &"InfoText"
+	from.text = "from %s" % String(inv.get("fromName", "a friend"))
+	main.add_child(from)
+	row.add_child(main)
+	var invite_id := int(inv.get("id", 0))
+	var join := Button.new()
+	join.theme_type_variation = &"SmallButton"
+	join.text = "Join"
+	join.pressed.connect(func():
+		_joining = true
+		_status_label.text = "Joining %s" % String(inv.get("lobbyName", "the village"))
+		NetworkManager.send_accept_village_invite(invite_id)
+	)
+	row.add_child(join)
+	var decline := Button.new()
+	decline.theme_type_variation = &"SmallButton"
+	decline.text = "Decline"
+	decline.pressed.connect(func():
+		_api(HTTPClient.METHOD_POST, "/api/village/invite/decline", {"inviteId": invite_id}, func(_c, _j): refresh())
+	)
+	row.add_child(decline)
 	return shell
 
 func _incoming_row(f: Dictionary) -> Control:

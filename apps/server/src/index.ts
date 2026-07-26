@@ -16,6 +16,7 @@ import sidequestsRouter from "./routes/sidequests.js";
 import reportsRouter from "./routes/reports.js";
 import vaultRouter from "./routes/vault.js";
 import storyRouter from "./routes/story.js";
+import villageRouter from "./routes/village.js";
 import { rateLimit } from "./rateLimit.js";
 import { attachWebSocketServer } from "./ws/gameServer.js";
 
@@ -58,6 +59,7 @@ app.use(sidequestsRouter);
 app.use(reportsRouter);
 app.use(vaultRouter);
 app.use(storyRouter);
+app.use(villageRouter);
 
 app.get("/", (_req, res) => res.json({ name: "pixl-server", status: "ok" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
