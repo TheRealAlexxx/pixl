@@ -348,6 +348,15 @@ async function voidFirstPassPayouts(projectId: number): Promise<void> {
   if (error) console.error("voidFirstPassPayouts failed", error.message);
 }
 
+// How a reviewer is credited in maker-facing notes. Prefers the Slack @handle;
+// never leaks a raw Slack user id (login stores the id as the name when Slack
+// gives us no real name) — attribute it to the review team instead.
+async function reviewerLabel(slackId: string, name: string): Promise<string> {
+  const handle = await slackHandle(slackId);
+  if (handle) return handle;
+  return /^[UW][A-Z0-9]{6,}$/.test(name) ? "the review team" : name;
+}
+
 async function notifyOwner(
   userId: string,
   title: string,
@@ -399,7 +408,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
   }
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   // First pass on a freshly-shipped project: approve and ban are only PROPOSALS,
   // regardless of the reviewer's own permissions — the project is held in
@@ -910,7 +919,7 @@ export async function rejectProject(formData: FormData): Promise<void> {
   if (target && (await isOwnProject(access, target.user_id)))
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   const { data: project, error } = await db
     .from("projects")
@@ -979,7 +988,7 @@ export async function banProject(formData: FormData): Promise<void> {
   if (target && (await isOwnProject(access, target.user_id)))
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   const { data: project, error } = await db
     .from("projects")
