@@ -1734,11 +1734,13 @@ export async function claimOrder(formData: FormData): Promise<void> {
     .eq("id", id)
     .eq("status", "pending");
   if (error) throw new Error(error.message);
+  const placedBody = `Your "${order.item_name}" order has been placed and is being fulfilled. We'll let you know when it ships.`;
   await db.from("notifications").insert({
     user_id: order.user_id,
     title: "Order placed! 📦",
-    body: `Your "${order.item_name}" order has been placed and is being fulfilled. We'll let you know when it ships.`,
+    body: placedBody,
   });
+  await dmOrEmail(order.user_id, "Order placed! 📦", placedBody);
   revalidatePath("/fulfillment");
 }
 
@@ -1894,11 +1896,13 @@ export async function cancelOrder(formData: FormData): Promise<void> {
   if (error) throw new Error(error.message);
   if (note) await db.from("shop_orders").update({ note }).eq("id", id);
   const amount = Number(refunded ?? 0);
+  const cancelBody = `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.${note ? ` ${note}` : ""}`;
   await db.from("notifications").insert({
     user_id: order.user_id,
     title: "Order cancelled",
-    body: `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.${note ? ` ${note}` : ""}`,
+    body: cancelBody,
   });
+  await dmOrEmail(order.user_id, "Order cancelled", cancelBody);
   revalidatePath("/fulfillment");
   revalidatePath("/pixels");
 }
