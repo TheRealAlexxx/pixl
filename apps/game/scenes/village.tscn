@@ -2638,6 +2638,7 @@ z_index = 13
 position = Vector2(208, -189)
 collision_mask = 2
 script = ExtResource("44_ci1yp")
+sign_name = "HOME"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=1177872957]
 position = Vector2(2, 6)
@@ -2662,6 +2663,7 @@ position = Vector2(-64, -31)
 collision_mask = 2
 script = ExtResource("44_ci1yp")
 target = "shop"
+sign_name = "SHOP"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger2" unique_id=1265632936]
 position = Vector2(2, 6)

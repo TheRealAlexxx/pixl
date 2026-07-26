@@ -1,8 +1,14 @@
 extends Area2D
 
 const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
+const SIGN := preload("res://scripts/building_sign.gd")
 
 @export var target: String = "house"
+## Big always-on signboard hung above the building (e.g. "SHOP", "HOME").
+## Leave blank for no sign.
+@export var sign_name: String = ""
+## Vertical offset of the sign; raise (more negative) for taller buildings.
+@export var sign_y: float = -66.0
 
 @onready var label: Label = $Label
 
@@ -10,6 +16,8 @@ var _glow: Sprite2D
 
 func _ready() -> void:
 	_setup_night_glow()
+	if sign_name != "":
+		add_child(SIGN.make(sign_name, sign_y))
 	label.add_theme_font_override("font", MONOCRAFT)
 	label.add_theme_font_size_override("font_size", 24)
 	label.add_theme_color_override("font_color", Color(1, 0.819608, 0.4))
