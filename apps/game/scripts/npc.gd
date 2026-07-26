@@ -1,7 +1,6 @@
 extends CharacterBody2D
 
 const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
-const SIGN := preload("res://scripts/building_sign.gd")
 
 @export var npc_name: String = "Villager"
 @export_multiline var dialogue: String = "Hello there!"
@@ -71,9 +70,6 @@ func _ready() -> void:
 	await get_tree().process_frame
 	nl.reset_size()
 	nl.position = Vector2(-nl.size.x * nl.scale.x / 2.0, -42.0 - nl.size.y * nl.scale.y)
-	var station := "PROJECTS" if opens_projects else ("EXPLORE" if opens_explore else "")
-	if station != "":
-		add_child(SIGN.make(station, -64.0))
 	if wanders:
 		_wait_then_move()
 
