@@ -1229,10 +1229,11 @@ export async function sendNotification(formData: FormData): Promise<void> {
 
   let targetId = userId;
   if (!targetId && playerName) {
+    const likeName = playerName.replace(/[,()%*\\]/g, " ").trim();
     const { data } = await db
       .from("users")
-      .select("id, display_name")
-      .ilike("display_name", playerName)
+      .select("id, display_name, real_name")
+      .or(`display_name.ilike.${likeName},real_name.ilike.${likeName}`)
       .limit(2);
     if (!data || data.length !== 1) {
       if (backTo)
@@ -1286,8 +1287,8 @@ export async function searchPlayers(query: string): Promise<PlayerHit[]> {
   if (clean.length < 2) return [];
   const { data, error } = await db
     .from("users")
-    .select("id, display_name, slack_id")
-    .ilike("display_name", `%${clean}%`)
+    .select("id, display_name, real_name, slack_id")
+    .or(`display_name.ilike.%${clean}%,real_name.ilike.%${clean}%`)
     .order("display_name", { ascending: true })
     .limit(8);
   if (error) {
@@ -1296,7 +1297,7 @@ export async function searchPlayers(query: string): Promise<PlayerHit[]> {
   }
   return (data ?? []).map((u) => ({
     id: u.id as string,
-    name: (u.display_name as string) ?? "(unnamed)",
+    name: (u.real_name as string) || (u.display_name as string) || "(unnamed)",
     hasSlack: Boolean(u.slack_id),
   }));
 }
@@ -2093,10 +2094,10 @@ export async function resolveReport(formData: FormData): Promise<void> {
   if (updated?.reporter_id) {
     const { data: target } = await db
       .from("users")
-      .select("display_name")
+      .select("display_name, real_name")
       .eq("id", updated.target_id)
       .single();
-    const name = target?.display_name ?? "a player";
+    const name = target?.real_name || target?.display_name || "a player";
     const title = "Report reviewed";
     const body = dismissed
       ? `Your report on ${name} was reviewed and closed , no action was needed this time. Thanks for helping keep Pixl safe.`

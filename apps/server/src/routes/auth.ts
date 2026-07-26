@@ -52,6 +52,7 @@ router.get("/auth/demo", async (req, res) => {
         oauth_provider: "demo",
         oauth_id: demoOauthId,
         display_name: name,
+        real_name: name,
         avatar_url: null,
       })
       .select()
@@ -206,6 +207,9 @@ router.get("/auth/hackclub/callback", async (req, res) => {
     const patch: Record<string, string> = {};
     if (identity.slack_id) patch.slack_id = identity.slack_id;
     if (identity.primary_email) patch.email = identity.primary_email;
+    // Keep the real name in sync every login , it's the authoritative identity the
+    // dashboard shows, and the player's display_name can drift from it.
+    if (fullName) patch.real_name = fullName;
     if (Object.keys(patch).length > 0) {
       void supabase
         .from("users")
@@ -225,6 +229,7 @@ router.get("/auth/hackclub/callback", async (req, res) => {
         oauth_provider: "hackclub",
         oauth_id: identity.id,
         display_name: displayNameFromHca,
+        real_name: fullName,
         avatar_url: null,
         slack_id: identity.slack_id ?? null,
         email: identity.primary_email ?? null,

@@ -78,7 +78,7 @@ export default async function BansPage({
                     <TableRow key={b.id}>
                       <TableCell className="p-3">
                         <Link href={`/players/${b.user_id}`} className="font-bold hover:text-brand">
-                          {b.users?.display_name ?? b.user_id}
+                          {b.users?.real_name || b.users?.display_name || b.user_id}
                         </Link>
                       </TableCell>
                       <TableCell className="p-3 max-w-64">

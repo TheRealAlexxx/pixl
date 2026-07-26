@@ -266,7 +266,7 @@ export default async function Overview({
                     href={`/players/${v.user_id}`}
                     className="font-medium hover:text-brand"
                   >
-                    {v.users?.display_name ?? v.user_id}
+                    {v.users?.real_name || v.users?.display_name || v.user_id}
                   </Link>
                   <div className="text-sm text-muted-foreground truncate">
                     “{v.content}”

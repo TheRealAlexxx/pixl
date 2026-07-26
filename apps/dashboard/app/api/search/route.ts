@@ -25,7 +25,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     players: players.map((p) => ({
       id: p.id,
-      label: (p.slack_id && handles.get(p.slack_id)) ?? p.slack_id ?? p.display_name,
+      label: p.real_name || (p.slack_id && handles.get(p.slack_id)) || p.slack_id || p.display_name,
       sub: p.display_name,
     })),
     projects: projects.map((p) => ({

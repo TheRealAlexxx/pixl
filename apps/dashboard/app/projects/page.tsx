@@ -92,8 +92,9 @@ export default async function ProjectsPage({
                 <TableCell className="p-3">
                   {p.users ? (
                     <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand">
-                      {(p.users.slack_id && handles.get(p.users.slack_id)) ??
-                        p.users.display_name ??
+                      {p.users.real_name ||
+                        (p.users.slack_id && handles.get(p.users.slack_id)) ||
+                        p.users.display_name ||
                         p.users.slack_id}
                     </Link>
                   ) : (

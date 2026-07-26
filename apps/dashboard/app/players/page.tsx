@@ -174,11 +174,11 @@ export default async function PlayersPage({
               {players.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="p-3">
-                    <RowSelect id={p.id} label={`Select ${p.display_name ?? p.id}`} />
+                    <RowSelect id={p.id} label={`Select ${p.real_name || p.display_name || p.id}`} />
                   </TableCell>
                   <TableCell className="p-3">
                     <Link href={`/players/${p.id}`} className="font-bold hover:text-brand">
-                      {(p.slack_id && handles.get(p.slack_id)) ?? p.display_name ?? "Unknown"}
+                      {p.real_name || (p.slack_id && handles.get(p.slack_id)) || p.display_name || "Unknown"}
                     </Link>
                     <div className="text-xs text-muted-foreground">
                       {p.slack_id ?? "no slack id"} · {p.oauth_provider}

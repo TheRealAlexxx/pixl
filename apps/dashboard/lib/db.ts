@@ -31,11 +31,26 @@ export interface UserRow {
   oauth_provider: string;
   oauth_id: string;
   display_name: string;
+  // Real name from Hack Club OAuth. This is what the dashboard shows , the
+  // in-game display_name can drift from it. Empty for players who haven't logged
+  // in since real_name was added; call playerLabel() to fall back gracefully.
+  real_name: string;
   avatar_url: string | null;
   skin: string;
   slack_id: string | null;
   pixels: number;
   created_at: string;
+}
+
+// The name to show for a player in the dashboard: their real (OAuth) name, or
+// their in-game display_name if we don't have a real name yet, or a final
+// fallback (usually the id). Everything player-facing in the dash goes through
+// this so we never surface a self-chosen display_name when a real name exists.
+export function playerLabel(
+  u: { real_name?: string | null; display_name?: string | null } | null | undefined,
+  fallback = "",
+): string {
+  return (u?.real_name || u?.display_name || fallback).trim();
 }
 
 export interface ViolationRow {
@@ -44,7 +59,7 @@ export interface ViolationRow {
   kind: string;
   content: string;
   created_at: string;
-  users?: Pick<UserRow, "id" | "display_name" | "slack_id"> | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id"> | null;
 }
 
 export interface BanRow {
@@ -55,7 +70,7 @@ export interface BanRow {
   expires_at: string | null;
   lifted_at: string | null;
   created_at: string;
-  users?: Pick<UserRow, "id" | "display_name"> | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name"> | null;
 }
 
 export interface ProjectRow {
@@ -155,15 +170,17 @@ export async function displayNamesBySlackId(ids: string[]): Promise<Map<string, 
   if (clean.length === 0) return new Map();
   const { data, error } = await db
     .from("users")
-    .select("slack_id, display_name")
+    .select("slack_id, display_name, real_name")
     .in("slack_id", clean);
   if (error) {
     console.error("displayNamesBySlackId", error.message);
     return new Map();
   }
   const out = new Map<string, string>();
-  for (const u of data ?? [])
-    if (u.slack_id && u.display_name) out.set(u.slack_id as string, u.display_name as string);
+  for (const u of data ?? []) {
+    const label = (u.real_name || u.display_name) as string;
+    if (u.slack_id && label) out.set(u.slack_id as string, label);
+  }
   return out;
 }
 
@@ -315,7 +332,7 @@ export async function getGrowthSeries(days = 30) {
 }
 
 export interface ProjectWithUser extends ProjectRow {
-  users?: Pick<UserRow, "id" | "display_name" | "slack_id"> | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id"> | null;
 }
 
 export interface ShippedProject extends ProjectWithUser {
@@ -369,7 +386,7 @@ function ownedByViewer(p: ShippedProject, viewer?: string): boolean {
 export async function listShippedProjects(viewer?: string): Promise<ShippedProject[]> {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .eq("status", "shipped")
     .is("archived_at", null)
     .is("rejected_at", null)
@@ -444,7 +461,7 @@ async function notifyReviewStarted(projectId: number): Promise<void> {
 export async function listSecondReviewProjects(viewer?: string): Promise<ShippedProject[]> {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .eq("status", "second_review")
     .is("archived_at", null)
     .is("rejected_at", null)
@@ -549,7 +566,7 @@ export async function projectPixelTotal(projectId: number): Promise<number> {
 export async function listReviewedProjects(): Promise<ShippedProject[]> {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .in("status", ["approved", "needs_changes"])
     .is("archived_at", null)
     .order("shipped_at", { ascending: false })
@@ -604,8 +621,8 @@ export async function countPendingReviews(
 async function attachPlayerNames(rows: (ModActionRow & { player_name?: string })[]) {
   const ids = [...new Set(rows.map((r) => r.user_id))];
   if (ids.length === 0) return;
-  const { data: users } = await db.from("users").select("id, display_name").in("id", ids);
-  const names = new Map((users ?? []).map((u) => [u.id as string, u.display_name as string]));
+  const { data: users } = await db.from("users").select("id, display_name, real_name").in("id", ids);
+  const names = new Map((users ?? []).map((u) => [u.id as string, (u.real_name || u.display_name) as string]));
   for (const r of rows) r.player_name = names.get(r.user_id) ?? r.user_id;
 }
 
@@ -653,13 +670,13 @@ export async function listReviewAudits(
   const projectIds = [...new Set(rows.map((r) => r.project_id))];
   const [users, projects] = await Promise.all([
     userIds.length > 0
-      ? db.from("users").select("id, display_name").in("id", userIds)
+      ? db.from("users").select("id, display_name, real_name").in("id", userIds)
       : Promise.resolve({ data: [] }),
     projectIds.length > 0
       ? db.from("projects").select("id, name").in("id", projectIds)
       : Promise.resolve({ data: [] }),
   ]);
-  const names = new Map((users.data ?? []).map((u) => [u.id as string, u.display_name as string]));
+  const names = new Map((users.data ?? []).map((u) => [u.id as string, (u.real_name || u.display_name) as string]));
   const projectNames = new Map((projects.data ?? []).map((p) => [p.id as number, p.name as string]));
   for (const r of rows) {
     r.player_name = names.get(r.user_id) ?? r.user_id;
@@ -994,7 +1011,7 @@ export interface GalleryProject {
 export async function publicGallery(limit = 12): Promise<GalleryProject[]> {
   const { data, error } = await db
     .from("projects")
-    .select("id, name, description, image_url, demo_url, approved_hours, users(display_name)")
+    .select("id, name, description, image_url, demo_url, approved_hours, users(display_name, real_name)")
     .eq("status", "approved")
     .is("banned_at", null)
     .order("shipped_at", { ascending: false })
@@ -1010,8 +1027,10 @@ export async function publicGallery(limit = 12): Promise<GalleryProject[]> {
     image_url: (p.image_url as string) ?? "",
     demo_url: (p.demo_url as string) ?? "",
     approved_hours: p.approved_hours as number | null,
-    owner:
-      ((p.users as unknown as { display_name?: string } | null)?.display_name as string) ?? "?",
+    owner: playerLabel(
+      p.users as unknown as { display_name?: string; real_name?: string } | null,
+      "?",
+    ),
   }));
 }
 
@@ -1183,13 +1202,13 @@ export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]>
   ];
   const [users, projects] = await Promise.all([
     userIds.length > 0
-      ? db.from("users").select("id, display_name").in("id", userIds)
+      ? db.from("users").select("id, display_name, real_name").in("id", userIds)
       : Promise.resolve({ data: [] }),
     projectIds.length > 0
       ? db.from("projects").select("id, name").in("id", projectIds)
       : Promise.resolve({ data: [] }),
   ]);
-  const names = new Map((users.data ?? []).map((u) => [u.id as string, u.display_name as string]));
+  const names = new Map((users.data ?? []).map((u) => [u.id as string, (u.real_name || u.display_name) as string]));
   const pnames = new Map((projects.data ?? []).map((p) => [p.id as number, p.name as string]));
   for (const r of rows) {
     r.player_name = names.get(r.user_id) ?? r.user_id;
@@ -1229,15 +1248,15 @@ export interface ReportRow {
 async function hydrateReports(rows: ReportRow[]): Promise<ReportRow[]> {
   const ids = [...new Set(rows.flatMap((r) => [r.reporter_id, r.target_id]))];
   const users = ids.length
-    ? await db.from("users").select("id, display_name, slack_id").in("id", ids)
+    ? await db.from("users").select("id, display_name, real_name, slack_id").in("id", ids)
     : { data: [] };
   const names = new Map(
-    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; slack_id: string | null }]),
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; real_name: string; slack_id: string | null }]),
   );
   for (const r of rows) {
     if (!Array.isArray(r.context)) r.context = [];
-    r.reporter_name = names.get(r.reporter_id)?.display_name ?? r.reporter_id;
-    r.target_name = names.get(r.target_id)?.display_name ?? r.target_id;
+    r.reporter_name = playerLabel(names.get(r.reporter_id), r.reporter_id);
+    r.target_name = playerLabel(names.get(r.target_id), r.target_id);
     r.target_slack = names.get(r.target_id)?.slack_id ?? null;
   }
   return rows;
@@ -1483,13 +1502,13 @@ export async function listShopOrders(status?: string, limit = 500): Promise<Shop
   const rows = (data ?? []) as ShopOrderRow[];
   const ids = [...new Set(rows.map((r) => r.user_id))];
   const users = ids.length
-    ? await db.from("users").select("id, display_name, slack_id").in("id", ids)
+    ? await db.from("users").select("id, display_name, real_name, slack_id").in("id", ids)
     : { data: [] };
   const names = new Map(
-    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; slack_id: string | null }]),
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; real_name: string; slack_id: string | null }]),
   );
   for (const r of rows) {
-    r.player_name = names.get(r.user_id)?.display_name ?? r.user_id;
+    r.player_name = playerLabel(names.get(r.user_id), r.user_id);
     r.player_slack = names.get(r.user_id)?.slack_id ?? null;
   }
   return rows;
@@ -1551,8 +1570,8 @@ export async function listActivityFeed(opts: {
   ];
   const names = new Map<string, string>();
   if (userIds.length > 0) {
-    const { data: users } = await db.from("users").select("id, display_name").in("id", userIds);
-    for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
+    const { data: users } = await db.from("users").select("id, display_name, real_name").in("id", userIds);
+    for (const u of users ?? []) names.set(u.id as string, (u.real_name || u.display_name) as string);
   }
   const stripId = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, "");
 
@@ -1646,7 +1665,7 @@ export interface JournalRow {
 export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;
@@ -1680,7 +1699,7 @@ export async function listProjects(
 ): Promise<ProjectWithUser[]> {
   let q = db
     .from("projects")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .order("created_at", { ascending: false })
     .limit(500);
   // archived: only archived. includeArchived: both. default: only active.
@@ -1698,7 +1717,7 @@ export async function listProjects(
 export async function listBans(): Promise<BanRow[]> {
   const { data, error } = await db
     .from("bans")
-    .select("*, users(id, display_name)")
+    .select("*, users(id, display_name, real_name)")
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) {
@@ -1711,7 +1730,7 @@ export async function listBans(): Promise<BanRow[]> {
 export async function listViolations(limit = 100): Promise<ViolationRow[]> {
   const { data, error } = await db
     .from("violations")
-    .select("*, users(id, display_name, slack_id)")
+    .select("*, users(id, display_name, real_name, slack_id)")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) {
@@ -1725,7 +1744,12 @@ export async function listPlayers(query?: string): Promise<
   (UserRow & { projectCount: number; violationCount: number; activeBan: BanRow | null })[]
 > {
   let q = db.from("users").select("*").order("created_at", { ascending: false }).limit(500);
-  if (query) q = q.ilike("display_name", `%${query}%`);
+  if (query) {
+    // Sanitize before interpolating into an or-filter , stray commas/parens
+    // would otherwise break PostgREST's filter grammar.
+    const like = query.replace(/[,()%*\\]/g, " ").trim();
+    q = q.or(`display_name.ilike.%${like}%,real_name.ilike.%${like}%`);
+  }
   const { data, error } = await q;
   if (error) {
     console.error("listPlayers", error.message);
@@ -1789,7 +1813,7 @@ export async function logModAction(
 }
 
 export interface SearchResults {
-  players: { id: string; display_name: string; slack_id: string | null }[];
+  players: { id: string; display_name: string; real_name: string; slack_id: string | null }[];
   projects: { id: number; name: string; status: string; user_id: string }[];
 }
 
@@ -1805,8 +1829,8 @@ export async function globalSearch(
     opts.players
       ? db
           .from("users")
-          .select("id, display_name, slack_id")
-          .or(`display_name.ilike.${like},slack_id.ilike.${like}`)
+          .select("id, display_name, real_name, slack_id")
+          .or(`display_name.ilike.${like},real_name.ilike.${like},slack_id.ilike.${like}`)
           .order("created_at", { ascending: false })
           .limit(6)
       : Promise.resolve({ data: [], error: null }),

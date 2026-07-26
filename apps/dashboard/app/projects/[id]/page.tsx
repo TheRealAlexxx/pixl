@@ -104,8 +104,9 @@ export default async function ProjectPage({
                   href={`/players/${project.user_id}`}
                   className="font-bold hover:text-brand"
                 >
-                  {ownerHandle ??
-                    project.users.display_name ??
+                  {project.users.real_name ||
+                    ownerHandle ||
+                    project.users.display_name ||
                     project.users.slack_id}
                 </Link>
               ) : (

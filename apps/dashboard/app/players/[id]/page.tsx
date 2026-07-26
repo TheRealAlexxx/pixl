@@ -76,7 +76,7 @@ export default async function PlayerPage({
         .reduce((s, p) => s + (Number(p.approved_hours) || 0), 0) * 10,
     ) / 10;
   const initials =
-    (user.display_name || "?")
+    (user.real_name || user.display_name || "?")
       .split(/\s+/)
       .map((w) => w[0])
       .slice(0, 2)
@@ -96,8 +96,13 @@ export default async function PlayerPage({
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold text-foreground tracking-tight break-words">
-              {user.display_name}
+              {user.real_name || user.display_name}
             </h1>
+            {user.real_name && user.display_name && user.real_name !== user.display_name && (
+              <span className="text-sm text-muted-foreground">
+                in-game: {user.display_name}
+              </span>
+            )}
             {activeBan && (
               <Badge className="bg-rose-600 text-white">
                 Banned{" "}

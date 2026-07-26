@@ -159,7 +159,8 @@ export default async function ReviewDetail({
     isFinalStage ? listSecondReviewProjects(viewer) : listShippedProjects(viewer),
     hackatimeReportPromise,
   ]);
-  const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
+  const ownerName =
+    p.users?.real_name || ownerHandle || p.users?.display_name || p.users?.slack_id || p.user_id;
   const idx = queue.findIndex((q) => q.id === projectId);
   const prev = idx > 0 ? queue[idx - 1] : null;
   const next = idx >= 0 && idx < queue.length - 1 ? queue[idx + 1] : null;
