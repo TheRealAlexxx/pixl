@@ -6,6 +6,7 @@
 
     { "source": "/shop", "destination": "https://play.pixl.rsvp/shop/" },
     { "source": "/shop/", "destination": "https://play.pixl.rsvp/shop/" },
+    { "source": "/shop/:path*", "destination": "https://play.pixl.rsvp/shop/:path*" },
 
     { "source": "/vault", "destination": "https://play.pixl.rsvp/vault/" },
     { "source": "/vault/:path*", "destination": "https://play.pixl.rsvp/vault/:path*" },
