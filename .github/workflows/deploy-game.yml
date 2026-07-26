@@ -22,6 +22,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,7 +71,16 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TELEMETRY_DISABLED: "1"
+        working-directory: build
         run: |
           set -euo pipefail
           npm i -g vercel@latest
-          vercel deploy build --prod --yes --token "$VERCEL_TOKEN"
+          # build/ is already the finished static export, so don't ship it as
+          # source and let Vercel build it remotely (that remote "Building…" step
+          # is what hangs). Produce the Vercel output locally and deploy it as
+          # prebuilt so Vercel just serves the files with no remote build.
+          # --archive=tgz uploads one tarball instead of every file individually.
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --token "$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --yes --archive=tgz --token "$VERCEL_TOKEN"
