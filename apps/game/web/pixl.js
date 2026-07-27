@@ -717,8 +717,12 @@ const Pixl = (() => {
         if (placeTries++ < 20) { setTimeout(() => place(step), 100); return; }
       }
       if (el && el.getClientRects().length) {
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
-        setTimeout(() => {
+        // Instant (not smooth) scroll so the element is at its final position by
+        // the time we measure — a smooth scroll is still animating when we read
+        // the rect, which left the spotlight offset from the real box.
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+        // Measure on the next frame, after layout settles from the scroll.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
           const r = el.getBoundingClientRect();
           const pad = 6;
           hole.style.display = "block";
@@ -733,7 +737,7 @@ const Pixl = (() => {
           const ch = card.offsetHeight || 200;
           card.style.top = `${room > ch + 20 ? below : Math.max(14, r.top - ch - 14)}px`;
           card.style.left = `${Math.min(Math.max(14, r.left + r.width / 2 - cw / 2), window.innerWidth - cw - 14)}px`;
-        }, 260);
+        }));
       } else {
         hole.style.display = "none";
         card.classList.add("center");
