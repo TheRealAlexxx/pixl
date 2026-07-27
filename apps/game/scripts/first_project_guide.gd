@@ -62,6 +62,7 @@ var _collapsed := false
 var _busy := false
 var _busy_at := 0.0
 var _last_scene := ""
+var _said_open := false  # a milestone Pixo line of ours is currently open
 
 var _root: Control
 var _body: VBoxContainer
@@ -110,6 +111,11 @@ func _process(_delta: float) -> void:
 	var scene := _current_scene_name()
 	if scene != _last_scene:
 		_last_scene = scene
+		# Left the world (quit to menu / logout) — clear any milestone line of ours
+		# so it doesn't linger over the main menu or login.
+		if not _in_gameplay() and _said_open and Dialogue.is_open:
+			Dialogue.close()
+			_said_open = false
 		if _step == S_MEET:
 			_render()
 
@@ -187,9 +193,11 @@ func _poll() -> void:
 func _apply_step(new_step: int) -> void:
 	if new_step == _step:
 		return
-	if new_step > _step:
-		# Announce the most recent completion (index new_step - 1), and if we blew
-		# past the last step, close it out.
+	# Announce the most recent completion (index new_step - 1), but only while the
+	# player's actually in the world — a poll can advance the step on the main menu
+	# / login (e.g. a stale saved step catching up on load), and a Pixo line has no
+	# business popping over the menu.
+	if new_step > _step and _in_gameplay():
 		var completed := new_step - 1
 		if completed >= 0 and completed < STEP_DONE_LINE.size():
 			_say(STEP_DONE_LINE[completed])
@@ -344,6 +352,8 @@ func _say(line: String) -> void:
 	if line == "":
 		return
 	Dialogue.open(PIXO, [line])
+	_said_open = true
+	Dialogue.closed.connect(func(): _said_open = false, CONNECT_ONE_SHOT)
 
 # ── persistence ──────────────────────────────────────────────────────────────
 

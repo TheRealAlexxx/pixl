@@ -324,7 +324,9 @@ func _start_trial_quest() -> void:
 	if choice == "accept":
 		await _accept_trial(tid)
 		Dialogue.open(npc_name, ["Then it's yours. Get building — I'll be around your village if you need me."])
-		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
+		# Fresh accept → run the Builder Terminal walkthrough, tuned to this Trial.
+		var accept_path := "projects?onboard=first-project&trial=%d" % tid if tid > 0 else "projects?onboard=first-project"
+		Dialogue.closed.connect(func(): WebPages.open(accept_path), CONNECT_ONE_SHOT)
 	elif choice == "own":
 		Dialogue.open(npc_name, ["Off-map, huh? The frontier respects that. Build your own thing — same loop, ship it when it's ready."])
 		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)

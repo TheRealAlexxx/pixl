@@ -482,45 +482,98 @@ const Pixl = (() => {
   // auto-tour above. It only sets the project up (create → link → track); the
   // in-game checklist owns building and shipping, so this ends by sending the
   // player back to the game rather than marking them fully onboarded.
-  const FIRST_PROJECT_STEPS = [
-    {
-      title: "Let's make your first project",
-      body: "Pixo sent you over. This is your <b>Builder Terminal</b> — I'll get your first project set up here. Pop back to the game anytime; the checklist there keeps your place.",
-    },
-    {
-      target: "#new-btn",
-      title: "Open a new project",
-      body: "Hit <b>Next</b> and I'll open a fresh project for you.",
-      onNext: () => document.getElementById("new-btn")?.click(),
-    },
-    {
-      target: "#f-name",
-      title: "Name it",
-      body: "Say what you're building — like <b>“My portfolio site”</b>. Short and real; you can rename it later.",
-    },
-    {
-      target: "#f-repo",
-      title: "Link your code",
-      body: "Paste your <b>GitHub repo</b> here (and a demo link below, if you have one) so a reviewer can see what you built. No repo yet? There's a Git guide.",
-      extra: { label: "Git guide", href: "/docs/git" },
-    },
-    {
-      target: "#ht-connect",
-      title: "Track your time with Hackatime",
-      body: "The important one. <b>Hackatime</b> logs your build hours, and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so the time counts.",
-      extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
-    },
-    {
-      target: "#f-save",
-      title: "Create it",
-      body: "Save your project. That's the first checklist item done — hop back to the game and Pixo will point you at what's next.",
-    },
-    {
-      title: "Now go build it",
-      body: "Head back into the game whenever — your <b>First Project</b> checklist tracks the rest (build it, then ship it). Want a starting point? I wrote the whole first site out for you, code and all.",
-      extra: { label: "Your first site (code) →", href: "/docs/first-site" },
-    },
-  ];
+  //
+  // Built per-run so it can speak to the specific Trial the player took on (from
+  // Ridit): when a Trial is active it drops in a "what to build" brief and points
+  // the naming/closing steps at that Trial. With no Trial it's the generic first
+  // project. The player is always free to build their own thing instead.
+  function firstProjectSteps(trial) {
+    const t = trial;
+    const intro = t
+      ? {
+          title: "Let's build your Trial",
+          body: `Pixo sent you over. You're building for <b>${esc(t.name)}</b> — this is your <b>Builder Terminal</b>. I'll get the project set up here, then you build it to the brief. Pop back to the game anytime; the checklist keeps your place.`,
+        }
+      : {
+          title: "Let's make your first project",
+          body: "Pixo sent you over. This is your <b>Builder Terminal</b> — I'll get your first project set up here. Pop back to the game anytime; the checklist there keeps your place.",
+        };
+    const brief = t
+      ? [
+          {
+            title: "What to build",
+            body: `<b>${esc(t.name)}</b>${t.region ? " · " + esc(t.region) : ""}<br><br>${esc(t.description || "")}${t.reward ? `<br><br><b>Reward:</b> ${esc(t.reward)}` : ""}<br><br>Build to this — you'll flag it for the Trial when you ship.`,
+          },
+        ]
+      : [];
+    const nameStep = t
+      ? {
+          target: "#f-name",
+          title: "Name it",
+          body: `Name your project for the Trial — something like <b>“${esc(t.name)}”</b>. Short and real; you can rename it later.`,
+        }
+      : {
+          target: "#f-name",
+          title: "Name it",
+          body: "Say what you're building — like <b>“My portfolio site”</b>. Short and real; you can rename it later.",
+        };
+    const closing = t
+      ? {
+          title: "Now go build it",
+          body: `Head back into the game whenever — your <b>First Trial</b> checklist tracks the rest (build it, then ship it for <b>${esc(t.name)}</b>). Want a starting point? I wrote a first-site walkthrough with code.`,
+          extra: { label: "First site (code) →", href: "/docs/first-site" },
+        }
+      : {
+          title: "Now go build it",
+          body: "Head back into the game whenever — your <b>First Project</b> checklist tracks the rest (build it, then ship it). Want a starting point? I wrote the whole first site out for you, code and all.",
+          extra: { label: "Your first site (code) →", href: "/docs/first-site" },
+        };
+    return [
+      intro,
+      ...brief,
+      {
+        target: "#new-btn",
+        title: "Open a new project",
+        body: "Hit <b>Next</b> and I'll open a fresh project for you.",
+        onNext: () => document.getElementById("new-btn")?.click(),
+      },
+      nameStep,
+      {
+        target: "#f-repo",
+        title: "Link your code",
+        body: "Paste your <b>GitHub repo</b> here (and a demo link below, if you have one) so a reviewer can see what you built. No repo yet? There's a Git guide.",
+        extra: { label: "Git guide", href: "/docs/git" },
+      },
+      {
+        target: "#ht-connect",
+        title: "Track your time with Hackatime",
+        body: "The important one. <b>Hackatime</b> logs your build hours, and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so the time counts.",
+        extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
+      },
+      {
+        target: "#f-save",
+        title: "Create it",
+        body: "Save your project. That's the first checklist item done — hop back to the game and Pixo will point you at what's next.",
+      },
+      closing,
+    ];
+  }
+
+  // The Trial the player is currently building for: ?trial=<id> (Ridit hand-off)
+  // or the single accepted-and-unfinished Trial. null → generic first project.
+  async function getActiveTrial() {
+    try {
+      const tid = Number(new URLSearchParams(location.search).get("trial"));
+      const d = await api("/api/sidequests");
+      const open = (d.quests || []).filter((q) => q.unlocked && !q.completed);
+      return (
+        (tid && open.find((q) => Number(q.id) === tid)) ||
+        (open.length === 1 ? open[0] : null)
+      );
+    } catch (e) {
+      return null;
+    }
+  }
 
   function injectTourCSS() {
     if (document.getElementById("pixl-tour-css")) return;
@@ -710,7 +763,8 @@ const Pixl = (() => {
       try { shown = sessionStorage.getItem("pixl_fp_shown") === "1"; } catch {}
       if (!shown) {
         try { sessionStorage.setItem("pixl_fp_shown", "1"); } catch {}
-        setTimeout(() => runTour(FIRST_PROJECT_STEPS, 0, false), 700);
+        const trial = await getActiveTrial();
+        setTimeout(() => runTour(firstProjectSteps(trial), 0, false), 700);
       }
       return;
     }
