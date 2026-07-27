@@ -29,7 +29,7 @@
         "description": "Descubre ciudades cyberpunk, zonas submarinas y mucho más"
       },
       {
-        "title": "Acepta misiones secundarias",
+        "title": "Acepta pruebas",
         "description": "Crea apps, webs y hardware para los personajes del juego"
       },
       {
@@ -42,7 +42,7 @@
       }
     ],
     "youRepair": "Tú reparas",
-    "youRepairDesc": "Entrega misiones reales de hardware y software para los NPC. Cada proyecto se convierte en Energía de Restauración que reconstruye una pieza rota de Pixl",
+    "youRepairDesc": "Entrega pruebas reales de hardware y software para los NPC. Cada proyecto se convierte en Energía de Restauración que reconstruye una pieza rota de Pixl",
     "theCorePays": "El Núcleo paga",
     "theCorePaysDesc": "El Núcleo es una bóveda de vieja tecnología pixeliana. A medida que lo reparas, devuelve sus tesoros: premios reales y becas acordes a lo que construiste",
     "comingSoon": "Muy pronto"
@@ -53,7 +53,7 @@
     "subtitle": "Pixl transcurre como una historia por temporadas: los capítulos hacen avanzar el mundo, y todo lo que entregas lo repara.",
     "paths": [
       {
-        "title": "Toma una misión secundaria",
+        "title": "Toma una prueba",
         "text": "El Núcleo ya las conoce: problemas que los NPC de las regiones desbloqueadas necesitan resolver. Elige una y entrégala."
       },
       {
@@ -65,7 +65,7 @@
     "rhythm": [
       {
         "title": "Capítulos (~3 semanas)",
-        "text": "La historia avanza por capítulos. Cada capítulo es un empujón para reparar una parte del mundo: tomas misiones de las regiones ya desbloqueadas, entregas proyectos reales, y tu trabajo cuenta para el objetivo de restauración del capítulo. Cuando la comunidad lo alcanza, la historia avanza: se abre una nueva región, vuelven nuevos NPC, aparecen nuevas misiones."
+        "text": "La historia avanza por capítulos. Cada capítulo es un empujón para reparar una parte del mundo: tomas pruebas de las regiones ya desbloqueadas, entregas proyectos reales, y tu trabajo cuenta para el objetivo de restauración del capítulo. Cuando la comunidad lo alcanza, la historia avanza: se abre una nueva región, vuelven nuevos NPC, aparecen nuevas pruebas."
       },
       {
         "title": "Operaciones (~1 semana)",
@@ -73,7 +73,7 @@
       },
       {
         "title": "¿Llegas tarde? Todo bien",
-        "text": "Las regiones desbloqueadas nunca cierran. Cuando llegues, puedes elegir cualquier misión disponible, entregarla y ganar tus premios y píxeles como todos. Los capítulos solo deciden qué se desbloquea a continuación, nunca lo que puedes construir."
+        "text": "Las regiones desbloqueadas nunca cierran. Cuando llegues, puedes elegir cualquier prueba disponible, entregarla y ganar tus premios y píxeles como todos. Los capítulos solo deciden qué se desbloquea a continuación, nunca lo que puedes construir."
       }
     ],
     "mechanics": [
@@ -100,13 +100,13 @@
   },
   "sidequests": {
     "badge": "Ejemplos",
-    "title": "Misiones secundarias y recompensas",
+    "title": "Pruebas y recompensas",
     "description": "Estos son solo ejemplos y pueden cambiar con las semanas.",
     "howRewardsWork": "Cómo funcionan las recompensas",
-    "howRewardsWorkDesc": "Recibes el premio base por cada misión que completas. Cuantas más horas dediques, más moneda ganas para gastar en la tienda. ¿No quieres el premio indicado o ya lo tienes? Sin problema, cámbialo por cualquier cosa de valor equivalente.",
+    "howRewardsWorkDesc": "Recibes el premio base por cada prueba que completas. Cuantas más horas dediques, más moneda ganas para gastar en la tienda. ¿No quieres el premio indicado o ya lo tienes? Sin problema, cámbialo por cualquier cosa de valor equivalente.",
     "seeFullExample": "Ver un ejemplo completo de entrega",
     "seeFullExampleDesc": "¿No sabes cómo se ve una entrega completa? Mira este ejemplo que cumple cada fecha límite.",
-    "sidequestLabel": "Misión",
+    "sidequestLabel": "Prueba",
     "prizeLabel": "Premio",
     "levels": [
       {
@@ -162,7 +162,7 @@
         "hours": "mín. 20h de trabajo",
         "quest": {
           "title": "Diseña tu propia región",
-          "description": "Crea una nueva región para el mundo de Pixl: mapa, NPC, assets y misiones. Luego prográmala en una demo jugable, no es solo una misión de arte. Si está bien pulida, se añade al juego real."
+          "description": "Crea una nueva región para el mundo de Pixl: mapa, NPC, assets y pruebas. Luego prográmala en una demo jugable, no es solo una prueba de arte. Si está bien pulida, se añade al juego real."
         },
         "prize": {
           "title": "Tableta gráfica",

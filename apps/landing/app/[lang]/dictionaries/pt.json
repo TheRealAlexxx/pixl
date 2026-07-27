@@ -29,7 +29,7 @@
         "description": "Descubra cidades cyberpunk, zonas subaquáticas e muito mais"
       },
       {
-        "title": "Aceite missões secundárias",
+        "title": "Aceite provas",
         "description": "Crie apps, sites e hardware para os personagens do jogo"
       },
       {
@@ -42,7 +42,7 @@
       }
     ],
     "youRepair": "Você repara",
-    "youRepairDesc": "Entregue missões reais de hardware e software para os NPCs. Cada projeto vira Energia de Restauração que reconstrói um pedaço quebrado do Pixl",
+    "youRepairDesc": "Entregue provas reais de hardware e software para os NPCs. Cada projeto vira Energia de Restauração que reconstrói um pedaço quebrado do Pixl",
     "theCorePays": "O Núcleo paga",
     "theCorePaysDesc": "O Núcleo é um cofre de tecnologia pixeliana antiga. À medida que você o repara, ele devolve seus tesouros: prêmios reais e bolsas condizentes com o que você construiu",
     "comingSoon": "Em breve"
@@ -53,7 +53,7 @@
     "subtitle": "O Pixl acontece como uma história em temporadas: os capítulos fazem o mundo avançar, e tudo o que você entrega o repara.",
     "paths": [
       {
-        "title": "Pegue uma missão secundária",
+        "title": "Pegue uma prova",
         "text": "O Núcleo já conhece essas: problemas que os NPCs das regiões desbloqueadas precisam resolver. Escolha uma e entregue."
       },
       {
@@ -65,7 +65,7 @@
     "rhythm": [
       {
         "title": "Capítulos (~3 semanas)",
-        "text": "A história avança em capítulos. Cada capítulo é um esforço para reparar uma parte do mundo: você pega missões das regiões já desbloqueadas, entrega projetos reais, e seu trabalho conta para a meta de restauração do capítulo. Quando a comunidade a atinge, a história avança: uma nova região abre, novos NPCs voltam, novas missões aparecem."
+        "text": "A história avança em capítulos. Cada capítulo é um esforço para reparar uma parte do mundo: você pega provas das regiões já desbloqueadas, entrega projetos reais, e seu trabalho conta para a meta de restauração do capítulo. Quando a comunidade a atinge, a história avança: uma nova região abre, novos NPCs voltam, novas provas aparecem."
       },
       {
         "title": "Operações (~1 semana)",
@@ -73,7 +73,7 @@
       },
       {
         "title": "Chegando atrasado? Tudo certo",
-        "text": "As regiões desbloqueadas nunca fecham. Sempre que você chegar, pode escolher qualquer missão disponível, entregá-la e ganhar seus prêmios e pixels como todo mundo. Os capítulos só decidem o que desbloqueia a seguir, nunca o que você pode construir."
+        "text": "As regiões desbloqueadas nunca fecham. Sempre que você chegar, pode escolher qualquer prova disponível, entregá-la e ganhar seus prêmios e pixels como todo mundo. Os capítulos só decidem o que desbloqueia a seguir, nunca o que você pode construir."
       }
     ],
     "mechanics": [
@@ -100,13 +100,13 @@
   },
   "sidequests": {
     "badge": "Exemplos",
-    "title": "Missões secundárias e recompensas",
+    "title": "Provas e recompensas",
     "description": "Estes são apenas exemplos e podem mudar ao longo das semanas.",
     "howRewardsWork": "Como funcionam as recompensas",
-    "howRewardsWorkDesc": "Você recebe o prêmio base por cada missão que completa. Quanto mais horas você dedica, mais moeda ganha para gastar na loja. Não quer o prêmio listado ou já tem? Sem problema, troque-o por qualquer coisa de valor equivalente.",
+    "howRewardsWorkDesc": "Você recebe o prêmio base por cada prova que completa. Quanto mais horas você dedica, mais moeda ganha para gastar na loja. Não quer o prêmio listado ou já tem? Sem problema, troque-o por qualquer coisa de valor equivalente.",
     "seeFullExample": "Ver um exemplo completo de envio",
     "seeFullExampleDesc": "Não sabe como é um envio completo? Confira este exemplo que cumpre cada prazo.",
-    "sidequestLabel": "Missão",
+    "sidequestLabel": "Prova",
     "prizeLabel": "Prêmio",
     "levels": [
       {
@@ -162,7 +162,7 @@
         "hours": "mín. 20h de trabalho",
         "quest": {
           "title": "Projete a sua própria região",
-          "description": "Crie uma nova região para o mundo do Pixl: mapa, NPCs, assets e missões. Depois programe-a numa demo jogável, não é só uma missão de arte. Se estiver bem polida, é adicionada ao jogo de verdade."
+          "description": "Crie uma nova região para o mundo do Pixl: mapa, NPCs, assets e provas. Depois programe-a numa demo jogável, não é só uma prova de arte. Se estiver bem polida, é adicionada ao jogo de verdade."
         },
         "prize": {
           "title": "Mesa digitalizadora",

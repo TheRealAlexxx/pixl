@@ -29,7 +29,7 @@
         "description": "Découvre des villes cyberpunk, des zones sous-marines et plus encore"
       },
       {
-        "title": "Accepte des quêtes annexes",
+        "title": "Accepte des épreuves",
         "description": "Crée des apps, des sites et du hardware pour les personnages du jeu"
       },
       {
@@ -42,7 +42,7 @@
       }
     ],
     "youRepair": "Tu répares",
-    "youRepairDesc": "Livre de vraies quêtes hardware et software pour les PNJ. Chaque projet devient de l'Énergie de Restauration qui reconstruit un morceau brisé de Pixl",
+    "youRepairDesc": "Livre de vraies épreuves hardware et software pour les PNJ. Chaque projet devient de l'Énergie de Restauration qui reconstruit un morceau brisé de Pixl",
     "theCorePays": "Le Cœur paie",
     "theCorePaysDesc": "Le Cœur est un coffre de vieille technologie pixelienne. À mesure que tu le répares, il rend ses trésors : de vrais prix et des bourses adaptés à ce que tu as construit",
     "comingSoon": "Bientôt disponible"
@@ -53,7 +53,7 @@
     "subtitle": "Pixl se déroule comme une histoire en saisons : les chapitres font avancer le monde, et tout ce que tu livres le répare.",
     "paths": [
       {
-        "title": "Prends une quête annexe",
+        "title": "Prends une épreuve",
         "text": "Le Cœur les connaît déjà : des problèmes que les PNJ des régions débloquées ont besoin de résoudre. Choisis-en une et livre-la."
       },
       {
@@ -65,7 +65,7 @@
     "rhythm": [
       {
         "title": "Chapitres (~3 semaines)",
-        "text": "L'histoire avance par chapitres. Chaque chapitre est un effort pour réparer une partie du monde : tu prends des quêtes dans les régions déjà débloquées, tu livres de vrais projets, et ton travail compte pour l'objectif de restauration du chapitre. Quand la communauté l'atteint, l'histoire progresse : une nouvelle région s'ouvre, de nouveaux PNJ reviennent, de nouvelles quêtes apparaissent."
+        "text": "L'histoire avance par chapitres. Chaque chapitre est un effort pour réparer une partie du monde : tu prends des épreuves dans les régions déjà débloquées, tu livres de vrais projets, et ton travail compte pour l'objectif de restauration du chapitre. Quand la communauté l'atteint, l'histoire progresse : une nouvelle région s'ouvre, de nouveaux PNJ reviennent, de nouvelles épreuves apparaissent."
       },
       {
         "title": "Opérations (~1 semaine)",
@@ -73,7 +73,7 @@
       },
       {
         "title": "Tu arrives en retard ? Pas de souci",
-        "text": "Les régions débloquées ne ferment jamais. Quand tu arrives, tu peux choisir n'importe quelle quête disponible, la livrer et gagner tes prix et pixels comme tout le monde. Les chapitres décident seulement de ce qui se débloque ensuite, jamais de ce que tu as le droit de construire."
+        "text": "Les régions débloquées ne ferment jamais. Quand tu arrives, tu peux choisir n'importe quelle épreuve disponible, la livrer et gagner tes prix et pixels comme tout le monde. Les chapitres décident seulement de ce qui se débloque ensuite, jamais de ce que tu as le droit de construire."
       }
     ],
     "mechanics": [
@@ -100,13 +100,13 @@
   },
   "sidequests": {
     "badge": "Exemples",
-    "title": "Quêtes annexes et récompenses",
+    "title": "Épreuves et récompenses",
     "description": "Ce ne sont que des exemples qui peuvent changer au fil des semaines.",
     "howRewardsWork": "Comment fonctionnent les récompenses",
-    "howRewardsWorkDesc": "Tu reçois le prix de base pour chaque quête que tu termines. Plus tu y passes d'heures, plus tu gagnes de monnaie à dépenser en boutique. Tu ne veux pas le prix indiqué ou tu l'as déjà ? Pas de problème, échange-le contre n'importe quoi de valeur équivalente.",
+    "howRewardsWorkDesc": "Tu reçois le prix de base pour chaque épreuve que tu termines. Plus tu y passes d'heures, plus tu gagnes de monnaie à dépenser en boutique. Tu ne veux pas le prix indiqué ou tu l'as déjà ? Pas de problème, échange-le contre n'importe quoi de valeur équivalente.",
     "seeFullExample": "Voir un exemple complet de soumission",
     "seeFullExampleDesc": "Tu ne sais pas à quoi ressemble une soumission complète ? Regarde cet exemple qui respecte chaque échéance.",
-    "sidequestLabel": "Quête",
+    "sidequestLabel": "Épreuve",
     "prizeLabel": "Prix",
     "levels": [
       {
@@ -162,7 +162,7 @@
         "hours": "min 20h de travail",
         "quest": {
           "title": "Conçois ta propre région",
-          "description": "Crée une nouvelle région pour le monde de Pixl : carte, PNJ, assets et quêtes. Puis code-la en démo jouable, ce n'est pas qu'une quête artistique. Si elle est assez soignée, elle est ajoutée au vrai jeu."
+          "description": "Crée une nouvelle région pour le monde de Pixl : carte, PNJ, assets et épreuves. Puis code-la en démo jouable, ce n'est pas qu'une épreuve artistique. Si elle est assez soignée, elle est ajoutée au vrai jeu."
         },
         "prize": {
           "title": "Tablette graphique",

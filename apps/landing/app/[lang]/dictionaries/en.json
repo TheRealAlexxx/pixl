@@ -29,7 +29,7 @@
         "description": "Discover cyberpunk cities, underwater zones & more"
       },
       {
-        "title": "Accept Sidequests",
+        "title": "Accept Trials",
         "description": "Build apps, websites & hardware for in-game characters"
       },
       {
@@ -42,7 +42,7 @@
       }
     ],
     "youRepair": "You Repair",
-    "youRepairDesc": "Ship real hardware & software sidequests for NPCs. Every project becomes Restoration Energy that rebuilds a broken piece of Pixl",
+    "youRepairDesc": "Ship real hardware & software Trials for NPCs. Every project becomes Restoration Energy that rebuilds a broken piece of Pixl",
     "theCorePays": "The Core Pays",
     "theCorePaysDesc": "The Core is a vault of old Pixelian tech. As you repair it, it gives its treasures back: real prizes and grants matched to what you built",
     "comingSoon": "Coming Soon"
@@ -53,7 +53,7 @@
     "subtitle": "Pixl runs as a story in seasons: chapters move the world forward, and everything you ship repairs it.",
     "paths": [
       {
-        "title": "Take a sidequest",
+        "title": "Take a Trial",
         "text": "The Core already knows about these: known problems NPCs across unlocked regions need solved. Pick one and ship it."
       },
       {
@@ -65,7 +65,7 @@
     "rhythm": [
       {
         "title": "Chapters (~3 weeks)",
-        "text": "The story moves forward in chapters. Each chapter is a push to repair a part of the world: you take sidequests from the regions already unlocked, ship real projects, and your work counts toward the chapter's restoration goal. When the community hits it, the story advances: a new region opens, new NPCs return, new sidequests appear."
+        "text": "The story moves forward in chapters. Each chapter is a push to repair a part of the world: you take Trials from the regions already unlocked, ship real projects, and your work counts toward the chapter's restoration goal. When the community hits it, the story advances: a new region opens, new NPCs return, new Trials appear."
       },
       {
         "title": "Operations (~1 week)",
@@ -73,7 +73,7 @@
       },
       {
         "title": "Joining late? All good",
-        "text": "Unlocked regions never close. Whenever you arrive, you can pick any available sidequest, ship it, and earn your prizes and pixels like everyone else. Chapters only decide what unlocks next, never what you're allowed to build."
+        "text": "Unlocked regions never close. Whenever you arrive, you can pick any available Trial, ship it, and earn your prizes and pixels like everyone else. Chapters only decide what unlocks next, never what you're allowed to build."
       }
     ],
     "mechanics": [
@@ -100,13 +100,13 @@
   },
   "sidequests": {
     "badge": "Examples",
-    "title": "Sidequests and Rewards",
+    "title": "Trials and Rewards",
     "description": "These are only examples and might change over the weeks.",
     "howRewardsWork": "How rewards work",
-    "howRewardsWorkDesc": "You get the base prize for each sidequest you complete. The more hours you put in, the more currency you earn to spend in the shop. Don't want the listed prize or already have it? No problem, swap it for anything of equivalent value.",
+    "howRewardsWorkDesc": "You get the base prize for each Trial you complete. The more hours you put in, the more currency you earn to spend in the shop. Don't want the listed prize or already have it? No problem, swap it for anything of equivalent value.",
     "seeFullExample": "See a full example submission",
     "seeFullExampleDesc": "Not sure what a complete submission looks like? Check out this example that hits every deadline.",
-    "sidequestLabel": "Sidequest",
+    "sidequestLabel": "Trial",
     "prizeLabel": "Prize",
     "levels": [
       {
@@ -162,7 +162,7 @@
         "hours": "min 20h of work",
         "quest": {
           "title": "Design your own region",
-          "description": "Create a new region for the Pixl world: map, NPCs, assets and sidequests. Then code it into a playable demo, it's not just an art quest. If it's polished enough, it gets added to the real game."
+          "description": "Create a new region for the Pixl world: map, NPCs, assets and Trials. Then code it into a playable demo, it's not just an art Trial. If it's polished enough, it gets added to the real game."
         },
         "prize": {
           "title": "Graphics Tablet",
