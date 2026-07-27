@@ -153,6 +153,7 @@ const Pixl = (() => {
     ["docs", "DOCS"],
     ["shop", "SHOP"],
     ["orders", "ORDERS"],
+    ["collectibles", "COLLECT"],
     // VAULT and QUESTS are hidden from the dash for now — not ready for players.
     // Re-enable when they are.
     // ["vault", "VAULT"],
@@ -170,6 +171,7 @@ const Pixl = (() => {
     docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 3h5c.6 0 1 .3 1 .6V14c0-.3-.4-.6-1-.6H2zM14 3H9c-.6 0-1 .3-1 .6V14c0-.3.4-.6 1-.6h5z"/></svg>`,
     shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 5h10l-1 9H4z"/><path d="M6 3h4v1H6z"/><rect x="6" y="4" width="1" height="1.6"/><rect x="9" y="4" width="1" height="1.6"/></svg>`,
     orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2h9l3 3v9H2z"/><rect x="4" y="6" width="8" height="1.4"/><rect x="4" y="9" width="8" height="1.4"/><rect x="4" y="12" width="5" height="1.4"/></svg>`,
+    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l2 4 4 .5-3 3 .8 4L8 14.5 4.2 12.5 5 8.5 2 5.5 6 5z"/></svg>`,
     explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
     projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
     report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,

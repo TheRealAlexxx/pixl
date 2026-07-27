@@ -12,6 +12,10 @@
     { "source": "/orders/", "destination": "https://play.pixl.rsvp/orders/" },
     { "source": "/orders/:path*", "destination": "https://play.pixl.rsvp/orders/:path*" },
 
+    { "source": "/collectibles", "destination": "https://play.pixl.rsvp/collectibles/" },
+    { "source": "/collectibles/", "destination": "https://play.pixl.rsvp/collectibles/" },
+    { "source": "/collectibles/:path*", "destination": "https://play.pixl.rsvp/collectibles/:path*" },
+
     { "source": "/vault", "destination": "https://play.pixl.rsvp/vault/" },
     { "source": "/vault/:path*", "destination": "https://play.pixl.rsvp/vault/:path*" },
     { "source": "/explore", "destination": "https://play.pixl.rsvp/explore/" },

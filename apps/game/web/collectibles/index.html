@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixl · Collectibles</title>
+    <link rel="icon" href="/index.icon.png" />
+    <link rel="stylesheet" href="/pixl.css" />
+    <style>
+      .bal { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+        font-family: var(--pixel); font-size: 15px; color: var(--gold);
+        background: var(--panel); border: 1px solid var(--stroke); border-radius: 999px; padding: 7px 15px; }
+      .bal .up { font-size: 13px; }
+      .col-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-top: 24px; }
+      .col-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+      .col-thumb { aspect-ratio: 1 / 1; border-radius: 10px; background: var(--panel-2);
+        border: 1px solid var(--stroke); display: grid; place-items: center; overflow: hidden; }
+      .col-thumb img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+      .col-thumb .ph { font-family: var(--pixel); font-size: 12px; color: var(--faint); }
+      .col-name { font-family: var(--pixel); font-size: 15px; color: var(--ink); letter-spacing: .3px; }
+      .col-desc { font-size: 13.5px; color: var(--dim); line-height: 1.5; flex: 1; }
+      .col-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+      .col-cost { font-family: var(--pixel); font-size: 13px; color: var(--gold); display: inline-flex; align-items: center; gap: 4px; }
+      .col-card .btn { padding: 7px 14px; font-size: 13px; }
+      .owned-tag { font-family: var(--pixel); font-size: 12px; color: var(--teal, #6cc); letter-spacing: .5px; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1 class="page-title">COLLECTIBLES</h1>
+      <div class="page-sub">
+        Spend the upvotes your projects have earned on cosmetics for your Builder. Upvotes are permanent —
+        every one someone gives your work stays in your account.
+      </div>
+      <div class="bal" id="bal" hidden>▲ <span class="up" id="bal-n">0</span> UPVOTES</div>
+
+      <div class="spin" id="loading"></div>
+      <div class="col-grid" id="grid"></div>
+      <div class="empty-note" id="empty" hidden>NO COLLECTIBLES IN THE STORE YET. CHECK BACK SOON.</div>
+    </main>
+
+    <script src="/pixl.js"></script>
+    <script>
+      Pixl.mountTopbar("collectibles");
+      const $ = (id) => document.getElementById(id);
+      let balance = 0;
+
+      function card(c) {
+        const affordable = !c.owned && balance >= c.cost;
+        const btn = c.owned
+          ? `<span class="owned-tag">OWNED</span>`
+          : `<button class="btn${affordable ? "" : " dark"}" onclick="buy(${c.id})"${affordable ? "" : " disabled"}>BUY</button>`;
+        return `
+          <div class="col-card card panel" id="c-${c.id}">
+            <div class="col-thumb">${c.image_url ? `<img src="${Pixl.esc(c.image_url)}" alt="" onerror="this.parentNode.innerHTML='<span class=ph>NO IMAGE</span>'">` : `<span class="ph">NO IMAGE</span>`}</div>
+            <div class="col-name">${Pixl.esc(c.name)}</div>
+            <div class="col-desc">${Pixl.esc(c.description || "")}</div>
+            <div class="col-foot">
+              <span class="col-cost">▲ ${c.cost}</span>
+              ${btn}
+            </div>
+          </div>`;
+      }
+
+      let items = [];
+      function render() {
+        $("bal-n").textContent = balance;
+        $("bal").hidden = false;
+        $("grid").innerHTML = items.map(card).join("");
+        $("empty").hidden = items.length !== 0;
+      }
+
+      window.buy = async function (id) {
+        const c = items.find((x) => x.id === id);
+        if (!c) return;
+        if (!(await Pixl.confirm({ title: "Buy " + c.name + "?", body: "This costs " + c.cost + " upvotes.", confirmText: "Buy" }))) return;
+        const r = await Pixl.send("POST", "/api/collectibles/" + id + "/buy");
+        if (r.ok) {
+          balance = r.balance;
+          c.owned = true;
+          render();
+          Pixl.toast("Got it — " + c.name + " is yours.");
+        } else if (r.error === "insufficient_upvotes") {
+          Pixl.toast("Not enough upvotes yet — earn more by getting your projects upvoted.", true);
+        } else if (r.error === "already_owned") {
+          c.owned = true; render();
+        } else {
+          Pixl.toast("Couldn't buy that right now.", true);
+        }
+      };
+
+      async function boot() {
+        if (!Pixl.hasToken) return;
+        let data;
+        try { data = await Pixl.api("/api/collectibles"); }
+        catch (e) { $("loading").remove(); if (e.message !== "unauthorized") Pixl.toast("Couldn't load the store.", true); return; }
+        $("loading").remove();
+        balance = data.balance || 0;
+        items = data.collectibles || [];
+        render();
+      }
+      boot();
+    </script>
+  </body>
+</html>
