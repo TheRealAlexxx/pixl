@@ -53,6 +53,13 @@
   .proj-thumb img { width: 100%; height: 100%; object-fit: cover; }
   .proj-name { font-size: 18px; color: var(--ink); }
   .proj-meta { font-size: 13.5px; color: var(--faint); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .proj-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+  .upvote-btn { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pixel, inherit); font-size: 13px; font-weight: 600;
+    color: var(--dim); background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 999px; padding: 4px 11px; cursor: pointer;
+    transition: color .12s ease, border-color .12s ease, background .12s ease, transform .08s ease; }
+  .upvote-btn:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); transform: translateY(-1px); }
+  .upvote-btn.on { color: var(--btn-ink); background: var(--gold); border-color: var(--gold); cursor: default; }
+  .upvote-btn:disabled { cursor: default; }
   .status-chip { text-transform: uppercase; }
   .board { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
   .board-row {
@@ -147,9 +154,37 @@ function projCard(p) {
         <span>by ${Pixl.esc(p.owner_name || "?")}</span>
         <span>${Pixl.timeAgo(p.created_at)}</span>
       </div>
-      <div>${statusChip(p)}${p.hackatime_seconds ? ` <span class="chip teal">${Pixl.hours(p.hackatime_seconds)}</span>` : ""}</div>
+      <div class="proj-foot">
+        <span>${statusChip(p)}${p.hackatime_seconds ? ` <span class="chip teal">${Pixl.hours(p.hackatime_seconds)}</span>` : ""}</span>
+        ${upvoteBtn(p)}
+      </div>
     </a>`;
 }
+
+// Upvote pill. Permanent — once cast it disables and stays lit.
+function upvoteBtn(p) {
+  return `<button class="upvote-btn${p.has_upvoted ? " on" : ""}" onclick="return upvote(event,${p.id})"${p.has_upvoted ? " disabled" : ""} aria-label="Upvote this project" title="${p.has_upvoted ? "You upvoted this" : "Upvote this project"}">▲ <span class="uv-count">${p.upvotes || 0}</span></button>`;
+}
+
+// Cast a permanent upvote without following the card link. Updates the button in
+// place; the server is idempotent and rejects self-upvotes.
+window.upvote = async function (e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  if (btn.disabled) return false;
+  btn.disabled = true;
+  const r = await Pixl.send("POST", "/api/projects/" + id + "/upvote");
+  if (r.ok) {
+    btn.classList.add("on");
+    const c = btn.querySelector(".uv-count");
+    if (c) c.textContent = r.upvotes;
+  } else {
+    btn.disabled = false;
+    Pixl.toast(r.error === "own_project" ? "You can't upvote your own project." : "Couldn't upvote right now.", true);
+  }
+  return false;
+};
 
 /* ---------- views ---------- */
 
@@ -273,6 +308,7 @@ async function showProject(id) {
           ${p.level ? `<span class="chip">LEVEL ${p.level}</span>` : ""}
         </div>
         <div class="muted" style="font-size:14px">by ${owner ? `<a href="#player=${Pixl.esc(owner.id)}">${Pixl.esc(owner.display_name)}</a>` : "?"} · started ${Pixl.timeAgo(p.created_at)}${p.shipped_at ? ` · shipped ${Pixl.timeAgo(p.shipped_at)}` : ""}</div>
+        <div style="margin-top:12px">${upvoteBtn({ id: p.id, upvotes: data.upvotes, has_upvoted: data.has_upvoted })}</div>
       </div>
     </div>
     ${p.description ? `<div class="jbody md" style="margin-top:16px;font-size:16px">${Pixl.markdown(p.description)}</div>` : ""}
