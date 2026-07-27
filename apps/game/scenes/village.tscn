@@ -2846,10 +2846,10 @@ dialogue = "Howdy again, partner."
 skin = "cvc:3"
 quest_trial = true
 trial_checkin = true
-trial_name = "Claim Your Stake"
-trial_reminder = "Come to check on your claim, partner. How's Claim Your Stake comin'?
-Name the project, log your hours, ship it when it's real. I'll open the ledger."
-quest_done = "Claim staked and shipped, partner. Proud of you.
+trial_name = "The Wall at the Sixteen Colors"
+trial_reminder = "Come to check on your work, partner. How's The Wall at the Sixteen Colors comin'?
+Get the noticeboard site posting and filterin', log your hours, ship it when it's real. I'll open the ledger."
+quest_done = "Mabel's wall is back up, partner. Proud of you.
 The frontier's wide open now — plenty more Trials where that came from."
 wanders = false
 

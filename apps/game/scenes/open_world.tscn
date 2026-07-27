@@ -2997,15 +2997,15 @@ npc_name = "Ridit"
 dialogue = "Howdy, partner. Name's Ridit — I keep an eye on this frontier."
 skin = "cvc:3"
 quest_trial = true
-trial_name = "Claim Your Stake"
+trial_name = "The Wall at the Sixteen Colors"
 quest_offer = "Howdy, partner. Name's Ridit — I keep an eye on this frontier.
-Folk 'round here don't sit idle. Every pioneer stakes a claim: somethin' they build with their own two hands.
-So here's your Trial — Claim Your Stake. Create a project, give it a proper name, and keep a journal of your work.
+Mabel over at the Sixteen Colors saloon's got a problem. Last dust storm tore her noticeboard clean off the wall — four hundred nails and a lot of paper, gone.
+So here's your Trial — The Wall at the Sixteen Colors. Rebuild that noticeboard as a website: folks post a notice with a title, a description, and who to reach 'em, and visitors browse and filter by type — work, lost, found, wanted. Make it look like it belongs on a saloon wall.
 Take it on and I'll come round to your village to see how it's goin'."
-trial_reminder = "Still on Claim Your Stake, partner? Good. Get that project named and journal your hours — ship it when it's real.
-I'll open the ledger for you."
-quest_done = "Well I'll be — you've staked your claim, partner.
-Claim Your Stake — complete. Now keep that journal burnin' and ship somethin' worth braggin' about."
+trial_reminder = "Still on The Wall at the Sixteen Colors, partner? Good.
+Get that noticeboard site up — post, browse, filter by work, lost, found, wanted. Ship it when it's real. I'll open the ledger for you."
+quest_done = "Well I'll be — Mabel's wall is back up, and prettier'n ever, partner.
+The Wall at the Sixteen Colors — complete. That's your first mark on the frontier."
 wanders = false
 
 [node name="Cheetah" parent="." unique_id=2080615907 instance=ExtResource("44_npcs")]
