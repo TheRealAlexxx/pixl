@@ -285,6 +285,10 @@ func _start_trial_quest() -> void:
 
 	var completed := bool(trial.get("completed", false))
 	var unlocked := bool(trial.get("unlocked", false))
+	# Carry the Trial id to the Builder Terminal so it shows the brief and helps
+	# the player build to spec (and defaults the ship picker to this Trial).
+	var tid := int(trial.get("id", 0))
+	var proj_path := "projects?trial=%d" % tid if tid > 0 else "projects"
 
 	if completed:
 		Dialogue.open(npc_name, quest_done.split("\n"))
@@ -295,7 +299,7 @@ func _start_trial_quest() -> void:
 	if trial_checkin:
 		var lines := (trial_reminder if trial_reminder != "" else quest_offer).split("\n")
 		Dialogue.open(npc_name, lines)
-		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)
+		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
 		_update_prompt()
 		return
 
@@ -303,7 +307,7 @@ func _start_trial_quest() -> void:
 	if unlocked:
 		var lines := (trial_reminder if trial_reminder != "" else quest_offer).split("\n")
 		Dialogue.open(npc_name, lines)
-		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)
+		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
 		_update_prompt()
 		return
 
@@ -318,9 +322,9 @@ func _start_trial_quest() -> void:
 	var picked: Array = await Dialogue.chosen
 	var choice := String(picked[1]) if picked.size() > 1 else "no"
 	if choice == "accept":
-		await _accept_trial(int(trial.get("id", 0)))
+		await _accept_trial(tid)
 		Dialogue.open(npc_name, ["Then it's yours. Get building — I'll be around your village if you need me."])
-		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)
+		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
 	elif choice == "own":
 		Dialogue.open(npc_name, ["Off-map, huh? The frontier respects that. Build your own thing — same loop, ship it when it's ready."])
 		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)

@@ -209,6 +209,38 @@
         background: color-mix(in srgb, var(--teal) 12%, var(--panel));
         color: var(--teal);
       }
+      .trial-brief {
+        border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--stroke));
+        border-radius: var(--radius-sm);
+        background: color-mix(in srgb, var(--gold) 9%, var(--panel));
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+      .trial-brief-h {
+        font-family: var(--pixel, var(--sans));
+        color: var(--gold);
+        font-size: 15px;
+        letter-spacing: 0.02em;
+        margin-bottom: 8px;
+      }
+      .trial-brief-desc {
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0 0 8px;
+      }
+      .trial-brief-reward {
+        font-family: var(--sans);
+        font-size: 13.5px;
+        color: var(--teal);
+        margin-bottom: 8px;
+      }
+      .trial-brief-note {
+        font-family: var(--sans);
+        font-size: 12.5px;
+        line-height: 1.5;
+        opacity: 0.75;
+      }
       .tl-list {
         display: flex;
         flex-direction: column;
@@ -764,6 +796,7 @@
       let stats = null;
       let projects = [];
       let trials = []; // Trials the player has accepted and not yet finished
+      let activeTrial = null; // the Trial the player arrived to build for, if any
       let form = null;
 
       function statusInfo(p) {
@@ -1176,6 +1209,7 @@
       </div>
       ${p.status === "needs_changes" && p.review_note ? `<div class="note-strip" style="margin-bottom:14px">REVIEWER: ${Pixl.esc(p.review_note)}</div>` : ""}
       ${p.rejected_at ? `<div class="note-strip" style="margin-bottom:14px">REJECTED${p.reject_reason ? ": " + Pixl.esc(p.reject_reason) : ""} — fix it up and ship again.</div>` : ""}
+      ${inReview ? "" : trialBriefHtml(trialForProject(p))}
       ${formHtml(p)}
 
       <div class="section-h">SHIP IT</div>
@@ -1684,7 +1718,7 @@
         if (h === "new") {
           $("new-btn").style.display = "none";
           $("view").innerHTML =
-            `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${formHtml({})}</div>`;
+            `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${trialBriefHtml(activeTrial)}${formHtml({})}</div>`;
           bindForm({});
           return;
         }
@@ -1706,6 +1740,35 @@
         } catch (e) {
           trials = [];
         }
+        // The Trial the player arrived to build for: ?trial=<id> from the NPC, or
+        // the single accepted Trial if there's exactly one. Drives the brief panel.
+        const tid = Number(new URLSearchParams(location.search).get("trial"));
+        activeTrial =
+          (tid && trials.find((t) => Number(t.id) === tid)) ||
+          (trials.length === 1 ? trials[0] : null);
+      }
+
+      // "Building for this Trial" brief — shown atop the new-project form and the
+      // editor so the player builds to the Trial's spec.
+      function trialBriefHtml(t) {
+        if (!t) return "";
+        return `
+      <div class="trial-brief">
+        <div class="trial-brief-h">BUILDING FOR TRIAL — ${Pixl.esc(t.name)}${t.region ? ` · ${Pixl.esc(t.region)}` : ""}</div>
+        ${t.description ? `<p class="trial-brief-desc">${Pixl.esc(t.description)}</p>` : ""}
+        ${t.reward ? `<div class="trial-brief-reward">Reward on completion: <b>${Pixl.esc(t.reward)}</b></div>` : ""}
+        <div class="trial-brief-note">Build to this spec. When you ship, it's flagged for this Trial in the picker below (change it if you're building something else).</div>
+      </div>`;
+      }
+
+      // The Trial to brief for a given project: its own linked Trial if set, else
+      // the Trial the player arrived to work on.
+      function trialForProject(p) {
+        if (p && p.sidequest_id) {
+          const linked = trials.find((t) => Number(t.id) === Number(p.sidequest_id));
+          if (linked) return linked;
+        }
+        return activeTrial;
       }
 
       async function boot() {
