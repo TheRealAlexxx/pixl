@@ -327,8 +327,14 @@ func _start_trial_quest() -> void:
 	_update_prompt()
 
 func _find_trial(quests: Array) -> Dictionary:
+	# Prefer the exact Trial this NPC was assigned by name.
 	for q in quests:
 		if typeof(q) == TYPE_DICTIONARY and String(q.get("name", "")) == trial_name:
+			return q
+	# Fallback so a name drift (e.g. the seeded Trial was renamed) can't leave the
+	# giver with nothing to hand out: take the first active starter Trial.
+	for q in quests:
+		if typeof(q) == TYPE_DICTIONARY and bool(q.get("starter", false)):
 			return q
 	return {}
 

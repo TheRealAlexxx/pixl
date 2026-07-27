@@ -32,3 +32,8 @@ FROM (VALUES
 WHERE NOT EXISTS (
   SELECT 1 FROM sidequests s WHERE s.name = v.name AND s.starter = true
 );
+
+-- Retire the earlier placeholder starter, if a prior run of this file seeded it,
+-- so it doesn't linger as a second starter Trial.
+UPDATE sidequests SET active = false, starter = false
+WHERE name = 'Claim Your Stake' AND starter = true;

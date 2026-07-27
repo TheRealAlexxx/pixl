@@ -61,6 +61,7 @@ var _step := S_CREATE
 var _collapsed := false
 var _busy := false
 var _busy_at := 0.0
+var _last_scene := ""
 
 var _root: Control
 var _body: VBoxContainer
@@ -104,10 +105,20 @@ func _process(_delta: float) -> void:
 			_root.visible = false
 		return
 	_root.visible = _in_gameplay() and NetworkManager.session_token != ""
+	# Re-render the "meet" step when the player crosses between the Hub and the
+	# frontier, so its hint/button match where they actually are.
+	var scene := _current_scene_name()
+	if scene != _last_scene:
+		_last_scene = scene
+		if _step == S_MEET:
+			_render()
+
+func _current_scene_name() -> String:
+	var cur := get_tree().current_scene
+	return cur.scene_file_path.get_file().get_basename() if cur else ""
 
 func _in_gameplay() -> bool:
-	var cur := get_tree().current_scene
-	return cur != null and GAMEPLAY_SCENES.has(cur.scene_file_path.get_file().get_basename())
+	return GAMEPLAY_SCENES.has(_current_scene_name())
 
 func _on_tick() -> void:
 	if _active and _in_gameplay() and NetworkManager.session_token != "":
@@ -200,14 +211,16 @@ func _build_ui() -> void:
 	_root.visible = false
 	add_child(_root)
 
+	# Pinned to the right edge — the left side is crowded with the wallet/chat/HUD.
 	var panel := PanelContainer.new()
-	panel.anchor_left = 0.0
-	panel.anchor_right = 0.0
+	panel.anchor_left = 1.0
+	panel.anchor_right = 1.0
 	panel.anchor_top = 0.5
 	panel.anchor_bottom = 0.5
-	panel.grow_horizontal = Control.GROW_DIRECTION_END
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
-	panel.offset_left = 18
+	panel.offset_left = -318
+	panel.offset_right = -18
 	panel.custom_minimum_size = Vector2(300, 0)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(panel)
@@ -299,6 +312,11 @@ func _render() -> void:
 	else:
 		_hint.text = STEP_HINT[_step]
 		_action_btn.text = STEP_ACTIONS[_step]
+		# The "meet Ridit" step reads differently once you're already out in the
+		# frontier — don't tell (or send) someone to the Lobbies they're standing in.
+		if _step == S_MEET and _current_scene_name() == "open_world":
+			_hint.text = "You're in the frontier — walk up to Ridit and talk to him to take his Trial. (Or start your own project instead.)"
+			_action_btn.text = "Start my own project"
 
 func _toggle_collapse() -> void:
 	_collapsed = not _collapsed
@@ -309,10 +327,15 @@ func _on_action() -> void:
 		_active = false
 		_root.visible = false
 		return
-	# The first step sends the player to the lobby browser (the route to the
-	# frontier where Ridit is); every other step opens a companion web page.
+	# The first step sends the player toward Ridit: from the Hub, open the lobby
+	# browser (the route to the frontier); if they're already in the frontier the
+	# button is the "start your own project" alternative instead. Every other step
+	# opens a companion web page.
 	if _step == S_MEET:
-		get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
+		if _current_scene_name() == "open_world":
+			WebPages.open("projects")
+		else:
+			get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
 		return
 	WebPages.open(STEP_PAGES[_step])
 

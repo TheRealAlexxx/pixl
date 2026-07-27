@@ -15,7 +15,7 @@ router.get("/api/sidequests", async (req, res) => {
     await Promise.all([
       supabase
         .from("sidequests")
-        .select("id, name, region, npc, description, reward")
+        .select("id, name, region, npc, description, reward, starter")
         .eq("active", true)
         .order("position", { ascending: true })
         .order("id", { ascending: true }),
