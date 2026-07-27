@@ -1,4 +1,17 @@
 const Pixl = (() => {
+  // play.pixl.rsvp is the raw game origin; the canonical host is the apex
+  // pixl.rsvp (which proxies these same pages). Bounce direct visitors to the
+  // apex so every link lives on one host. This is client-side and host-keyed, so
+  // it can only fire on a direct play.* visit — never on the proxied apex load
+  // (hostname there is pixl.rsvp), which is why it can't loop with the proxy.
+  try {
+    const h = location.hostname;
+    if (h.indexOf("play.") === 0) {
+      const dest = (location.pathname === "/" || location.pathname === "") ? "/play" : location.pathname;
+      location.replace(location.protocol + "//" + h.substring(5) + dest + location.search + location.hash);
+    }
+  } catch {}
+
   // Applied as early as possible (top of the IIFE) to minimize the flash of
   // the default theme before this loads. Shares the "pixl_theme" key with the
   // docs app's own inline head script so the choice is consistent across both.
