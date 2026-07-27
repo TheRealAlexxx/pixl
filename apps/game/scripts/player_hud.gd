@@ -284,7 +284,7 @@ func _build_ui() -> void:
 
 	var quest_label := Label.new()
 	_ssize(quest_label, 16)
-	quest_label.text = "Quests  [J]"
+	quest_label.text = "Trials  [J]"
 	quest_row.add_child(quest_label)
 
 	var inbox_chip := PanelContainer.new()

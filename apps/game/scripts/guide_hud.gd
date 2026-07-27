@@ -268,7 +268,7 @@ func _show_page(n: int) -> void:
 		_pages[i].visible = i == n
 	for i in _dots.size():
 		_dots[i].color = COLOR_ACCENT if i == n else Color(COLOR_DIM, 0.35)
-	var titles := ["WELCOME TO PIXL", "THE STORY", "WHY YOU'RE HERE", "GETTING AROUND", "HANG OUT", "PROJECTS & PIXELS", "SHOP & SIDEQUESTS", "EXPLORE", "HANDY KEYS"]
+	var titles := ["WELCOME TO PIXL", "THE STORY", "WHY YOU'RE HERE", "GETTING AROUND", "HANG OUT", "PROJECTS & PIXELS", "SHOP & TRIALS", "EXPLORE", "HANDY KEYS"]
 	_plate_label.text = titles[n] if n < titles.size() else "PIXL"
 	_back_button.visible = n > 0
 	if n == _pages.size() - 1:
@@ -328,8 +328,8 @@ func _build_pages() -> void:
 		_para("Spend pixels in the Shop — stickers, licenses, plushies, hardware, all real. It opens in a new browser tab."),
 		_row("B", "Open the shop (or walk into the shop house)"),
 		_spacer(),
-		_para("Sidequests are themed challenges from NPCs with special rewards on top."),
-		_row("J", "Quest log — see every sidequest and who unlocks it"),
+		_para("Trials are themed challenges from NPCs with special rewards on top."),
+		_row("J", "Trial log — see every Trial and who unlocks it"),
 	]))
 	_pages.append(_page_body([
 		_para("Explore what everyone's making — player cards, projects and the leaderboard."),
@@ -341,7 +341,7 @@ func _build_pages() -> void:
 		_row("N", "Inbox"),
 		_row("H", "Projects"),
 		_row("B", "Shop"),
-		_row("J", "Quest log"),
+		_row("J", "Trial log"),
 		_row("E", "Explore"),
 		_row("F1", "This guide"),
 		_row("Esc", "Pause / settings"),

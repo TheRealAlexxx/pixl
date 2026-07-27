@@ -2999,7 +2999,7 @@ skin = "cvc:3"
 quest_project = true
 quest_offer = "Howdy, partner. Name's Ridit — I keep an eye on this frontier.
 Folk 'round here don't sit idle. Every pioneer stakes a claim: somethin' they build with their own two hands.
-So here's your sidequest — Claim Your Stake. Create a project, give it a proper name, and keep a journal of your work.
+So here's your Trial — Claim Your Stake. Create a project, give it a proper name, and keep a journal of your work.
 I'll open the ledger for you. Don't keep the frontier waitin'."
 quest_done = "Well I'll be — you've staked your claim, partner.
 Claim Your Stake — complete. Now keep that journal burnin' and ship somethin' worth braggin' about."
