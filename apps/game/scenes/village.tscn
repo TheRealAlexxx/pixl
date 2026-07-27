@@ -2838,6 +2838,21 @@ dialogue = "Yo, I'm Ricky. Gabin dragged me here but honestly?
 This village is pretty cool."
 skin = "cv1:b1h4t2o1"
 
+[node name="Ridit" parent="." unique_id=771144221 instance=ExtResource("48_npcs")]
+visible = false
+position = Vector2(180, -140)
+npc_name = "Ridit"
+dialogue = "Howdy again, partner."
+skin = "cvc:3"
+quest_trial = true
+trial_checkin = true
+trial_name = "Claim Your Stake"
+trial_reminder = "Come to check on your claim, partner. How's Claim Your Stake comin'?
+Name the project, log your hours, ship it when it's real. I'll open the ledger."
+quest_done = "Claim staked and shipped, partner. Proud of you.
+The frontier's wide open now — plenty more Trials where that came from."
+wanders = false
+
 [connection signal="body_entered" from="DoorTrigger" to="DoorTrigger" method="_on_body_entered"]
 [connection signal="body_exited" from="DoorTrigger" to="DoorTrigger" method="_on_body_exited"]
 [connection signal="body_entered" from="DoorTrigger2" to="DoorTrigger2" method="_on_body_entered"]

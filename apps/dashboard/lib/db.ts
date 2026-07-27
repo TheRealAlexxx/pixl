@@ -1665,7 +1665,9 @@ export interface JournalRow {
 export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name, real_name, slack_id)")
+    .select(
+      "*, users(id, display_name, real_name, slack_id), sidequests(id, name, region, reward)",
+    )
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;

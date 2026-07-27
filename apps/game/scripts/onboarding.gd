@@ -2,7 +2,8 @@ extends CanvasLayer
 ## First-run arrival flow — the Day-0 onboarding (ONBOARDING_REDESIGN.md §2-8).
 ## Orchestrates, in order:
 ##   cinematic → Pixo greeting → naming ritual → experience question →
-##   the loop patter → recommended first Trial → hand-off to the Builder Terminal.
+##   the loop patter → point the player out to the frontier (Ridit) and start the
+##   FirstProjectGuide checklist.
 ## Pixo is a dialogue speaker only (no world NPC). Runs as a coroutine driven by
 ## the extended Dialogue autoload; each beat awaits the player.
 ##
@@ -65,13 +66,10 @@ func start() -> void:
 	await _naming()
 	await _experience()
 	await _loop_patter()
-	# Beginners get offered the full hand-held walkthrough (create → Hackatime →
-	# build → ship, tracked by FirstProjectGuide). Everyone else gets the normal
-	# Trial Board hand-off.
-	if captured_experience == "beginner":
-		await _first_project_offer()
-	else:
-		await _first_trial()
+	# Everyone runs the same loop now: Pixo points the player out to the frontier
+	# to meet a Trial-giver (Ridit), and the FirstProjectGuide checklist takes
+	# over from there (meet → create → Hackatime → build → ship).
+	await _direct_to_frontier()
 
 	_release_block()
 	_running = false
@@ -151,59 +149,29 @@ func _loop_patter() -> void:
 		"Ship enough and you'll feel it: the more you build, the more each hour pays. Pixels for you, energy for all of us.",
 	])
 
-func _first_trial() -> void:
-	var trial: Dictionary = await _fetch_recommended()
-	var name := String(trial.get("name", ""))
-	var reward := String(trial.get("reward", ""))
-	var id = trial.get("id", null)
-
-	var intro := ["Come here — the Trial Board. This is where the Core posts what needs doing."]
-	if name != "":
-		var line := "Based on what you told me, I'd start with this one: \"%s\"." % name
-		if reward != "":
-			line += " Ship it and the Core hands back %s." % reward
-		intro.append(line)
-		intro.append("It's not an order — the best Builders go off-map all the time. But it's a good first thaw.")
-	else:
-		intro.append("Pick whatever calls to you — or build something entirely your own. The Core recognizes both.")
-
-	Dialogue.ask(PIXO, intro,
-		PackedStringArray(["Open it in the Terminal", "Let me look around first"]),
-		PackedStringArray(["open", "later"]))
-	var picked: Array = await Dialogue.chosen
-	var choice := String(picked[1]) if picked.size() > 1 else "later"
-
-	if choice == "open":
-		await _say([
-			"That's the one. Opening your Builder Terminal — that's where you log the work, link your repo, and ship when it's ready.",
-			"Go build it for real. Come back when it's shipped, and watch what happens to this place.",
-		])
-		_handoff(id)
-	else:
-		await _say(["Take your time. When you're ready, the Terminal's a keypress away — and I'll be right here."])
-		_mark_step_done()
-
-# Beginner-only: offer the full hand-held first project. Yes → hand off to the
-# persistent FirstProjectGuide (create → Hackatime → build → ship). No → the same
-# Trial Board everyone else gets.
-func _first_project_offer() -> void:
+# Universal hand-off: the Trials live out in the regions, not the Hub. Point the
+# player through the Lobbies to the frontier to meet Ridit, then hand control to
+# the FirstProjectGuide checklist. Building your own idea instead is always fine.
+func _direct_to_frontier() -> void:
 	Dialogue.ask(PIXO,
 		[
-			"One more thing. Since you're just starting out — want me to walk you through your whole first project, from nothing to shipped? I'll stick with you the entire way.",
+			"The Trials themselves aren't here in the Hub — they're out past the edge, in the regions.",
+			"Head through the Lobbies to reach the frontier, and find Ridit out there. He keeps the Dustline, and he's holding a first Trial for you.",
+			"Take his, or build something entirely your own — the Core recognizes both. Either way the loop's the same: build it, ship it, watch the world thaw.",
 		],
-		PackedStringArray(["Yes — walk me through it", "I'll look around on my own"]),
-		PackedStringArray(["guide", "solo"]))
+		PackedStringArray(["Open the Lobbies", "I'll head out myself"]),
+		PackedStringArray(["lobbies", "later"]))
 	var picked: Array = await Dialogue.chosen
-	var choice := String(picked[1]) if picked.size() > 1 else "solo"
-	if choice == "guide":
-		await _say([
-			"Love it. I'll pin a little checklist to your screen and tick things off as you go — create your project, hook up Hackatime, build it, ship it.",
-			"First up: open your Builder Terminal and give your first project a name. I'll be right here the whole way.",
-		])
-		_mark_step_done()
-		FirstProjectGuide.begin()
-	else:
-		await _first_trial()
+	var choice := String(picked[1]) if picked.size() > 1 else "later"
+	await _say(["I'll pin a checklist to your screen so you never lose the thread — first stop, find Ridit."])
+	_mark_step_done()
+	FirstProjectGuide.begin()
+	# Send them straight to the lobby browser (the way to the frontier). Deferred
+	# by change_scene, so start() still unwinds its UI blocker cleanly first.
+	if choice == "lobbies":
+		handoff_path = "lobby_menu"
+		if not mock:
+			get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
 
 # ── helpers: dialogue ────────────────────────────────────────────────────────
 
@@ -344,28 +312,10 @@ func _post_experience(id: String) -> void:
 		return
 	await _api_post("/api/profile/experience", { "experience": id })
 
-func _fetch_recommended() -> Dictionary:
-	if mock:
-		return { "id": 101, "name": "Raise your Builder Page", "reward": "a custom .pixl.rsvp subdomain" }
-	var data: Dictionary = await _api_get("/api/sidequests/recommended")
-	var rec = data.get("recommended", null)
-	if typeof(rec) == TYPE_DICTIONARY:
-		return rec
-	return {}
-
 func _mark_step_done() -> void:
 	if mock:
 		return
 	await _api_post("/api/profile/onboarding", { "step": 1 })
-
-func _handoff(trial_id) -> void:
-	_mark_step_done()
-	var path := "projects?from=game"
-	if trial_id != null:
-		path += "&trial=" + str(trial_id)
-	handoff_path = path
-	if not mock:
-		WebPages.open(path)
 
 # Thin HTTPRequest wrappers (token appended like guide_hud.gd).
 func _api_get(path: String) -> Dictionary:

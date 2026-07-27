@@ -41,7 +41,7 @@ func _run() -> void:
 	check(_names_submitted >= 2, "rejected name re-prompts (overlay shown twice)")
 	check(O.captured_name == "Ridit", "captured_name is the accepted name")
 	check(O.captured_experience == "beginner", "captured_experience matches the picked option")
-	check(O.handoff_path == "projects?from=game&trial=101", "hand-off carries from=game + trial id")
+	check(O.handoff_path == "lobby_menu", "picking 'Open the Lobbies' routes to the lobby browser")
 	check(not global.ui_blocked(), "ui blocker released at the end")
 
 	if _fail == 0: print("\nALL ONBOARDING TESTS PASSED")

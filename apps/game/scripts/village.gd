@@ -15,9 +15,36 @@ func _ready() -> void:
 	_spawn_npcs()
 	if NetworkManager.is_connected_to_server():
 		NetworkManager.npc_init.connect(_on_npc_init)
+	_reveal_trial_npcs()
 	await get_tree().create_timer(0.3).timeout
 	can_transition = true
 	_maybe_start_arrival()
+
+# A Trial-giver's check-in copy (e.g. Ridit) is hidden until the player has
+# accepted that Trial and not yet finished it. Reveal on load by matching each
+# check-in NPC's trial_name against the player's active Trials.
+func _reveal_trial_npcs() -> void:
+	var checkins: Array = _npcs.filter(func(n): return is_instance_valid(n) and n.get("trial_checkin") == true)
+	if checkins.is_empty() or NetworkManager.session_token == "":
+		return
+	var req := HTTPRequest.new()
+	add_child(req)
+	var url := NetworkManager.SERVER_HTTP_URL + "/api/sidequests?token=" + NetworkManager.session_token.uri_encode()
+	req.request_completed.connect(func(_result, code, _headers, data):
+		req.queue_free()
+		var active := {}  # trial name -> true when unlocked and not completed
+		if code == 200 and data.size() > 0:
+			var json = JSON.parse_string(data.get_string_from_utf8())
+			if typeof(json) == TYPE_DICTIONARY and json.get("ok", false):
+				for q in json.get("quests", []):
+					if typeof(q) == TYPE_DICTIONARY and bool(q.get("unlocked", false)) and not bool(q.get("completed", false)):
+						active[String(q.get("name", ""))] = true
+		for n in checkins:
+			if is_instance_valid(n):
+				n.set_present(active.has(String(n.get("trial_name"))))
+	)
+	if req.request(url) != OK:
+		req.queue_free()
 
 # Decide whether to run the first-run arrival flow. Signed-in players are gated
 # on the server's shared onboarding counter (step 0 = never onboarded), so a
@@ -63,7 +90,9 @@ func _save_npcs() -> void:
 		return
 	var payload: Array = []
 	for n in _npcs:
-		if is_instance_valid(n):
+		# Skip hidden conditional NPCs (a not-yet-revealed check-in copy) so we
+		# don't persist a placeholder position for them.
+		if is_instance_valid(n) and n.visible:
 			payload.append({"id": n.npc_id(), "posX": n.position.x, "posY": n.position.y})
 	NetworkManager.send_save_npcs(_network_scene_name(), payload)
 

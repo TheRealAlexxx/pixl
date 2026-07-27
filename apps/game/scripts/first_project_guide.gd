@@ -1,13 +1,14 @@
 extends CanvasLayer
-## First-Project Guide — a persistent, NON-blocking checklist that walks a brand-
-## new Builder from "no project yet" all the way to their first ship, one step at
-## a time: create the project → set up Hackatime → build it → ship it.
+## First-Trial checklist — a persistent, NON-blocking tracker that walks every new
+## Builder through their first Trial, one step at a time: meet the Trial-giver
+## (Ridit, out in the frontier) → create the project → set up Hackatime → build it
+## → ship it.
 ##
-## Opt-in: onboarding.gd calls begin() only when a beginner says yes. From then on
-## the guide lives across scenes and sessions, tracks real progress by polling the
-## server (projects + Hackatime), checks steps off as they land, and pops a short
-## Pixo line at each milestone. It never pushes a UI blocker — the player can walk,
-## chat and tab out to the browser the whole time.
+## onboarding.gd calls begin() for everyone at the end of arrival. From then on the
+## tracker lives across scenes and sessions, follows real progress by polling the
+## server (projects + Hackatime + sidequests), checks steps off as they land, and
+## pops a short Pixo line at each milestone. It never pushes a UI blocker — the
+## player can walk, chat and tab out to the browser the whole time.
 
 const THEME := preload("res://themes/main_theme.tres")
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
@@ -20,34 +21,39 @@ const PIXO := "Pixo"
 # The four steps, in order. Each carries its checklist label, the button copy for
 # when it's the current step, the companion page that button opens, and the line
 # Pixo says once it's completed.
-enum { S_CREATE, S_HACKATIME, S_CODE, S_SHIP, S_DONE }
+enum { S_MEET, S_CREATE, S_HACKATIME, S_CODE, S_SHIP, S_DONE }
 const STEP_LABELS := [
+	"Find Ridit in the frontier",
 	"Create your project",
 	"Set up Hackatime",
 	"Build it",
-	"Ship your first project",
+	"Ship it for the Trial",
 ]
 const STEP_ACTIONS := [
+	"Open the Lobbies",
 	"Open Builder Terminal",
 	"Hackatime setup",
 	"Open the build guide",
 	"Ship it for review",
 ]
-# The Create step hands off to the Builder Terminal with ?onboard=first-project,
-# which kicks off the dedicated project-creation walkthrough on the dash (separate
-# from the old counter-synced auto-tour — see pixl.js maybeOnboard).
-const STEP_PAGES := ["projects?onboard=first-project", "docs/hackatime", "docs/first-site", "projects"]
+# Where each step's action button goes. S_MEET is special-cased (it changes scene
+# to the lobby browser, not a web page) so its entry is unused. The Create step
+# hands off to the Builder Terminal with ?onboard=first-project, which kicks off
+# the dedicated project-creation walkthrough on the dash (see pixl.js maybeOnboard).
+const STEP_PAGES := ["", "projects?onboard=first-project", "docs/hackatime", "docs/first-site", "projects"]
 const STEP_HINT := [
-	"Name your first project in the Builder Terminal — that tells the Core you're building.",
+	"Head through the Lobbies to the frontier and talk to Ridit — take his Trial, or just start your own project.",
+	"Name your project in the Builder Terminal — that tells the Core you're building.",
 	"Install Hackatime in your editor and connect it, so the hours you code actually count.",
 	"Make the thing. Keep it small and real — the guide has copy-pasteable code to start from.",
-	"Once it runs and you've logged some time, ship it for review to finish your first Trial.",
+	"Once it runs and you've logged some time, ship it for review — flag it for your Trial as you do.",
 ]
 const STEP_DONE_LINE := [
+	"You've got a Trial. Now make it real — start by creating your project.",
 	"Project created — the Core can see it now. Next: get Hackatime tracking your hours so they count.",
 	"Hackatime's live. Every minute you code from here on counts. Go make the thing.",
 	"There it is — your first tracked time. Keep going until it's real, then ship it.",
-	"You shipped it. Your first project is in the Restoration — that's the whole game. Welcome, Builder.",
+	"You shipped it. Your first Trial is in the Restoration — that's the whole game. Welcome, Builder.",
 ]
 
 var _active := false
@@ -83,7 +89,7 @@ func _ready() -> void:
 ## Start (or restart) the guide — called from the beginner onboarding opt-in.
 func begin() -> void:
 	_active = true
-	_step = S_CREATE
+	_step = S_MEET
 	_collapsed = false
 	_save_state(true)
 	_render()
@@ -128,6 +134,7 @@ func _poll() -> void:
 	_busy_at = Time.get_ticks_msec()
 	var proj: Dictionary = await _api_get("/api/projects")
 	var hack: Dictionary = await _api_get("/api/hackatime/stats")
+	var quests: Dictionary = await _api_get("/api/sidequests")
 	_busy = false
 	if not _active:
 		return
@@ -143,10 +150,20 @@ func _poll() -> void:
 		if st == "shipped" or st == "second_review" or st == "approved":
 			shipped = true
 			break
+	# The "meet" step clears once a Trial is accepted (unlocked, not yet done) —
+	# or once they've started a project on their own (going off-map is fine).
+	var accepted := false
+	var quest_list: Array = quests.get("quests", []) if typeof(quests.get("quests")) == TYPE_ARRAY else []
+	for q in quest_list:
+		if typeof(q) == TYPE_DICTIONARY and bool(q.get("unlocked", false)) and not bool(q.get("completed", false)):
+			accepted = true
+			break
 
 	# Current step = the first one that isn't satisfied yet.
 	var new_step := S_DONE
-	if not has_project:
+	if not accepted and not has_project:
+		new_step = S_MEET
+	elif not has_project:
 		new_step = S_CREATE
 	elif not connected:
 		new_step = S_HACKATIME
@@ -212,7 +229,7 @@ func _build_ui() -> void:
 	col.add_child(header)
 
 	var title := Label.new()
-	title.text = "YOUR FIRST PROJECT"
+	title.text = "YOUR FIRST TRIAL"
 	title.theme_type_variation = &"TitleText"
 	title.add_theme_font_size_override("font_size", 18)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -277,7 +294,7 @@ func _render() -> void:
 			label.add_theme_color_override("font_color", DIM)
 
 	if _step == S_DONE:
-		_hint.text = "All done. Your first project is shipped — the rest of Pixl is the same loop."
+		_hint.text = "All done. Your first Trial is shipped — every other Trial is the same loop."
 		_action_btn.text = "Close"
 	else:
 		_hint.text = STEP_HINT[_step]
@@ -291,6 +308,11 @@ func _on_action() -> void:
 	if _step == S_DONE:
 		_active = false
 		_root.visible = false
+		return
+	# The first step sends the player to the lobby browser (the route to the
+	# frontier where Ridit is); every other step opens a companion web page.
+	if _step == S_MEET:
+		get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
 		return
 	WebPages.open(STEP_PAGES[_step])
 

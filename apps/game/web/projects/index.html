@@ -763,6 +763,7 @@
 
       let stats = null;
       let projects = [];
+      let trials = []; // Trials the player has accepted and not yet finished
       let form = null;
 
       function statusInfo(p) {
@@ -906,6 +907,33 @@
       }
 
       /* ---------- editor view ---------- */
+
+      // Optional "which Trial is this for?" picker for the ship panel. Only the
+      // Trials the player has accepted (plus whatever this project is already
+      // linked to) are offered; empty when there's nothing to pick.
+      function trialPickerHtml(p) {
+        const opts = [...trials];
+        const linkedId = p.sidequest_id != null ? Number(p.sidequest_id) : null;
+        if (linkedId && !opts.some((t) => Number(t.id) === linkedId))
+          opts.push({ id: linkedId, name: p.sidequest_name || "Linked Trial", region: "" });
+        if (!opts.length) return "";
+        // Default to the linked Trial, or auto-select the one accepted Trial.
+        const current =
+          linkedId != null ? linkedId : trials.length === 1 ? Number(trials[0].id) : "";
+        const options = [`<option value="">Not for a Trial — my own idea</option>`]
+          .concat(
+            opts.map(
+              (t) =>
+                `<option value="${Number(t.id)}" ${Number(t.id) === current ? "selected" : ""}>${Pixl.esc(t.name)}${t.region ? " · " + Pixl.esc(t.region) : ""}</option>`,
+            ),
+          )
+          .join("");
+        return `
+        <label class="check-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+          <span>Submitting this for a Trial?</span>
+          <select class="field" id="s-trial" style="max-width:340px">${options}</select>
+        </label>`;
+      }
 
       function formHtml(p) {
         const linked = new Set(p.hackatime_projects || []);
@@ -1144,6 +1172,7 @@
         ${Pixl.esc(p.name)}
         <span class="chip ${cls}">${label}</span>
         ${p.pixels_earned ? `<span class="chip gold">+${Math.round(p.pixels_earned)} PX EARNED</span>` : ""}
+        ${p.sidequest_name ? `<span class="chip teal">TRIAL: ${Pixl.esc(p.sidequest_name)}</span>` : ""}
       </div>
       ${p.status === "needs_changes" && p.review_note ? `<div class="note-strip" style="margin-bottom:14px">REVIEWER: ${Pixl.esc(p.review_note)}</div>` : ""}
       ${p.rejected_at ? `<div class="note-strip" style="margin-bottom:14px">REJECTED${p.reject_reason ? ": " + Pixl.esc(p.reject_reason) : ""} — fix it up and ship again.</div>` : ""}
@@ -1157,6 +1186,7 @@
           <div class="ship-item"><span class="${p.image_url ? "ok" : "no"}">${p.image_url ? "+" : "-"}</span> Thumbnail uploaded</div>
           <div class="ship-item" id="ship-ht"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
         </div>
+        ${inReview ? "" : trialPickerHtml(p)}
         ${
           !isUpdate
             ? `
@@ -1361,6 +1391,8 @@
         const body = { otherYsws: $("s-ysws") ? $("s-ysws").checked : false };
         if (isUpdate && $("f-update") && $("f-update").checked)
           body.updateNotes = $("f-update-notes").value.trim();
+        // 0 / absent tells the server this ship isn't for a Trial (clears any link).
+        if ($("s-trial")) body.sidequestId = Number($("s-trial").value) || 0;
         $("s-ship").disabled = true;
         Pixl.toast("Checking your repo and demo…");
         const r = await Pixl.send("POST", `/api/projects/${p.id}/ship`, body);
@@ -1665,12 +1697,24 @@
         projects = (d.projects || []).map((p) => ({ ...p, id: Number(p.id) }));
       }
 
+      async function loadTrials() {
+        try {
+          const d = await Pixl.api("/api/sidequests");
+          // Only Trials the player has taken on and not yet finished can be a
+          // ship target.
+          trials = (d.quests || []).filter((q) => q.unlocked && !q.completed);
+        } catch (e) {
+          trials = [];
+        }
+      }
+
       async function boot() {
         if (!Pixl.hasToken) return;
         try {
           const [s] = await Promise.all([
             Pixl.api("/api/hackatime/stats"),
             loadProjects(),
+            loadTrials(),
           ]);
           stats = s.stats || null;
         } catch (e) {

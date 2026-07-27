@@ -55,11 +55,29 @@ router.get("/api/projects", async (req, res) => {
         (earned.get(t.project_id as number) ?? 0) + Number(t.amount),
       );
   }
+  // Resolve the linked Trial name for any project shipped for one, so the client
+  // can show it without a second round-trip.
+  const trialName = new Map<number, string>();
+  const trialIds = [
+    ...new Set(
+      projects.map((p) => p.sidequest_id as number | null).filter((x): x is number => !!x),
+    ),
+  ];
+  if (trialIds.length > 0) {
+    const { data: sqs } = await supabase
+      .from("sidequests")
+      .select("id, name")
+      .in("id", trialIds);
+    for (const s of sqs ?? []) trialName.set(s.id as number, s.name as string);
+  }
   res.json({
     ok: true,
     projects: projects.map((p) => ({
       ...p,
       pixels_earned: earned.get(p.id as number) ?? 0,
+      sidequest_name: p.sidequest_id
+        ? (trialName.get(p.sidequest_id as number) ?? null)
+        : null,
     })),
   });
 });
@@ -294,6 +312,24 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "update_notes_too_short" });
   const otherYsws = req.body?.otherYsws === true;
 
+  // Optional: the player flags this ship as a submission for a Trial. Only an
+  // active Trial they've actually accepted (unlocked) can be linked; anything
+  // else clears the link (they're shipping their own idea).
+  const wantSidequest = Number(req.body?.sidequestId);
+  let sidequestId: number | null = null;
+  if (Number.isFinite(wantSidequest) && wantSidequest > 0) {
+    const { data: unlock } = await supabase
+      .from("sidequest_unlocks")
+      .select("sidequest_id, sidequests!inner(active)")
+      .eq("user_id", session.userId)
+      .eq("sidequest_id", wantSidequest)
+      .eq("sidequests.active", true)
+      .maybeSingle();
+    if (!unlock)
+      return res.status(400).json({ ok: false, error: "trial_not_available" });
+    sidequestId = wantSidequest;
+  }
+
   let systemNote = "";
   const matched = await findInYswsArchive(
     project.repo_url as string,
@@ -334,6 +370,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
       update_notes: isUpdate ? updateNotes : "",
       other_ysws: otherYsws,
       system_note: systemNote,
+      sidequest_id: sidequestId,
     })
     .eq("id", id)
     .eq("user_id", session.userId)
