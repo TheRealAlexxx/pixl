@@ -39,6 +39,7 @@ var captured_experience := ""
 var handoff_path := ""
 
 var _running := false
+var _blocked := false
 var _name_root: Control
 var _name_edit: LineEdit
 var _name_warn: Label
@@ -56,6 +57,7 @@ func start() -> void:
 		return
 	_running = true
 	global.push_ui_blocker()
+	_blocked = true
 
 	if not skip_cinematic:
 		await _run_cinematic()
@@ -65,9 +67,25 @@ func start() -> void:
 	await _loop_patter()
 	await _first_trial()
 
-	global.pop_ui_blocker()
+	_release_block()
 	_running = false
 	finished.emit()
+
+# Balance the UI blocker at most once, whether the flow ends naturally or is torn
+# down early. `ui_blockers` lives on the `global` autoload and survives scene
+# changes, so a missed pop freezes the player everywhere.
+func _release_block() -> void:
+	if _blocked:
+		_blocked = false
+		global.pop_ui_blocker()
+
+# If the flow is destroyed mid-run — Quit to Main Menu, logout, or a network
+# await that never resolves — release the blocker so the player can still move,
+# and close any open dialogue so Pixo's lines can't bleed onto the next scene.
+func _exit_tree() -> void:
+	_release_block()
+	if Dialogue.is_open:
+		Dialogue.close()
 
 # ── beats ──────────────────────────────────────────────────────────────────
 

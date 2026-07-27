@@ -28,7 +28,10 @@ func _maybe_start_arrival() -> void:
 		GuideHud.maybe_show_intro()
 		return
 	GuideHud.fetch_onboarding_step(func(step):
-		if step == 0:
+		# The step check is an HTTP round-trip; the player may have left the
+		# village (Quit to Main Menu) before it lands. Don't start the flow onto
+		# a scene we're no longer in.
+		if step == 0 and is_inside_tree() and get_tree().current_scene == self:
 			_start_arrival()
 	)
 
