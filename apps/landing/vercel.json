@@ -8,6 +8,10 @@
     { "source": "/shop/", "destination": "https://play.pixl.rsvp/shop/" },
     { "source": "/shop/:path*", "destination": "https://play.pixl.rsvp/shop/:path*" },
 
+    { "source": "/orders", "destination": "https://play.pixl.rsvp/orders/" },
+    { "source": "/orders/", "destination": "https://play.pixl.rsvp/orders/" },
+    { "source": "/orders/:path*", "destination": "https://play.pixl.rsvp/orders/:path*" },
+
     { "source": "/vault", "destination": "https://play.pixl.rsvp/vault/" },
     { "source": "/vault/:path*", "destination": "https://play.pixl.rsvp/vault/:path*" },
     { "source": "/explore", "destination": "https://play.pixl.rsvp/explore/" },
