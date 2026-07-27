@@ -65,7 +65,13 @@ func start() -> void:
 	await _naming()
 	await _experience()
 	await _loop_patter()
-	await _first_trial()
+	# Beginners get offered the full hand-held walkthrough (create → Hackatime →
+	# build → ship, tracked by FirstProjectGuide). Everyone else gets the normal
+	# Trial Board hand-off.
+	if captured_experience == "beginner":
+		await _first_project_offer()
+	else:
+		await _first_trial()
 
 	_release_block()
 	_running = false
@@ -176,6 +182,28 @@ func _first_trial() -> void:
 	else:
 		await _say(["Take your time. When you're ready, the Terminal's a keypress away — and I'll be right here."])
 		_mark_step_done()
+
+# Beginner-only: offer the full hand-held first project. Yes → hand off to the
+# persistent FirstProjectGuide (create → Hackatime → build → ship). No → the same
+# Trial Board everyone else gets.
+func _first_project_offer() -> void:
+	Dialogue.ask(PIXO,
+		[
+			"One more thing. Since you're just starting out — want me to walk you through your whole first project, from nothing to shipped? I'll stick with you the entire way.",
+		],
+		PackedStringArray(["Yes — walk me through it", "I'll look around on my own"]),
+		PackedStringArray(["guide", "solo"]))
+	var picked: Array = await Dialogue.chosen
+	var choice := String(picked[1]) if picked.size() > 1 else "solo"
+	if choice == "guide":
+		await _say([
+			"Love it. I'll pin a little checklist to your screen and tick things off as you go — create your project, hook up Hackatime, build it, ship it.",
+			"First up: open your Builder Terminal and give your first project a name. I'll be right here the whole way.",
+		])
+		_mark_step_done()
+		FirstProjectGuide.begin()
+	else:
+		await _first_trial()
 
 # ── helpers: dialogue ────────────────────────────────────────────────────────
 
