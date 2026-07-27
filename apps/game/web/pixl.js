@@ -56,6 +56,16 @@ const Pixl = (() => {
     try { token = localStorage.getItem("pixl_token") || ""; } catch {}
   }
 
+  // The in-game First Project guide opens the Builder Terminal with
+  // ?onboard=first-project to launch its own project-creation walkthrough. Grab
+  // the flag, then strip it from the URL so a manual refresh doesn't replay it.
+  const firstProjectOnboard = params.get("onboard") === "first-project";
+  if (params.has("onboard")) {
+    params.delete("onboard");
+    const oqs = params.toString();
+    history.replaceState({}, "", location.pathname + (oqs ? "?" + oqs : "") + location.hash);
+  }
+
   function phase() {
     const h = new Date().getHours() + new Date().getMinutes() / 60;
     if (h < 5 || h >= 21) return "night";
@@ -465,6 +475,51 @@ const Pixl = (() => {
     },
   ];
 
+  // The NEW-onboarding walkthrough — launched explicitly by the in-game First
+  // Project guide (?onboard=first-project), separate from the counter-synced
+  // auto-tour above. It only sets the project up (create → link → track); the
+  // in-game checklist owns building and shipping, so this ends by sending the
+  // player back to the game rather than marking them fully onboarded.
+  const FIRST_PROJECT_STEPS = [
+    {
+      title: "Let's make your first project",
+      body: "Pixo sent you over. This is your <b>Builder Terminal</b> — I'll get your first project set up here. Pop back to the game anytime; the checklist there keeps your place.",
+    },
+    {
+      target: "#new-btn",
+      title: "Open a new project",
+      body: "Hit <b>Next</b> and I'll open a fresh project for you.",
+      onNext: () => document.getElementById("new-btn")?.click(),
+    },
+    {
+      target: "#f-name",
+      title: "Name it",
+      body: "Say what you're building — like <b>“My portfolio site”</b>. Short and real; you can rename it later.",
+    },
+    {
+      target: "#f-repo",
+      title: "Link your code",
+      body: "Paste your <b>GitHub repo</b> here (and a demo link below, if you have one) so a reviewer can see what you built. No repo yet? There's a Git guide.",
+      extra: { label: "Git guide", href: "/docs/git" },
+    },
+    {
+      target: "#ht-connect",
+      title: "Track your time with Hackatime",
+      body: "The important one. <b>Hackatime</b> logs your build hours, and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so the time counts.",
+      extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
+    },
+    {
+      target: "#f-save",
+      title: "Create it",
+      body: "Save your project. That's the first checklist item done — hop back to the game and Pixo will point you at what's next.",
+    },
+    {
+      title: "Now go build it",
+      body: "Head back into the game whenever — your <b>First Project</b> checklist tracks the rest (build it, then ship it). Want a starting point? I wrote the whole first site out for you, code and all.",
+      extra: { label: "Your first site (code) →", href: "/docs/first-site" },
+    },
+  ];
+
   function injectTourCSS() {
     if (document.getElementById("pixl-tour-css")) return;
     const s = document.createElement("style");
@@ -645,6 +700,18 @@ const Pixl = (() => {
   async function maybeOnboard(steps = ONBOARDING_STEPS) {
     if (!token) return; // signed-out (public docs) never auto-runs
     if (!/\/projects(\/|$)/.test(location.pathname)) return;
+    // New First Project guide hand-off: run its own self-contained walkthrough
+    // and STOP — never also fire the old counter-synced auto-tour (which would
+    // mark them fully onboarded and yank them back to the game mid-flow).
+    if (firstProjectOnboard) {
+      let shown = false;
+      try { shown = sessionStorage.getItem("pixl_fp_shown") === "1"; } catch {}
+      if (!shown) {
+        try { sessionStorage.setItem("pixl_fp_shown", "1"); } catch {}
+        setTimeout(() => runTour(FIRST_PROJECT_STEPS, 0, false), 700);
+      }
+      return;
+    }
     const saved = getTourStep();
     const ob = await getOnboarding();
     if (ob && ob.ok) {

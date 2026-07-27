@@ -33,7 +33,10 @@ const STEP_ACTIONS := [
 	"Open the build guide",
 	"Ship it for review",
 ]
-const STEP_PAGES := ["projects", "docs/hackatime", "docs/first-site", "projects"]
+# The Create step hands off to the Builder Terminal with ?onboard=first-project,
+# which kicks off the dedicated project-creation walkthrough on the dash (separate
+# from the old counter-synced auto-tour — see pixl.js maybeOnboard).
+const STEP_PAGES := ["projects?onboard=first-project", "docs/hackatime", "docs/first-site", "projects"]
 const STEP_HINT := [
 	"Name your first project in the Builder Terminal — that tells the Core you're building.",
 	"Install Hackatime in your editor and connect it, so the hours you code actually count.",
