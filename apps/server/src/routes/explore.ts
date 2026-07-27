@@ -285,11 +285,29 @@ router.get("/api/explore/projects", async (req, res) => {
     for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
   }
 
+  // Upvote count per project + whether this viewer already upvoted each one.
+  const pids = (projects ?? []).map((p) => p.id as number);
+  const upCounts = new Map<number, number>();
+  const myUp = new Set<number>();
+  if (pids.length > 0) {
+    const { data: ups } = await supabase
+      .from("project_upvotes")
+      .select("project_id, voter_id")
+      .in("project_id", pids);
+    for (const u of ups ?? []) {
+      const pid = u.project_id as number;
+      upCounts.set(pid, (upCounts.get(pid) ?? 0) + 1);
+      if (u.voter_id === session.userId) myUp.add(pid);
+    }
+  }
+
   res.json({
     ok: true,
     projects: (projects ?? []).map((p) => ({
       ...p,
       owner_name: names.get(p.user_id as string) ?? "?",
+      upvotes: upCounts.get(p.id as number) ?? 0,
+      has_upvoted: myUp.has(p.id as number),
     })),
   });
 });
@@ -313,7 +331,7 @@ router.get("/api/explore/projects/:id", async (req, res) => {
     .maybeSingle();
   if (error || !project) return res.status(404).json({ ok: false });
 
-  const [owner, entries] = await Promise.all([
+  const [owner, entries, ups] = await Promise.all([
     supabase
       .from("users")
       .select("id, display_name")
@@ -324,13 +342,20 @@ router.get("/api/explore/projects/:id", async (req, res) => {
       .select("*")
       .eq("project_id", id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("project_upvotes")
+      .select("voter_id")
+      .eq("project_id", id),
   ]);
 
+  const upvoters = ups.data ?? [];
   res.json({
     ok: true,
     project,
     owner: owner.data ?? null,
     entries: entries.data ?? [],
+    upvotes: upvoters.length,
+    has_upvoted: upvoters.some((u) => u.voter_id === session.userId),
   });
 });
 
