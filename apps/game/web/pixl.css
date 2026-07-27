@@ -232,7 +232,7 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
   transition:background .12s ease,box-shadow .12s ease,transform .12s ease,color .12s ease,border-color .12s ease;
   text-decoration:none;white-space:nowrap;
 }
-.btn:hover{background:var(--gold-soft);transform:translateY(-2px);box-shadow:0 5px 0 color-mix(in srgb,var(--gold) 55%,#000)}
+.btn:hover{background:var(--gold-soft);color:var(--btn-ink);transform:translateY(-2px);box-shadow:0 5px 0 color-mix(in srgb,var(--gold) 55%,#000)}
 .btn:active{transform:translateY(1px);box-shadow:0 1px 0 color-mix(in srgb,var(--gold) 55%,#000)}
 .btn.dark{background:var(--panel-2);color:var(--dim);border-color:var(--stroke);box-shadow:0 3px 0 var(--panel-deep)}
 .btn.dark:hover{background:var(--panel);color:var(--gold);border-color:var(--gold)}
