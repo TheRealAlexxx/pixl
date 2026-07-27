@@ -1328,10 +1328,17 @@ app.action('delete_pixl', async ({ ack, body, client }) => {
   }
 });
 
-// React with :pixl-delete: on any Pixo message to delete it
+// React with :pixl-delete: on any Pixo message to delete it — except help
+// tickets. Ticket messages (the original question in the help channel, and
+// the status card in the private ticket channel) are records the support
+// team relies on; letting anyone erase them with a reaction would nuke
+// ticket history, so those two channels are exempt.
 app.event('reaction_added', async ({ event, client }) => {
   if (event.reaction !== 'pixl-delete') return;
   if (event.item.type !== 'message') return;
+  if (event.item.channel === process.env.SLACK_HELP_CHANNEL || event.item.channel === process.env.SLACK_TICKET_CHANNEL) {
+    return;
+  }
   try {
     await client.chat.delete({ channel: event.item.channel, ts: event.item.ts });
   } catch (e) {
