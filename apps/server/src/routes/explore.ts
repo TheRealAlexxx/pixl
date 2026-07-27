@@ -228,7 +228,7 @@ router.get("/api/explore/players/:id", async (req, res) => {
   const id = String(req.params.id);
   const userQuery = (fields: string) =>
     supabase.from("users").select(fields).eq("id", id).maybeSingle();
-  const [user, fallbackUser, projects] = await Promise.all([
+  const [user, fallbackUser, projects, owned] = await Promise.all([
     userQuery("id, display_name, skin, created_at, pixels, avatar_url, card_pixelate, slack_id"),
     userQuery("id, display_name, skin, created_at, pixels, avatar_url, slack_id"),
     supabase
@@ -240,15 +240,25 @@ router.get("/api/explore/players/:id", async (req, res) => {
     .is("banned_at", null)
     .eq("status", "approved")
       .order("created_at", { ascending: false }),
+    supabase
+      .from("collectible_purchases")
+      .select("created_at, collectibles(id, name, description, image_url)")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false }),
   ]);
   const data = (user.error ? fallbackUser.data : user.data) as Record<string, unknown> | null;
   if (!data) return res.status(404).json({ ok: false });
+
+  const collectibles = (owned.data ?? [])
+    .map((r) => (r as { collectibles: unknown }).collectibles)
+    .filter(Boolean);
 
   const xp = await approvedHoursFor(id);
   res.json({
     ok: true,
     player: { ...data, xp_hours: xp, level: levelFor(xp) },
     projects: projects.data ?? [],
+    collectibles,
   });
 });
 

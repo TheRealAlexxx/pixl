@@ -95,6 +95,12 @@
   .stat .v { color: var(--gold); font-size: 21px; }
   .stat .k { color: var(--faint); font-size: 12.5px; letter-spacing: 1px; }
   .section-h { font-size: 20px; color: var(--gold); margin: 28px 0 14px; letter-spacing: 1px; }
+  .col-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .coll { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .coll-thumb { width: 34px; height: 34px; border-radius: 8px; background: var(--panel-2); border: 1px solid var(--stroke);
+    display: grid; place-items: center; color: var(--gold); overflow: hidden; flex-shrink: 0; }
+  .coll-thumb img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+  .coll-name { font-family: var(--pixel); font-size: 13px; color: var(--ink); }
   .journal { display: flex; flex-direction: column; gap: 12px; max-width: 780px; }
   .journal-entry { padding: 16px 18px; }
   .journal-entry .jmeta { font-size: 13px; color: var(--faint); margin-bottom: 8px; display: flex; gap: 12px; }
@@ -269,6 +275,7 @@ async function showPlayer(id) {
   catch { view.innerHTML = `<div class="empty-note">PLAYER NOT FOUND.</div>`; return; }
   const p = data.player;
   const projects = data.projects || [];
+  const collectibles = data.collectibles || [];
   view.innerHTML = `
     <button class="btn dark back-btn" onclick="location.hash='#players'">← ALL PLAYERS</button>
     <div class="profile-head panel">
@@ -283,10 +290,21 @@ async function showPlayer(id) {
         </div>
       </div>
     </div>
+    ${collectibles.length ? `
+    <div class="section-h">COLLECTIBLES</div>
+    <div class="col-row">${collectibles.map(collChip).join("")}</div>` : ""}
     <div class="section-h">PROJECTS</div>
     ${projects.length === 0
       ? `<div class="empty-note">NOTHING SHIPPED YET.</div>`
       : `<div class="grid">${projects.map((pr) => projCard({ ...pr, owner_name: p.display_name })).join("")}</div>`}`;
+}
+
+// A collectible the player owns, shown as a small badge on their profile.
+function collChip(c) {
+  return `<div class="coll panel" title="${Pixl.esc(c.description || "")}">
+    <div class="coll-thumb">${c.image_url ? `<img src="${Pixl.esc(c.image_url)}" alt="" onerror="this.remove()">` : "▲"}</div>
+    <div class="coll-name">${Pixl.esc(c.name)}</div>
+  </div>`;
 }
 
 async function showProject(id) {
