@@ -12,7 +12,7 @@ extends CanvasLayer
 const THEME := preload("res://themes/main_theme.tres")
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const SAVE_PATH := "user://first_project_guide.cfg"
-const POLL_INTERVAL := 12.0
+const POLL_INTERVAL := 6.0
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
 const DIM := Color(0.62, 0.57, 0.47)
 const PIXO := "Pixo"
@@ -54,6 +54,7 @@ var _active := false
 var _step := S_CREATE
 var _collapsed := false
 var _busy := false
+var _busy_at := 0.0
 
 var _root: Control
 var _body: VBoxContainer
@@ -106,12 +107,25 @@ func _on_tick() -> void:
 	if _active and _in_gameplay() and NetworkManager.session_token != "":
 		_poll()
 
+# Poll the instant the game regains focus. Browsers pause timers in a backgrounded
+# tab, so when the player tabs back from creating their project / connecting
+# Hackatime in the browser, this catches it right away instead of on the next tick.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_WM_WINDOW_FOCUS_IN:
+		if _active and _in_gameplay() and NetworkManager.session_token != "":
+			_poll()
+
 # ── polling / state machine ──────────────────────────────────────────────────
 
 func _poll() -> void:
-	if _busy or not _active or NetworkManager.session_token == "":
+	if not _active or NetworkManager.session_token == "":
+		return
+	# A poll is in flight — skip, unless it's been stuck too long (safety net so a
+	# wedged request can never permanently stop the checklist from updating).
+	if _busy and Time.get_ticks_msec() - _busy_at < 20000:
 		return
 	_busy = true
+	_busy_at = Time.get_ticks_msec()
 	var proj: Dictionary = await _api_get("/api/projects")
 	var hack: Dictionary = await _api_get("/api/hackatime/stats")
 	_busy = false
@@ -203,6 +217,15 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 18)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
+
+	# Manual re-check, so the player is never stuck waiting on the poll.
+	var refresh_btn := Button.new()
+	refresh_btn.theme_type_variation = &"GreyButton"
+	refresh_btn.text = "↻"
+	refresh_btn.custom_minimum_size = Vector2(30, 0)
+	refresh_btn.tooltip_text = "Check progress now"
+	refresh_btn.pressed.connect(_poll)
+	header.add_child(refresh_btn)
 
 	_collapse_btn = Button.new()
 	_collapse_btn.theme_type_variation = &"GreyButton"
@@ -307,7 +330,11 @@ func _api_get(path: String) -> Dictionary:
 	add_child(req)
 	var url := NetworkManager.SERVER_HTTP_URL + path
 	url += ("&" if path.contains("?") else "?") + "token=" + NetworkManager.session_token.uri_encode()
-	req.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
+	# If request() itself fails, request_completed never fires — bail now so the
+	# caller's await can't hang forever (which would wedge _busy and stop polling).
+	if req.request(url, PackedStringArray(), HTTPClient.METHOD_GET) != OK:
+		req.queue_free()
+		return {}
 	var r: Array = await req.request_completed
 	req.queue_free()
 	if int(r[1]) != 200 or (r[3] as PackedByteArray).size() == 0:
