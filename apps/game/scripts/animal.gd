@@ -34,7 +34,11 @@ var _affection: int = 0
 var _follow_time: float = 0.0
 var _heart_time: float = 0.0
 var _companion_heart: Sprite2D = null
+var _follow_offset: Vector2 = Vector2.ZERO
 const FOLLOW_STOP_DIST := 22.0
+const COMPANION_GROUP := "pixl_companions"
+## How close two companions can pack before they gently push apart.
+const COMPANION_SEPARATION := 16.0
 
 func _ready() -> void:
 	_spawn_pos = global_position
@@ -200,14 +204,30 @@ func _start_following() -> void:
 	_state = "follow"
 	_follow_time = follow_duration
 	_heart_time = 0.0
+	add_to_group(COMPANION_GROUP)
+	_assign_follow_slot()
 	_show_companion_marker(true)
 	_pop_heart()
+
+## Give this companion its own standing spot in a loose ring around the player so
+## a pack fans out instead of stacking on one point.
+func _assign_follow_slot() -> void:
+	var comps := get_tree().get_nodes_in_group(COMPANION_GROUP)
+	var idx: int = maxi(comps.find(self), 0)
+	var per_ring := 6
+	var ring := idx / per_ring
+	var slot := idx % per_ring
+	var radius := FOLLOW_STOP_DIST + float(ring) * COMPANION_SEPARATION
+	# stagger each ring's angle so outer pets sit in the gaps of the inner ring
+	var angle := TAU * float(slot) / float(per_ring) + float(ring) * 0.6
+	_follow_offset = Vector2(cos(angle), sin(angle)) * radius
 
 func _stop_following() -> void:
 	_affection = 0
 	_spawn_pos = global_position
 	velocity = Vector2.ZERO
 	_state = "idle"
+	remove_from_group(COMPANION_GROUP)
 	_show_companion_marker(false)
 	_play_idle()
 	_wait_then_move()
@@ -239,16 +259,31 @@ func _process_follow(delta: float) -> void:
 	if _heart_time <= 0.0:
 		_pop_heart()
 		_heart_time = randf_range(2.5, 4.0)
-	var to_player := _player.global_position - global_position
-	if to_player.length() > FOLLOW_STOP_DIST:
-		var direction := to_player.normalized()
+	var target := _player.global_position + _follow_offset
+	var to_target := target - global_position
+	if to_target.length() > 3.0:
+		var direction := (to_target.normalized() + _separation_push()).normalized()
 		velocity = direction * speed * follow_speed_mult
-		$AnimatedSprite2D.flip_h = direction.x < 0
+		$AnimatedSprite2D.flip_h = (_player.global_position.x - global_position.x) < 0
 		$AnimatedSprite2D.play("walk")
 	else:
-		velocity = Vector2.ZERO
+		velocity = _separation_push() * speed
+		$AnimatedSprite2D.flip_h = (_player.global_position.x - global_position.x) < 0
 		$AnimatedSprite2D.play("idle")
 	move_and_slide()
+
+## A small steering vector that pushes away from any companion packed too close,
+## so overlapping pets nudge themselves apart.
+func _separation_push() -> Vector2:
+	var push := Vector2.ZERO
+	for other in get_tree().get_nodes_in_group(COMPANION_GROUP):
+		if other == self or not (other is Node2D):
+			continue
+		var away := global_position - (other as Node2D).global_position
+		var d := away.length()
+		if d > 0.01 and d < COMPANION_SEPARATION:
+			push += away.normalized() * (1.0 - d / COMPANION_SEPARATION)
+	return push
 
 func _pop_heart() -> void:
 	var tex := EmoteHud.texture_for("heart")
