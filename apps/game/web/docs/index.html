@@ -257,6 +257,65 @@
         </div>
       </section>
 
+      <section class="doc-page" id="first-site">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Your first site, line by line</h1>
+        <p class="lead">This is the actual code for a tiny personal page you can ship as your very first project. Copy it, change the words to be about you, and you've built something real. No experience needed.</p>
+
+        <h2>1. Make the files</h2>
+        <p>Open VS Code, make a new folder (call it whatever, e.g. <code>my-page</code>), and inside it create two files: <code>index.html</code> and <code>style.css</code>.</p>
+
+        <h2>2. The page — <code>index.html</code></h2>
+        <p>Paste this in. It's a whole webpage: a heading, a line about you, and a couple of links.</p>
+        <pre><code class="language-html">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;
+  &lt;title&gt;Your Name&lt;/title&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;main&gt;
+    &lt;h1&gt;Hi, I'm Your Name&lt;/h1&gt;
+    &lt;p&gt;I'm a builder on Pixl. I like making things and I'm just getting started.&lt;/p&gt;
+    &lt;ul&gt;
+      &lt;li&gt;&lt;a href="https://github.com/yourname"&gt;My GitHub&lt;/a&gt;&lt;/li&gt;
+      &lt;li&gt;&lt;a href="https://pixl.rsvp"&gt;Pixl&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/main&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+        <h2>3. The style — <code>style.css</code></h2>
+        <p>HTML on its own looks plain. This makes it look intentional.</p>
+        <pre><code class="language-css">body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, sans-serif;
+  background: #16130d;
+  color: #f4e3c2;
+}
+main { max-width: 32rem; padding: 2rem; }
+h1 { font-size: 2.2rem; margin: 0 0 .5rem; }
+a { color: #f4b942; }
+ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
+        <p>Double-click <code>index.html</code> to open it in your browser. That's your site — live, on your own machine.</p>
+
+        <h2>4. Make it yours</h2>
+        <p>Change the name, the sentence, and the links. Add a second paragraph, a photo (<code>&lt;img src="me.png"&gt;</code>), a list of things you've made — whatever. It only has to be real and yours. If you want more tags to play with, the <a href="/docs/html">HTML guide</a> covers the basics.</p>
+
+        <h2>5. Track, push, ship</h2>
+        <p>Before you spend real time on it, get <a href="/docs/hackatime">Hackatime</a> installed so your hours count. Then push the folder to GitHub (the <a href="/docs/git">Git guide</a> has the commands), create the project in your Builder Terminal, and ship it. Full checklist in <a href="/docs/first-project">Build your first project</a>.</p>
+
+        <div class="callout">
+          <span class="k">Stuck?</span>
+          <p>That's normal — everyone is at first. Ask in the Pixl help channel, or just ship the simplest version that works. Finished beats perfect.</p>
+        </div>
+      </section>
+
       <section class="doc-page" id="shipping">
         <div class="eyebrow">Build &amp; ship</div>
         <h1>Shipping</h1>
@@ -630,7 +689,7 @@ dist/</code></pre>
   const GROUPS = [
     { title: "Start here", items: [["welcome", "Welcome"], ["get", "What you get"]] },
     { title: "The Restoration", items: [["restoration", "How it works"], ["sidequest", "Your sidequest"]] },
-    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["shipping", "Shipping"], ["rewards", "Rewards"]] },
+    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["first-site", "Your first site (code)"], ["shipping", "Shipping"], ["rewards", "Rewards"]] },
     { title: "Resources", items: [["free", "Free stuff"], ["help", "Need help"]] },
     { title: "Guides", items: [["html", "HTML guide"], ["slack", "Slack app"], ["roblox", "Roblox"], ["react-native", "React Native"], ["pixel-art", "Pixel art"]] },
     { title: "Setup", items: [["hackatime", "Hackatime"], ["submitting", "Submitting"], ["git", "Git & GitHub"]] },
