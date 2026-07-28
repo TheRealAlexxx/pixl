@@ -103,10 +103,10 @@ export async function ticketActivity(): Promise<ActivityPoint[]> {
   }
 }
 
-async function slackCall(
+async function slackFetch(
   method: string,
   body: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, unknown> & { ok: boolean; error?: string }> {
   const token = process.env.SLACK_BOT_TOKEN;
   if (!token) throw new Error("SLACK_BOT_TOKEN is not set");
   const res = await fetch(`https://slack.com/api/${method}`, {
@@ -117,10 +117,21 @@ async function slackCall(
     },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as Record<string, unknown> & {
-    ok: boolean;
-    error?: string;
-  };
+  return (await res.json()) as Record<string, unknown> & { ok: boolean; error?: string };
+}
+
+async function slackCall(
+  method: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  let json = await slackFetch(method, body);
+  // The dashboard bot isn't auto-added to the help channel the way Pixorpheus
+  // is, so writes come back `not_in_channel`. Self-join the (public) channel
+  // and retry once. Private channels still need a manual invite.
+  if (!json.ok && json.error === "not_in_channel" && typeof body.channel === "string") {
+    const joined = await slackFetch("conversations.join", { channel: body.channel });
+    if (joined.ok) json = await slackFetch(method, body);
+  }
   if (!json.ok) throw new Error(`Slack ${method} failed: ${json.error}`);
   return json;
 }
