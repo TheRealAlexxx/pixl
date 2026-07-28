@@ -5,6 +5,9 @@ const ONBOARDING := preload("res://scripts/onboarding.gd")
 
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
+# Main menu & pause menu keep the original Monocraft face; the rest of the game
+# moved its default menu font to Pixelify Sans (see commit b8b1360).
+const OLD_MENU_FONT := preload("res://assets/fonts/Monocraft.ttf")
 
 var _root: Control
 var _resume_button: Button
@@ -26,7 +29,11 @@ var _name_saving := false
 # Control.scale (a transform just blurs the already-rasterized pixel font
 # instead of actually growing it — reads as the wrong font entirely).
 func _touch_theme() -> Theme:
-	return Settings.touch_menu_theme(THEME)
+	# touch_menu_theme always hands back a duplicate, so swapping the default
+	# font here is safe and never touches the shared THEME resource.
+	var t := Settings.touch_menu_theme(THEME)
+	t.default_font = OLD_MENU_FONT
+	return t
 
 func _ready() -> void:
 	layer = 100

@@ -39,6 +39,11 @@ const FOLLOW_STOP_DIST := 22.0
 const COMPANION_GROUP := "pixl_companions"
 ## How close two companions can pack before they gently push apart.
 const COMPANION_SEPARATION := 16.0
+## Ease the follow speed down within this distance of the standing spot, and
+## treat anything inside the deadzone as "arrived" so pets settle instead of
+## ping-ponging across their target (the jitter you saw when the player stops).
+const FOLLOW_ARRIVE := 12.0
+const FOLLOW_DEADZONE := 2.0
 
 func _ready() -> void:
 	_spawn_pos = global_position
@@ -261,14 +266,23 @@ func _process_follow(delta: float) -> void:
 		_heart_time = randf_range(2.5, 4.0)
 	var target := _player.global_position + _follow_offset
 	var to_target := target - global_position
-	if to_target.length() > 3.0:
-		var direction := (to_target.normalized() + _separation_push()).normalized()
-		velocity = direction * speed * follow_speed_mult
-		$AnimatedSprite2D.flip_h = (_player.global_position.x - global_position.x) < 0
+	var dist := to_target.length()
+	var max_speed := speed * follow_speed_mult
+	var desired := Vector2.ZERO
+	if dist > FOLLOW_DEADZONE:
+		# Scale speed down as the pet closes in so it eases onto its spot rather
+		# than blowing past it and having to walk back every frame.
+		var arrive := clampf(dist / FOLLOW_ARRIVE, 0.0, 1.0)
+		desired = to_target.normalized() * max_speed * arrive
+	# Separation still nudges packed pets apart, but capped so it can't fling.
+	desired += _separation_push().limit_length(1.0) * speed
+	# Smooth toward the desired velocity (frame-rate independent) to kill the
+	# single-frame jitter that made a stopped pack twitch in place.
+	velocity = velocity.lerp(desired, 1.0 - exp(-12.0 * delta))
+	if velocity.length() > 4.0:
+		$AnimatedSprite2D.flip_h = velocity.x < 0
 		$AnimatedSprite2D.play("walk")
 	else:
-		velocity = _separation_push() * speed
-		$AnimatedSprite2D.flip_h = (_player.global_position.x - global_position.x) < 0
 		$AnimatedSprite2D.play("idle")
 	move_and_slide()
 
