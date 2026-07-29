@@ -183,29 +183,29 @@ export function Hero() {
           </motion.div>
         </div>
         <motion.div
-          className="absolute bottom-4 sm:bottom-6 flex flex-col items-center gap-1 select-none pointer-events-none"
+          className="absolute bottom-5 sm:bottom-8 flex flex-col items-center gap-2 select-none pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 1.4 }}
         >
           <p
-            className="font-sans text-white/90 text-xs sm:text-sm"
-            style={{ textShadow: "0 1px 4px rgba(0,0,0,0.55)" }}
+            className="font-pixel text-white text-sm sm:text-lg md:text-xl uppercase tracking-widest"
+            style={{ textShadow: "0 2px 6px rgba(0,0,0,0.7)" }}
           >
             {t.scrollHint}
           </p>
           <motion.svg
-            width="20"
-            height="20"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="none"
             stroke="white"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="opacity-90"
-            style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.55))" }}
-            animate={{ y: [0, 5, 0] }}
+            className="sm:w-9 sm:h-9"
+            style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
+            animate={{ y: [0, 7, 0] }}
             transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
           >
             <path d="M6 9l6 6 6-6" />
