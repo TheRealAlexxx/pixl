@@ -65,16 +65,17 @@ const ITEM_IMAGES = [
   "/shop/framework-16.png",
   "/shop/mac-mini.png",
   "/shop/nintendo-switch-2.png",
+  "/shop/meme-pack.png",
 ];
 
 // Repriced at the base rate of 1h = $3.5 = 50px (hours rounded to the
 // nearest 0.5). That rate is the floor — it only gets better once a shipped
 // project's Restoration Energy multiplier kicks in.
 const ITEM_PRICES = [
-  100, 150, 150, 150, 150, 150, 150, 175, 150, 200, 150, 225, 225, 150, 225, 225, 275, 325, 350, 575, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150,
+  100, 150, 150, 150, 150, 150, 150, 175, 150, 200, 150, 225, 225, 150, 225, 225, 275, 325, 350, 575, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150, 100,
 ];
 
-const NICHE_INDICES = new Set([0, 9, 11, 17]);
+const NICHE_INDICES = new Set([0, 9, 11, 17, 60]);
 
 function ShopCard({
   item,

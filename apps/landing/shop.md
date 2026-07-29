@@ -74,6 +74,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `framework-16` | Framework 16 DIY | — (configurator) | 17843 base | $1249 base from frame.work, priced per-component via `config_options` (0058), not a flat rate | `/shop/framework-16.png` |
 | `mac-mini` | Mac Mini (24GB/512GB) | 448.5 h | 22425 | $1570 Amazon US, easily shippable, order in user's regional store | `/shop/mac-mini.png` |
 | `nintendo-switch-2` | Nintendo Switch 2 | 143 h | 7150 | $500 Amazon US. **New item** | `/shop/nintendo-switch-2.png` (pending — needs an image) |
+| `meme-pack` | Community Meme Pack (5-Pack) | 2 h | 100 | 5 random memes made by the community team, printed on real photo paper. ~$5 real cost (prints + envelope), priced like Signed Org Photo rather than the raw formula price — a fun collectible, not a grant. **New item, US only for now** | `/shop/meme-pack.png` (pending — needs an image) |
 
 ## Sidequest Rewards (not buyable — earned by completing sidequests)
 
@@ -106,6 +107,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 - All images are now in place — no more SVG placeholders. `signed-photo.png` is a fanned polaroid composite (the 3 orgs' Slack pfps); `mystery-box.png`, `hardware-grant.png`, `apple-dev.png`, `steam-license.png` are real/generated images swapped in after the initial batch.
 - All other images (including the 9 new grant/license icons — `hardware-grant`, `domain-grant`, `hosting-grant`, `cpu-grant`, `gpu-grant`, `ram-grant`, `google-play`, `steam-license`, `apple-dev` — and the real photos for `pencil-pro` and `ipad-air-m4`) are in place, no longer pending.
 - `nintendo-switch-2.png` is pending — new item added in the 2026-07-29 repricing pass, no image yet.
+- `meme-pack.png` is pending — new item, no image yet (memes are community-made, so this one needs an actual photo of a printed pack once they're made).
 
 ## Where to edit items
 
