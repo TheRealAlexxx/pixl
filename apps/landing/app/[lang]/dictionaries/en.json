@@ -454,6 +454,10 @@
       {
         "name": "Mac Mini (24GB/512GB)",
         "description": "A compact desktop Mac for coding, streaming and everyday builds."
+      },
+      {
+        "name": "Nintendo Switch 2",
+        "description": "Nintendo's newest handheld/console hybrid. Play your builds and everything else on the go or on the big screen."
       }
     ]
   },

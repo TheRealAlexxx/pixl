@@ -64,10 +64,14 @@ const ITEM_IMAGES = [
   "/shop/framework-13.png",
   "/shop/framework-16.png",
   "/shop/mac-mini.png",
+  "/shop/nintendo-switch-2.png",
 ];
 
+// Repriced at the base rate of 1h = $3.5 = 50px (hours rounded to the
+// nearest 0.5). That rate is the floor — it only gets better once a shipped
+// project's Restoration Energy multiplier kicks in.
 const ITEM_PRICES = [
-  100, 150, 150, 150, 150, 150, 175, 175, 175, 200, 200, 200, 200, 200, 250, 250, 300, 350, 350, 400, 400, 425, 500, 500, 650, 700, 700, 700, 700, 700, 750, 1000, 1000, 1450, 1450, 1450, 1500, 1850, 2000, 2150, 2750, 2900, 3350, 3350, 3600, 3750, 4250, 5000, 5750, 5750, 5750, 6450, 7150, 10000, 10000, 17150, 17150, 17900, 22500,
+  100, 150, 150, 150, 150, 150, 150, 175, 150, 200, 150, 225, 225, 150, 225, 225, 275, 325, 350, 575, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150,
 ];
 
 const NICHE_INDICES = new Set([0, 9, 11, 17]);
@@ -81,6 +85,7 @@ function ShopCard({
 }) {
   const accent = NICHE_INDICES.has(index) ? "#ec3750" : "#ff8c37";
   const price = ITEM_PRICES[index];
+  const hours = price / 50;
   return (
     <div
       className="relative flex flex-col border-2 border-black bg-[#fffaf7] w-44 shrink-0"
@@ -106,12 +111,15 @@ function ShopCard({
       <div className="px-3 py-2.5 flex flex-col gap-1 flex-1">
         <p className="font-pixel text-xs leading-snug">{item.name}</p>
         <p className="text-black/60 text-[11px] leading-snug font-sans flex-1">{item.description}</p>
-        <span
-          className="self-start font-pixel text-[11px] text-white px-2 py-0.5 border-2 border-black mt-1"
-          style={{ background: accent, boxShadow: "2px 2px 0px #000" }}
-        >
-          {price} px
-        </span>
+        <div className="flex items-baseline gap-1.5 mt-1">
+          <span
+            className="self-start font-pixel text-[11px] text-white px-2 py-0.5 border-2 border-black"
+            style={{ background: accent, boxShadow: "2px 2px 0px #000" }}
+          >
+            {price} px
+          </span>
+          <span className="text-black/40 text-[9px] font-sans">~{hours}h</span>
+        </div>
       </div>
     </div>
   );
