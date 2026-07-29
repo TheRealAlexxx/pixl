@@ -385,6 +385,13 @@
           <option value="pricey">PRICE ↓</option>
           <option value="name">A–Z</option>
         </select>
+        <select class="field" id="region-select" title="Your region — sets which catalog you shop from">
+          <option value="US">🇺🇸 US</option>
+          <option value="NORTH_AMERICA">🌎 North America</option>
+          <option value="SOUTH_AMERICA">🌎 South America</option>
+          <option value="EUROPE">🇪🇺 Europe</option>
+          <option value="ASIA">🌏 Asia</option>
+        </select>
       </div>
 
       <div class="tiers" id="tiers">
@@ -426,6 +433,7 @@
       let xp = 0;
       let claimedIds = new Set();
       let activeTier = "all";
+      let loadingRegion = false;
 
       function basePrice(item) {
         return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
@@ -625,9 +633,7 @@
       }
       setInterval(tickLimited, 1000);
 
-      async function boot() {
-        if (!Pixl.hasToken) return;
-        wallet = await Pixl.loadWallet();
+      async function loadItems() {
         try {
           const data = await Pixl.api("/api/shop/items");
           items = (data.items || []).map((i) => ({
@@ -638,11 +644,11 @@
           }));
           xp = Number(data.xp || 0);
           claimedIds = new Set((data.claimed || []).map(Number));
+          if (data.region) $("region-select").value = data.region;
         } catch (e) {
           if (e.message !== "unauthorized")
             Pixl.toast("Couldn't reach the shop server.", true);
         }
-        $("loading").remove();
         render();
         tickLimited();
         const names =
@@ -652,10 +658,35 @@
             .join("  ◆  ") || "THE SHELVES ARE BARE TODAY";
         $("marquee-inner").innerHTML =
           `<span>${names}  ◆  ${names}  ◆  </span>`;
+      }
+
+      async function boot() {
+        if (!Pixl.hasToken) return;
+        wallet = await Pixl.loadWallet();
+        await loadItems();
+        $("loading").remove();
         if (wallet)
           say(`HEY! YOU'VE GOT ${Math.round(wallet.pixels)} PX TO BURN.`, 5000);
       }
       boot();
+
+      $("region-select").addEventListener("change", async (e) => {
+        if (loadingRegion) return;
+        loadingRegion = true;
+        const region = e.target.value;
+        e.target.disabled = true;
+        const label = e.target.selectedOptions[0]?.textContent || region;
+        const r = await Pixl.send("POST", "/api/shop/region", { region });
+        if (r.ok) {
+          say(`SWITCHED TO ${label}. NEW SHELVES!`, 3500);
+          await loadItems();
+        } else {
+          Pixl.toast("Couldn't switch region.", true);
+          await loadItems(); // resync the dropdown to whatever the server has
+        }
+        e.target.disabled = false;
+        loadingRegion = false;
+      });
     </script>
   </body>
 </html>
