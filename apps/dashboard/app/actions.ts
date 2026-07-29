@@ -22,6 +22,7 @@ import {
 } from "@/lib/db";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
 import { serializeGroups } from "@/lib/shopOptions";
+import { SHOP_REGIONS, type ShopRegion } from "@/lib/shopRegions";
 import { kickOnlinePlayer } from "@/lib/gameServer";
 import { dmOrEmail } from "@/lib/notify";
 import {
@@ -1616,6 +1617,10 @@ async function uploadShopImage(file: File): Promise<string> {
   return `${base}/storage/v1/object/public/shop/${name}`;
 }
 
+function readRegion(raw: string): ShopRegion {
+  return (SHOP_REGIONS as readonly string[]).includes(raw) ? (raw as ShopRegion) : "US";
+}
+
 function readOptions(raw: string): string[] {
   const s = raw.trim();
   if (!s) return [];
@@ -1645,6 +1650,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim().slice(0, 300);
   const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
   const options = readOptions(String(formData.get("options") ?? ""));
+  const region = readRegion(String(formData.get("region") ?? ""));
   if (!name) return;
   // Double-submit guard: an identical name created in the last minute is the
   // same click arriving twice, not a new item.
@@ -1652,6 +1658,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
     .from("shop_items")
     .select("id")
     .eq("name", name)
+    .eq("region", region)
     .gte("created_at", new Date(Date.now() - 60_000).toISOString())
     .limit(1);
   if (recent && recent.length > 0) {
@@ -1670,6 +1677,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
     price,
     image_url: imageUrl,
     options,
+    region,
     created_by: actorName(access),
   });
   if (error) throw new Error(error.message);
@@ -1683,8 +1691,9 @@ export async function updateShopItem(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim().slice(0, 300);
   const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
   const options = readOptions(String(formData.get("options") ?? ""));
+  const region = readRegion(String(formData.get("region") ?? ""));
   if (!id || !name) return;
-  const patch: Record<string, unknown> = { name, description, price, options };
+  const patch: Record<string, unknown> = { name, description, price, options, region };
   const image = formData.get("image");
   if (image instanceof File && image.size > 0) {
     if (image.size > 4 * 1024 * 1024) throw new Error("Image too big (max 4 MB).");

@@ -1426,6 +1426,10 @@ export async function countOpenReports(): Promise<number> {
   return count ?? 0;
 }
 
+export { SHOP_REGIONS, SHOP_REGION_LABELS } from "./shopRegions";
+export type { ShopRegion } from "./shopRegions";
+import type { ShopRegion } from "./shopRegions";
+
 export interface ShopItemRow {
   id: number;
   name: string;
@@ -1437,12 +1441,15 @@ export interface ShopItemRow {
   position: number;
   created_by: string;
   created_at: string;
+  region: ShopRegion;
 }
 
-export async function listShopItems(): Promise<ShopItemRow[]> {
-  const { data, error } = await db
-    .from("shop_items")
-    .select("*")
+// Omit `region` to get every item across all regions (used by the events
+// merchant picker, which isn't region-scoped).
+export async function listShopItems(region?: ShopRegion): Promise<ShopItemRow[]> {
+  let query = db.from("shop_items").select("*");
+  if (region) query = query.eq("region", region);
+  const { data, error } = await query
     .order("position", { ascending: true })
     .order("id", { ascending: true });
   if (error) {
