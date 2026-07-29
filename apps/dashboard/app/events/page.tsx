@@ -67,7 +67,10 @@ export default async function EventsPage({
   if (!access.isSuper) redirect("/");
   const { error, created } = await searchParams;
 
-  const [events, shopItems] = await Promise.all([listEvents(), listShopItems()]);
+  const [events, allShopItems] = await Promise.all([listEvents(), listShopItems()]);
+  // Trophies (unlock_xp > 0) are earned, not sold — never offer one as a
+  // limited mystery-merchant item.
+  const shopItems = allShopItems.filter((i) => i.unlock_xp === 0);
   const progress = new Map<number, number>();
   const claims = new Map<number, number>();
   for (const ev of events) {

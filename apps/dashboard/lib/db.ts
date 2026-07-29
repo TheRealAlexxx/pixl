@@ -1442,6 +1442,7 @@ export interface ShopItemRow {
   created_by: string;
   created_at: string;
   region: ShopRegion;
+  unlock_xp: number;
 }
 
 // Omit `region` to get every item across all regions (used by the events

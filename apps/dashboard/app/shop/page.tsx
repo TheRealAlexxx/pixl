@@ -37,7 +37,12 @@ export default async function ShopPage({
   const region: ShopRegion = (SHOP_REGIONS as readonly string[]).includes(rawRegion ?? "")
     ? (rawRegion as ShopRegion)
     : "US";
-  const allItems = await listShopItems(region);
+  // Trophies (unlock_xp > 0, e.g. the 3D Printed Blahaj) are earned by
+  // leveling up, not bought with pixels or tied to a region — pull them out
+  // into their own section regardless of which region tab is selected.
+  const [regionItems, everyItem] = await Promise.all([listShopItems(region), listShopItems()]);
+  const trophies = everyItem.filter((i) => i.unlock_xp > 0);
+  const allItems = regionItems.filter((i) => i.unlock_xp === 0);
   const pages = Math.max(1, Math.ceil(allItems.length / PER));
   const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
   const start = (cur - 1) * PER;
@@ -52,6 +57,57 @@ export default async function ShopPage({
           only browse, so feel free to stock the shelves.
         </p>
       </div>
+
+      {trophies.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-muted-foreground mb-3">
+            🏆 Trophies · earned by leveling up, not bought or region-scoped
+          </div>
+          <div className="grid gap-4">
+            {trophies.map((item) => (
+              <Card key={item.id} className={`p-4 gap-4 flex-row ${item.active ? "" : "opacity-60"}`}>
+                {item.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.image_url}
+                    alt=""
+                    className="w-20 h-20 rounded-lg object-cover border border-border shrink-0 [image-rendering:pixelated]"
+                  />
+                ) : (
+                  <span className="grid place-items-center w-20 h-20 rounded-lg bg-muted border border-border shrink-0 text-2xl">
+                    🏆
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold">{item.name}</span>
+                    <Badge variant="secondary" className="tabular-nums">
+                      Unlocks at {item.unlock_xp} XP
+                    </Badge>
+                    {!item.active && <Badge variant="secondary">hidden</Badge>}
+                  </div>
+                  {item.description && (
+                    <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
+                  )}
+                  <div className="flex items-center gap-2 mt-3">
+                    <form action={toggleShopItem}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <input type="hidden" name="active" value={item.active ? "0" : "1"} />
+                      <PendingButton
+                        variant="outline"
+                        size="sm"
+                        pendingText={item.active ? "Hiding…" : "Showing…"}
+                      >
+                        {item.active ? "Hide" : "Show"}
+                      </PendingButton>
+                    </form>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-1.5 flex-wrap">
         {SHOP_REGIONS.map((r) => (
