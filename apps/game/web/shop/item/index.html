@@ -135,6 +135,21 @@
       }
       .price img { width: 20px; height: 20px; }
       .price.cant { color: var(--bad); }
+      .price-hours {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--faint);
+        margin-left: 2px;
+      }
+      .rate-note {
+        font-family: var(--sans);
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--faint);
+        margin: 2px 0 4px;
+        max-width: 340px;
+      }
       .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .opt-group { display: flex; flex-direction: column; gap: 6px; }
       .opt-group-name {
@@ -205,6 +220,7 @@
               <div id="detail-name"></div>
               <div id="detail-limited"></div>
               <div class="price" id="detail-price"></div>
+              <div class="rate-note">1h shipped = $3.5 = 50px — the shop's lowest rate. It only climbs from there once your Restoration Energy multiplier kicks in.</div>
               <div id="detail-desc"></div>
               <div class="options-row" id="detail-options"></div>
               <div>
@@ -302,7 +318,7 @@
         const price = computeConfigPrice(selected, configPick);
         const afford = wallet && wallet.pixels >= price;
         $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS`;
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS<span class="price-hours">~${hoursOf(price)}h</span>`;
         $("detail-price").classList.toggle("cant", !afford);
         $("buy-btn").disabled = !afford;
         $("buy-btn").textContent = "BUY";
@@ -398,6 +414,13 @@
         const p = item.config_options ? Number(item.config_options.base_price) : Number(item.price);
         return wallet && wallet.pixels >= p;
       }
+
+      // Every price is hours × 50 at the shop's $3.5/h base rate, so hours
+      // is always just price / 50 — no separate stored value needed.
+      function hoursOf(px) {
+        const h = Math.round((px / 50) * 10) / 10;
+        return Number.isInteger(h) ? String(h) : h.toFixed(1);
+      }
       function imgHtml(item) {
         const url = String(item.image_url || "");
         if (!url) return `<span class="ph"></span>`;
@@ -484,7 +507,7 @@
           ? `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`
           : "";
         $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${Number(selected.price)} PIXELS`;
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${Number(selected.price)} PIXELS<span class="price-hours">~${hoursOf(Number(selected.price))}h</span>`;
         $("detail-price").classList.toggle("cant", !canAfford(selected));
         $("buy-btn").textContent = "BUY";
         $("buy-btn").disabled = !canAfford(selected);

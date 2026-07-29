@@ -219,6 +219,11 @@
         justify-content: space-between;
         margin-top: auto;
       }
+      .price-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
       .price {
         color: var(--gold);
         font-family: var(--sans);
@@ -231,6 +236,20 @@
       }
       .price img { width: 16px; height: 16px; }
       .price.cant { color: var(--bad); }
+      .price-hours {
+        font-family: var(--sans);
+        font-size: 10.5px;
+        font-weight: 500;
+        color: var(--faint);
+      }
+      .rate-note {
+        font-family: var(--sans);
+        font-size: 11.5px;
+        line-height: 1.4;
+        color: var(--faint);
+        margin-top: 6px;
+        max-width: 300px;
+      }
       .limited-tag {
         position: absolute;
         top: -9px;
@@ -346,6 +365,7 @@
           <div class="shop-title-box">
             <h1 class="page-title">THE PIXL SHOP</h1>
             <div class="page-sub">Stickers · Licenses · Plushies · Hardware — all real</div>
+            <div class="rate-note">1h shipped = $3.5 = 50px — the shop's lowest rate. It only climbs from there once your Restoration Energy multiplier kicks in.</div>
             <div class="open-sign"><span class="dot teal"></span>OPEN · PIXELS ACCEPTED</div>
           </div>
         </div>
@@ -409,6 +429,13 @@
 
       function basePrice(item) {
         return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
+      }
+
+      // Every price is hours × 50 at the shop's $3.5/h base rate, so hours
+      // is always just price / 50 — no separate stored value needed.
+      function hoursOf(px) {
+        const h = Math.round((px / 50) * 10) / 10;
+        return Number.isInteger(h) ? String(h) : h.toFixed(1);
       }
 
       function isTrophy(item) {
@@ -529,7 +556,10 @@
       <div class="item-name">${Pixl.esc(item.name)}</div>
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
       <div class="item-foot">
-        <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${item.config_options ? `FROM ${basePrice(item).toLocaleString()}` : basePrice(item).toLocaleString()} PX</span>
+        <div class="price-wrap">
+          <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${item.config_options ? `FROM ${basePrice(item).toLocaleString()}` : basePrice(item).toLocaleString()} PX</span>
+          <span class="price-hours">~${hoursOf(basePrice(item))}h</span>
+        </div>
         <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
       </div>
     </div>`,
