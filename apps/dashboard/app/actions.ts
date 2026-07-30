@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import sharp from "sharp";
 import {
   db,
   getAdmin,
@@ -1582,21 +1583,28 @@ export async function kickPlayer(formData: FormData): Promise<void> {
 }
 
 // Upload a shop image to Supabase Storage (public "shop" bucket, created on
-// first use) and return its public URL.
+// first use) and return its public URL. Resized/re-encoded to WebP first —
+// shop images are shown at most at 300×300 (the item detail page), but
+// admins often upload straight-from-phone photos that can be several MB,
+// which made shop pages painfully slow to load. Capping at 900×900 (a 3x
+// retina margin) and re-encoding to WebP keeps every upload small regardless
+// of what was submitted.
 async function uploadShopImage(file: File): Promise<string> {
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
-  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const body = Buffer.from(await file.arrayBuffer());
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const body = await sharp(Buffer.from(await file.arrayBuffer()))
+    .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
   const upload = () =>
     fetch(`${base}/storage/v1/object/shop/${name}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         apikey: key,
-        "Content-Type": file.type || "image/png",
+        "Content-Type": "image/webp",
       },
       body,
     });
