@@ -1359,7 +1359,7 @@ const PIXL_WELCOME_MSGS = [
   "welcome !! pixl is a retro 2D world where you level up by building real stuff — not launched yet but launching soon, stay tuned :yay:",
   "heyy welcome :hyper-dino-wave: pixl hasn't launched yet but it drops soon — you're getting in before everyone fr",
   "welcome to pixl !! it's a game where you build real things and get rewarded for it — launching soon, you picked the perfect time to show up :sm_slap:",
-  "oh a new one :eyes-shaking: welcome !! pixl isn't out yet but launch is coming soon — hang around, you'll be first in line",
+  "oh a new one :eyes_shaking: welcome !! pixl isn't out yet but launch is coming soon — hang around, you'll be first in line",
 ];
 
 app.event('member_joined_channel', async ({ event, client }) => {
