@@ -74,6 +74,11 @@ export default async function ReviewDetail({
   const data = await getProject(projectId);
   if (!data) notFound();
   const { project: p, journals, verdicts } = data;
+  // The Trial this project was shipped for, if the player flagged one at ship
+  // time (joined in getProject). null = they built their own idea.
+  const trial = (
+    p as { sidequests?: { name?: string; region?: string; reward?: string; min_hours?: number | null } | null }
+  ).sidequests;
 
   const isFinalStage = p.status === "second_review";
   const isOwn = !!p.users?.slack_id && p.users.slack_id === viewer && !access.isSuper;
@@ -194,6 +199,12 @@ export default async function ReviewDetail({
               <LevelBadge level={p.level} />
               <TypeBadge type={p.project_type} />
               <ShipBadges project={p} />
+              {trial?.name && (
+                <Badge variant="secondary" className="font-bold">
+                  Trial: {trial.name}
+                  {trial.min_hours != null ? ` · min ${trial.min_hours}h` : ""}
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground font-mono ml-auto">#{p.id}</span>
             </div>
             {!isOwn && (
@@ -447,6 +458,9 @@ export default async function ReviewDetail({
                     defaultHours={formDefaultHours}
                     secondPass={isFinalStage}
                     bounties={bounties}
+                    trial={
+                      trial?.name ? { name: trial.name, minHours: trial.min_hours ?? null } : null
+                    }
                   />
                 </Card>
 

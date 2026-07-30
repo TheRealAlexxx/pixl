@@ -790,6 +790,7 @@
         journal_too_short:
           "Log more detail — journals need ~100 characters per hour.",
         not_in_review: "This project isn't in review.",
+        trial_hours_below_minimum: "This Trial needs more tracked hours before you can ship it.",
       };
       const err = (e) => ERRORS[e] || "Something went wrong — try again.";
 
@@ -1431,7 +1432,14 @@
         Pixl.toast("Checking your repo and demo…");
         const r = await Pixl.send("POST", `/api/projects/${p.id}/ship`, body);
         $("s-ship").disabled = false;
-        if (!r.ok) return Pixl.toast(err(r.error), true);
+        if (!r.ok) {
+          if (r.error === "trial_hours_below_minimum" && r.need != null)
+            return Pixl.toast(
+              `This Trial needs at least ${r.need}h tracked — you're at ${r.have}h.`,
+              true,
+            );
+          return Pixl.toast(err(r.error), true);
+        }
         Pixl.toast("SHIPPED! It's in the review queue.");
         await loadProjects();
         renderProject(p.id);

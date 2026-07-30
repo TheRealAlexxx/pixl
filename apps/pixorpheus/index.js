@@ -23,10 +23,10 @@ function db() { return supabase; }
 async function aiCall(body) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (!openrouterKey) { const err = new Error('no credits'); err.code = NO_CREDITS; throw err; }
-  // Persona chat / roasts / classification model. Haiku 4.5 by default , cheap
-  // and fast for this high-volume bot, still miles better than gemini-flash-lite.
+  // Persona chat / roasts / classification model. Gemini 3.1 Flash Lite by
+  // default, cheap and fast for this high-volume bot.
   // Bump to "anthropic/claude-sonnet-4.6" via PIXO_MODEL if you want more punch.
-  const orBody = { ...body, model: process.env.PIXO_MODEL || 'anthropic/claude-haiku-4.5' };
+  const orBody = { ...body, model: process.env.PIXO_MODEL || 'google/gemini-3.1-flash-lite' };
   try {
     const res = await axios.post(OPENROUTER_URL, orBody, {
       headers: { Authorization: `Bearer ${openrouterKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pixorpheus.app', 'X-Title': 'Pixorpheus' },
@@ -52,7 +52,6 @@ const aiPost = aiCall;
 const aiClassify = aiCall;
 
 const { App, ExpressReceiver } = require("@slack/bolt");
-const Anthropic = require("@anthropic-ai/sdk");
 
 const receiver = new ExpressReceiver({ signingSecret: process.env.SLACK_SIGNING_SECRET });
 
@@ -1387,7 +1386,6 @@ app.event('member_joined_channel', async ({ event, client }) => {
   }
 });
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const dmHistory = new Map();
 
 const userMemory = new Map();
@@ -2214,18 +2212,13 @@ app.message(async ({ message, client }) => {
         ? [{ role: 'user', content: dmMemoryBlock }, { role: 'assistant', content: 'got it' }, ...hist.slice(-10)]
         : hist.slice(-10);
 
-      const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+      const response = await aiPost({
+        messages: [{ role: 'system', content: dmSystemPrompt }, ...dmHistoryWithMemory],
         max_tokens: 300,
-        system: dmSystemPrompt,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: dmHistoryWithMemory,
-      }, { headers: { 'anthropic-beta': 'web-search-2025-03-05' } });
+        plugins: [{ id: 'web' }],
+      });
 
-      const reply = response.content
-        .filter(b => b.type === 'text')
-        .map(b => b.text)
-        .join('')
+      const reply = (response.data.choices?.[0]?.message?.content || '')
         .replace(/<think>[\s\S]*?<\/think>/gi, '')
         .trim();
 

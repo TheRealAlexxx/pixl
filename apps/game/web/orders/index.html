@@ -184,7 +184,7 @@
         return `
       <div class="panel order ${o.status === "cancelled" ? "cancelled" : ""}">
         <div class="order-head">
-          <span class="order-name">${Pixl.esc(o.item_name || "Item")}</span>
+          <span class="order-name">${Number(o.quantity) > 1 ? `${Number(o.quantity)}× ` : ""}${Pixl.esc(o.item_name || "Item")}</span>
           <span class="order-price"><img src="/img/pixel.png" alt="">${Number(o.price)} PX</span>
           ${badge}${option}${when}
         </div>

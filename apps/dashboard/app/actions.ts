@@ -384,12 +384,33 @@ export async function reviewProject(formData: FormData): Promise<void> {
 
   const { data: current } = await db
     .from("projects")
-    .select("status, user_id, name, first_pass_by, first_pass_hours, first_pass_verdict, shipped_at")
+    .select(
+      "status, user_id, name, first_pass_by, first_pass_hours, first_pass_verdict, shipped_at, sidequest_id, trial_prize_order_id",
+    )
     .eq("id", projectId)
     .single();
   if (!current) return;
   const stage = String(current.status);
   const back = `/review/${projectId}`;
+
+  // The Trial this project was shipped for, if any (see [[trial-ship-review-reward]]
+  // in project memory) , carries an optional min-hours gate and prize.
+  type LinkedTrial = {
+    id: number;
+    name: string;
+    reward: string;
+    min_hours: number | null;
+    prize_shop_item_id: number | null;
+  };
+  let linkedTrial: LinkedTrial | null = null;
+  if (current.sidequest_id) {
+    const { data: sq } = await db
+      .from("sidequests")
+      .select("id, name, reward, min_hours, prize_shop_item_id")
+      .eq("id", current.sidequest_id)
+      .maybeSingle();
+    linkedTrial = sq as LinkedTrial | null;
+  }
   const own = await isOwnProject(access, current.user_id);
   if (stage === "shipped" && !access.isSuper && own)
     redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project , another reviewer has to take it.")}`);
@@ -536,6 +557,18 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
 
   const creditHours = approvedHours ?? claimedHours;
+
+  // A Trial's min-hours requirement is a hard floor on approval: if the
+  // credited hours (after any deflation) don't clear it, this can't be
+  // approved , the reviewer has to request changes instead.
+  if (linkedTrial?.min_hours != null && creditHours < Number(linkedTrial.min_hours)) {
+    redirect(
+      `${back}?error=${encodeURIComponent(
+        `Credited hours (${creditHours}h) are below "${linkedTrial.name}"'s ${linkedTrial.min_hours}h minimum , use Request Changes instead, or credit at least ${linkedTrial.min_hours}h.`,
+      )}`,
+    );
+  }
+
   const { data: project, error } = await db
     .from("projects")
     .update({
@@ -647,6 +680,53 @@ export async function reviewProject(formData: FormData): Promise<void> {
     credited += ` Bounty "${bounty.name}" met , +${reward} pixels!`;
     await logModAction(project.user_id, "bounty_awarded", `${bounty.name}: +${reward} pixels (${project.name})`, by);
   }
+
+  // Trial prize: granted once per project, alongside (not instead of) the
+  // normal per-hour pixel credit above. Prefers a linked catalog item; falls
+  // back to a $0 order with the Trial's free-text reward as the item name,
+  // same as any custom order ops fulfils by hand.
+  if (linkedTrial && !current.trial_prize_order_id) {
+    let prizeItemId: number | null = null;
+    let prizeName = linkedTrial.reward || linkedTrial.name;
+    if (linkedTrial.prize_shop_item_id) {
+      const { data: prizeItem } = await db
+        .from("shop_items")
+        .select("id, name")
+        .eq("id", linkedTrial.prize_shop_item_id)
+        .maybeSingle();
+      if (prizeItem) {
+        prizeItemId = prizeItem.id as number;
+        prizeName = prizeItem.name as string;
+      }
+    }
+    if (prizeName) {
+      const { data: order, error: orderError } = await db
+        .from("shop_orders")
+        .insert({
+          user_id: project.user_id,
+          item_id: prizeItemId,
+          item_name: prizeName,
+          option: `Trial: ${linkedTrial.name}`,
+          price: 0,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (!orderError && order) {
+        await db.from("projects").update({ trial_prize_order_id: order.id }).eq("id", projectId);
+        credited += ` Trial "${linkedTrial.name}" complete , "${prizeName}" added to your orders!`;
+        await logModAction(
+          project.user_id,
+          "trial_prize_granted",
+          `${linkedTrial.name}: ${prizeName} (${project.name})`,
+          by,
+        );
+      } else if (orderError) {
+        console.error("reviewProject (trial prize)", orderError.message);
+      }
+    }
+  }
+
   await notifyOwner(
     project.user_id,
     "Project approved!",
@@ -1969,14 +2049,19 @@ export async function addSidequest(formData: FormData): Promise<void> {
   const npc = String(formData.get("npc") ?? "").trim().slice(0, 40);
   const description = String(formData.get("description") ?? "").trim().slice(0, 500);
   const reward = String(formData.get("reward") ?? "").trim().slice(0, 120);
+  const minHoursRaw = String(formData.get("minHours") ?? "").trim();
+  const minHours = minHoursRaw === "" ? null : Math.max(0, Number(minHoursRaw));
   if (!name)
     redirect(`/sidequests?error=${encodeURIComponent("A sidequest needs a name.")}`);
+  if (minHoursRaw !== "" && !Number.isFinite(minHours))
+    redirect(`/sidequests?error=${encodeURIComponent("Minimum hours must be a number.")}`);
   const { error } = await db.from("sidequests").insert({
     name,
     region,
     npc,
     description,
     reward,
+    min_hours: minHours,
     created_by: actorName(access),
   });
   if (error) {

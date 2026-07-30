@@ -159,7 +159,7 @@ router.post("/api/shop/claim/:id", async (req, res) => {
 // the fulfillment-pipeline columns (status/tracking/stage stamps) but falls back
 // to the base columns so it keeps working before migration 0052 is applied.
 const ORDER_COLUMNS =
-  "id, item_name, option, price, status, note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
+  "id, item_name, option, price, quantity, status, note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
 const ORDER_COLUMNS_FALLBACK =
   "id, item_name, option, price, status, note, created_at, fulfilled_at";
 
@@ -201,12 +201,17 @@ router.post("/api/shop/buy/:id", async (req, res) => {
   // (config_options). Ignored by buy_shop_item for every other item.
   const config =
     req.body?.config && typeof req.body.config === "object" ? req.body.config : null;
+  // How many of this item to buy in one order. Clamped again server-side
+  // inside buy_shop_item — this is just so a garbage value doesn't even reach it.
+  const rawQty = Number(req.body?.quantity);
+  const quantity = Number.isFinite(rawQty) ? Math.max(1, Math.min(999, Math.round(rawQty))) : 1;
 
   const { data, error } = await supabase.rpc("buy_shop_item", {
     p_user_id: session.userId,
     p_item_id: id,
     p_option: option,
     p_config: config,
+    p_quantity: quantity,
   });
   if (error) {
     console.error("[shop] buy failed", error);
@@ -218,15 +223,17 @@ router.post("/api/shop/buy/:id", async (req, res) => {
     balance?: number;
     price?: number;
     item_name?: string;
+    quantity?: number;
   };
   if (!result.ok) {
     return res.status(result.error === "insufficient" ? 400 : 409).json(result);
   }
 
+  const qtyPrefix = (result.quantity ?? 1) > 1 ? `${result.quantity}x ` : "";
   void addNotification(
     session.userId,
     "Order placed! 🛍️",
-    `You bought "${result.item_name}"${option ? ` (${option})` : ""}. The team will reach out about getting it to you.`,
+    `You bought ${qtyPrefix}"${result.item_name}"${option ? ` (${option})` : ""}. The team will reach out about getting it to you.`,
   );
   res.json({ ok: true, balance: result.balance });
 });

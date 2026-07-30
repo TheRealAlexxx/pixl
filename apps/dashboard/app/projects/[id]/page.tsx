@@ -47,7 +47,12 @@ export default async function ProjectPage({
   // time (joined in getProject). null = they built their own idea.
   const trial = (
     project as {
-      sidequests?: { name?: string; region?: string; reward?: string } | null;
+      sidequests?: {
+        name?: string;
+        region?: string;
+        reward?: string;
+        min_hours?: number | null;
+      } | null;
     }
   ).sidequests;
   const journalHours =
@@ -209,6 +214,7 @@ export default async function ProjectPage({
               Trial: {trial.name}
               {trial.region ? ` · ${trial.region}` : ""}
               {trial.reward ? ` · reward: ${trial.reward}` : ""}
+              {trial.min_hours != null ? ` · min ${trial.min_hours}h` : ""}
             </Badge>
           </div>
         )}

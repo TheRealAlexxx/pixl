@@ -110,6 +110,8 @@ export interface ProjectRow {
   first_pass_verdict: string | null;
   shipped_at: string | null;
   created_at: string;
+  sidequest_id: number | null;
+  trial_prize_order_id: number | null;
 }
 
 export interface PlayerStateRow {
@@ -901,6 +903,8 @@ export interface SidequestRow {
   position: number;
   created_by: string;
   created_at: string;
+  min_hours: number | null;
+  prize_shop_item_id: number | null;
 }
 
 export async function listSidequests(): Promise<SidequestRow[]> {
@@ -1478,6 +1482,7 @@ export interface ShopOrderRow {
   item_name: string;
   option: string;
   price: number;
+  quantity: number;
   status: OrderStatus;
   note: string;
   created_at: string;
@@ -1674,7 +1679,7 @@ export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
     .select(
-      "*, users(id, display_name, real_name, slack_id), sidequests(id, name, region, reward)",
+      "*, users(id, display_name, real_name, slack_id), sidequests(id, name, region, reward, min_hours)",
     )
     .eq("id", id)
     .maybeSingle();

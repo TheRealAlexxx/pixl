@@ -87,15 +87,28 @@ export default async function SidequestsPage({
               className="w-full text-sm"
             />
           </Label>
-          <Label className="block font-normal">
-            <span className="block text-sm font-medium mb-1.5">Reward (shown to players)</span>
-            <Input
-              name="reward"
-              maxLength={120}
-              placeholder="e.g. Flipper Zero"
-              className="w-full text-sm"
-            />
-          </Label>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Label className="block font-normal sm:col-span-2">
+              <span className="block text-sm font-medium mb-1.5">Reward (shown to players)</span>
+              <Input
+                name="reward"
+                maxLength={120}
+                placeholder="e.g. Flipper Zero"
+                className="w-full text-sm"
+              />
+            </Label>
+            <Label className="block font-normal">
+              <span className="block text-sm font-medium mb-1.5">Min hours (optional gate)</span>
+              <Input
+                name="minHours"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="e.g. 7"
+                className="w-full text-sm"
+              />
+            </Label>
+          </div>
           <PendingButton className="bg-brand text-white border-transparent" pendingText="Adding…">
             Add sidequest
           </PendingButton>
@@ -120,6 +133,7 @@ export default async function SidequestsPage({
               <div className="text-xs text-muted-foreground mt-1">
                 {q.npc ? `given by ${q.npc}` : "no NPC set"}
                 {q.reward ? ` · reward: ${q.reward}` : ""}
+                {q.min_hours != null ? ` · min ${q.min_hours}h` : ""}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
