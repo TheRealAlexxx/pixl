@@ -224,6 +224,10 @@
         "description": "Uma foto assinada de um membro da orga, enviada à sua porta."
       },
       {
+        "name": "Pacote de Memes da Comunidade (5 un.)",
+        "description": "5 memes aleatórios feitos pela community team, impressos em papel fotográfico de verdade e enviados até você."
+      },
+      {
         "name": "Bolsa de assets de jogo",
         "description": "Uma bolsa acumulável de US$ 10 para comprar tilesets, sprites, músicas e sons para o seu jogo."
       },
@@ -458,10 +462,6 @@
       {
         "name": "Nintendo Switch 2",
         "description": "O mais novo híbrido portátil/console da Nintendo. Jogue seus projetos e tudo mais em qualquer lugar ou na tela grande."
-      },
-      {
-        "name": "Pacote de Memes da Comunidade (5 un.)",
-        "description": "5 memes aleatórios feitos pela community team, impressos em papel fotográfico de verdade e enviados até você."
       }
     ]
   },

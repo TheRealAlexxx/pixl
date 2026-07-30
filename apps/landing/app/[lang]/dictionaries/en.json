@@ -224,6 +224,10 @@
         "description": "A signed photo of one of the org members, shipped to your door."
       },
       {
+        "name": "Community Meme Pack (5-Pack)",
+        "description": "5 random memes made by the community team, printed on real photo paper and shipped to your door."
+      },
+      {
         "name": "Game Assets Grant",
         "description": "A stackable $10 grant to buy tilesets, sprites, music and sounds for your game."
       },
@@ -458,10 +462,6 @@
       {
         "name": "Nintendo Switch 2",
         "description": "Nintendo's newest handheld/console hybrid. Play your builds and everything else on the go or on the big screen."
-      },
-      {
-        "name": "Community Meme Pack (5-Pack)",
-        "description": "5 random memes made by the community team, printed on real photo paper and shipped to your door."
       }
     ]
   },

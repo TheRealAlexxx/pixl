@@ -224,6 +224,10 @@
         "description": "Une photo signée d'un membre de l'orga, livrée à ta porte."
       },
       {
+        "name": "Pack de Memes Communautaires (x5)",
+        "description": "5 memes aléatoires faits par la community team, imprimés sur vrai papier photo et livrés chez toi."
+      },
+      {
         "name": "Bourse assets de jeu",
         "description": "Une bourse cumulable de 10 $ pour acheter des tilesets, sprites, musiques et sons pour ton jeu."
       },
@@ -458,10 +462,6 @@
       {
         "name": "Nintendo Switch 2",
         "description": "La toute nouvelle console/hybride portable de Nintendo. Joue à tes projets et à tout le reste en mobilité ou sur grand écran."
-      },
-      {
-        "name": "Pack de Memes Communautaires (x5)",
-        "description": "5 memes aléatoires faits par la community team, imprimés sur vrai papier photo et livrés chez toi."
       }
     ]
   },

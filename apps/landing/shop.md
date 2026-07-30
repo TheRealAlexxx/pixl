@@ -15,6 +15,7 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | ID | Name | Hours | Price (px) | Internal cost / fulfillment notes | Image |
 |---|---|---|---|---|---|
 | `signed-photo` | Signed Org Photo | 2 h | 100 | ~$3 shipping + ~$1 photo; envelope near-free if we buy ~20 per member at once | `/shop/signed-photo.png` (fanned polaroid of the 3 orgs' Slack pfps) |
+| `meme-pack` | Community Meme Pack (5-Pack) | 2 h | 100 | 5 random memes made by the community team, printed on real photo paper. ~$5 real cost (prints + envelope), priced like Signed Org Photo rather than the raw formula price — a fun collectible, not a grant. **Moved to #2 (right after Signed Org Photo) in the featured order — same kind of niche item, and its photos are heavier to load so it stays near the front rather than buried at the end.** | `/shop/meme-pack.png` (pending — needs an image) |
 | `assets-grant` | Game Assets Grant | 3 h | 150 | **$10** HCB grant, stackable. Fraudable like every grant but it's about pixels so ok | `/shop/assets-grant.png` |
 | `hc-stickers` | Hack Club Sticker Pack | 3 h | 150 | Cheap if HQ stock; new custom stickers = big order (up to $500). Envelope ~$3 worldwide, ~$10 per pack total. Description now notes it's a collab between several artists | `/shop/hc-stickers.png` |
 | `api-credits` | AI Credits | 3 h | 150 | **$10** HCB grant, no shipping. Fraudable like every grant | `/shop/api.png` |
@@ -74,7 +75,6 @@ The "ID" column is a mnemonic label for humans only — `Shop.tsx` items are pla
 | `framework-16` | Framework 16 DIY | — (configurator) | 17843 base | $1249 base from frame.work, priced per-component via `config_options` (0058), not a flat rate | `/shop/framework-16.png` |
 | `mac-mini` | Mac Mini (24GB/512GB) | 448.5 h | 22425 | $1570 Amazon US, easily shippable, order in user's regional store | `/shop/mac-mini.png` |
 | `nintendo-switch-2` | Nintendo Switch 2 | 143 h | 7150 | $500 Amazon US. **New item** | `/shop/nintendo-switch-2.png` (pending — needs an image) |
-| `meme-pack` | Community Meme Pack (5-Pack) | 2 h | 100 | 5 random memes made by the community team, printed on real photo paper. ~$5 real cost (prints + envelope), priced like Signed Org Photo rather than the raw formula price — a fun collectible, not a grant. **New item, US only for now** | `/shop/meme-pack.png` (pending — needs an image) |
 
 ## Sidequest Rewards (not buyable — earned by completing sidequests)
 
@@ -114,7 +114,7 @@ Below the Shop carousel, the site shows "...and even more coming!".
 The shop is now localized (en/fr/es/pt). Name and description live in each locale's dictionary; image and price are locale-independent and live in `Shop.tsx`.
 
 1. **Text (name/description)**: `app/[lang]/dictionaries/{en,fr,es,pt}.json` → `shop.items`, a flat array. **Order matters** — item *i* in this array must line up with index *i* in `ITEM_IMAGES`/`ITEM_PRICES` below, so the same insertion position is needed in all 4 files.
-2. **Image + price**: `app/_components/Shop.tsx` → `ITEM_IMAGES` and `ITEM_PRICES`, two parallel arrays indexed the same way as the dictionaries. `NICHE_INDICES` flags which indices get the red star badge (currently 0, 9, 11, 17 — signed-photo, mystery-box, cookie-cutter, aseprite). The card also derives an hours figure from `price / 50` and shows it in small text next to the pixel price.
+2. **Image + price**: `app/_components/Shop.tsx` → `ITEM_IMAGES` and `ITEM_PRICES`, two parallel arrays indexed the same way as the dictionaries. `NICHE_INDICES` flags which indices get the red star badge (currently 0, 1, 10, 12, 18 — signed-photo, meme-pack, mystery-box, cookie-cutter, aseprite). The card also derives an hours figure from `price / 50` and shows it in small text next to the pixel price.
 3. **This file**: `shop.md` — the tables above, for the human-readable recap with $ costs and fulfillment notes.
 
 Nothing here is synced automatically: adding/reordering an item means touching all 4 dictionaries + both Shop.tsx arrays + this file, keeping every index aligned.
