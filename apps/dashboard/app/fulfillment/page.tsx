@@ -181,7 +181,10 @@ function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: s
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold">{o.item_name || "(item removed)"}</span>
+            <span className="font-semibold">
+              {o.quantity > 1 ? `${o.quantity}× ` : ""}
+              {o.item_name || "(item removed)"}
+            </span>
             <Badge variant="success" className="tabular-nums">
               {o.price} px
             </Badge>

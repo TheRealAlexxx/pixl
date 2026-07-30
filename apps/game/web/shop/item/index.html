@@ -151,6 +151,52 @@
         max-width: 340px;
       }
       .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .qty-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .qty-label {
+        font-family: var(--pixel);
+        font-size: 13px;
+        letter-spacing: 1px;
+        color: var(--dim);
+      }
+      .qty-stepper {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+      .qty-stepper button {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: var(--panel-2);
+        color: var(--ink);
+        font-family: var(--pixel);
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .qty-stepper button:hover:not(:disabled) { background: var(--panel-deep); }
+      .qty-stepper button:disabled { opacity: 0.4; cursor: default; }
+      .qty-stepper input {
+        width: 44px;
+        height: 32px;
+        border: none;
+        border-left: 1px solid var(--stroke);
+        border-right: 1px solid var(--stroke);
+        background: var(--panel-deep);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-weight: 700;
+        text-align: center;
+        font-size: 14px;
+      }
+      .qty-stepper input::-webkit-outer-spin-button,
+      .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
       .opt-group { display: flex; flex-direction: column; gap: 6px; }
       .opt-group-name {
         font-family: var(--pixel);
@@ -231,6 +277,14 @@
                 ></div>
                 <div class="afford-bar"><div id="afford-fill"></div></div>
               </div>
+              <div class="qty-row" id="qty-row" hidden>
+                <span class="qty-label">QTY</span>
+                <div class="qty-stepper">
+                  <button type="button" id="qty-minus">-</button>
+                  <input id="qty-input" type="number" min="1" max="999" step="1" value="1" inputmode="numeric" />
+                  <button type="button" id="qty-plus">+</button>
+                </div>
+              </div>
               <div class="btn-row">
                 <button class="btn" id="buy-btn">BUY</button>
                 <a class="btn dark" href="/shop/">KEEP BROWSING</a>
@@ -254,6 +308,20 @@
       let buying = false;
       let optionPick = {};
       let configPick = {};
+      let quantity = 1;
+
+      function clampQty(n) {
+        n = Math.round(Number(n));
+        if (!Number.isFinite(n)) return 1;
+        return Math.max(1, Math.min(999, n));
+      }
+      function setQty(n) {
+        quantity = clampQty(n);
+        $("qty-input").value = quantity;
+        $("qty-minus").disabled = quantity <= 1;
+        $("qty-plus").disabled = quantity >= 999;
+        renderDetail();
+      }
 
       // ── real price-varying configurator (Framework 13/16 DIY etc.) ──
       function computeConfigPrice(item, picks) {
@@ -449,6 +517,8 @@
         $("detail-desc").innerHTML = Pixl.bbcode(selected.description || "");
         document.title = `Pixl · ${selected.name}`;
 
+        $("qty-row").hidden = true;
+
         if (isTrophy(selected)) {
           $("detail-options").innerHTML = optionGroups(selected)
             .flatMap((g) => g.choices)
@@ -506,22 +576,29 @@
         $("detail-limited").innerHTML = selected.limited
           ? `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`
           : "";
+        $("qty-row").hidden = false;
+        $("qty-input").value = quantity;
+        $("qty-minus").disabled = quantity <= 1;
+        $("qty-plus").disabled = quantity >= 999;
+        const total = Number(selected.price) * quantity;
+        const afford = wallet && wallet.pixels >= total;
         $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${Number(selected.price)} PIXELS<span class="price-hours">~${hoursOf(Number(selected.price))}h</span>`;
-        $("detail-price").classList.toggle("cant", !canAfford(selected));
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${total.toLocaleString()} PIXELS<span class="price-hours">~${hoursOf(total)}h</span>` +
+          (quantity > 1 ? ` <span class="price-hours">(${Number(selected.price).toLocaleString()} × ${quantity})</span>` : "");
+        $("detail-price").classList.toggle("cant", !afford);
         $("buy-btn").textContent = "BUY";
-        $("buy-btn").disabled = !canAfford(selected);
+        $("buy-btn").disabled = !afford;
         const have = wallet ? wallet.pixels : 0;
-        const pct = Math.max(0, Math.min(100, (have / Math.max(1, selected.price)) * 100));
+        const pct = Math.max(0, Math.min(100, (have / Math.max(1, total)) * 100));
         $("afford-fill").style.width = pct + "%";
         $("afford-fill").style.background =
           pct >= 100
             ? "var(--good)"
             : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
         $("afford-label").textContent =
-          `YOU HAVE ${Math.round(have)} / ${Number(selected.price)} PX` +
+          `YOU HAVE ${Math.round(have)} / ${total.toLocaleString()} PX` +
           (pct >= 100 ? "  —  EASY." : "");
-        say(canAfford(selected) ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
+        say(afford ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
       }
 
       async function claimTrophy(id) {
@@ -546,6 +623,7 @@
         const option = optionSummary();
         const body = { option };
         if (selected && selected.config_options) body.config = configPick;
+        else body.quantity = quantity;
         const r = await Pixl.send("POST", `/api/shop/buy/${id}`, body);
         buying = false;
         if (r.ok) {
@@ -579,7 +657,7 @@
         }
         const price = selected.config_options
           ? computeConfigPrice(selected, configPick)
-          : Number(selected.price);
+          : Number(selected.price) * quantity;
         if (!wallet || wallet.pixels < price) {
           Pixl.toast("BIT PRICEY FOR YOU, FOR NOW.", true);
           say("SHIP A FEW MORE PROJECTS\nAND COME BACK!", 4000);
@@ -588,6 +666,10 @@
         }
         buyItem(selected.id);
       });
+
+      $("qty-minus").addEventListener("click", () => setQty(quantity - 1));
+      $("qty-plus").addEventListener("click", () => setQty(quantity + 1));
+      $("qty-input").addEventListener("change", (e) => setQty(e.target.value));
 
       // limited-item countdown refresh
       setInterval(() => {
