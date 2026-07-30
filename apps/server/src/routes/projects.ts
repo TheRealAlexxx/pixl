@@ -383,7 +383,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
   if (Number.isFinite(wantSidequest) && wantSidequest > 0) {
     const { data: unlock } = await supabase
       .from("sidequest_unlocks")
-      .select("sidequest_id, sidequests!inner(active)")
+      .select("sidequest_id, sidequests!inner(active, name, min_hours)")
       .eq("user_id", session.userId)
       .eq("sidequest_id", wantSidequest)
       .eq("sidequests.active", true)
@@ -391,6 +391,21 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     if (!unlock)
       return res.status(400).json({ ok: false, error: "trial_not_available" });
     sidequestId = wantSidequest;
+
+    // A Trial can carry a minimum tracked-hours requirement (nullable = no
+    // gate, e.g. Trials seeded before this existed). Checked against the same
+    // trackedSeconds the normal 1h ship floor uses below.
+    const trial = (unlock as { sidequests?: { name?: string; min_hours?: number | null } })
+      .sidequests;
+    const minHours = trial?.min_hours != null ? Number(trial.min_hours) : null;
+    if (minHours != null && trackedSeconds < minHours * 3600) {
+      return res.status(400).json({
+        ok: false,
+        error: "trial_hours_below_minimum",
+        need: minHours,
+        have: Math.round((trackedSeconds / 3600) * 10) / 10,
+      });
+    }
   }
 
   let systemNote = "";

@@ -60,6 +60,11 @@ export interface BountyOption {
   description: string;
 }
 
+export interface TrialInfo {
+  name: string;
+  minHours: number | null;
+}
+
 export function ReviewForm({
   projectId,
   repoUrl,
@@ -68,6 +73,7 @@ export function ReviewForm({
   defaultHours,
   secondPass = false,
   bounties = [],
+  trial,
 }: {
   projectId: number;
   repoUrl: string | null;
@@ -76,6 +82,7 @@ export function ReviewForm({
   defaultHours?: number;
   secondPass?: boolean;
   bounties?: BountyOption[];
+  trial?: TrialInfo | null;
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -172,6 +179,18 @@ export function ReviewForm({
           />
         </Label>
       </div>
+      {trial?.minHours != null && (
+        <div
+          className={`text-xs font-medium ${
+            hours < trial.minHours
+              ? "text-red-600 dark:text-red-400"
+              : "text-muted-foreground"
+          }`}
+        >
+          Trial &quot;{trial.name}&quot; needs {trial.minHours}h minimum to approve
+          {hours < trial.minHours ? " , credited hours are below that, so Approve will be blocked." : "."}
+        </div>
+      )}
       {bounties.length > 0 && (
         <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/[0.06] p-3">
           <div className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
