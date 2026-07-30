@@ -7,7 +7,7 @@ import { addNotification } from "./notifications.js";
 
 const router = Router();
 
-const SHOP_REGIONS = ["US", "ASIA", "NORTH_AMERICA", "SOUTH_AMERICA", "EUROPE"];
+const SHOP_REGIONS = ["US", "ASIA", "NORTH_AMERICA", "SOUTH_AMERICA", "EUROPE", "INDIA", "AFRICA"];
 
 async function regionFor(userId: string): Promise<string> {
   const { data } = await supabase.from("users").select("region").eq("id", userId).maybeSingle();

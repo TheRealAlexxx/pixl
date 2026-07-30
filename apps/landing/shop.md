@@ -1,6 +1,6 @@
 # PIXL Shop — Inventory
 
-Conversion rate: **1 h of work = $3.5 = 50 pixels**. Shop price (px) = hours × 50, hours rounded to the nearest 0.5h. This $3.5/h rate is the **floor** — the lowest rate you ever get, just from shipping a project. It only goes up from there once a shipped project's Restoration Energy multiplier kicks in.
+Conversion rate: **1 h of work = $3.5 = 50 pixels**. Shop price (px) = hours × 50, hours rounded to the nearest 0.5h. $3.5/h is the floor rate; it only goes up from there once a shipped project's Restoration Energy multiplier kicks in. The shop UI shows each item's hours as a range, e.g. `2-1.2h`: hours needed at the $3.5/h floor, then hours needed at $6/h (an assumed high-end multiplied rate) — `hoursOf()`/`hoursRange()` in `Shop.tsx` and the two `apps/game/web/shop/*.html` pages.
 
 Dollar values and fulfillment notes are internal reference only — the website shows pixel prices only, no dollar estimates.
 

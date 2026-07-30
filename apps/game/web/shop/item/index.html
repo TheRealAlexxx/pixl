@@ -142,14 +142,6 @@
         color: var(--faint);
         margin-left: 2px;
       }
-      .rate-note {
-        font-family: var(--sans);
-        font-size: 12px;
-        line-height: 1.5;
-        color: var(--faint);
-        margin: 2px 0 4px;
-        max-width: 340px;
-      }
       .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
       .qty-row {
         display: flex;
@@ -266,7 +258,6 @@
               <div id="detail-name"></div>
               <div id="detail-limited"></div>
               <div class="price" id="detail-price"></div>
-              <div class="rate-note">1h shipped = $3.5 = 50px — the shop's lowest rate. It only climbs from there once your Restoration Energy multiplier kicks in.</div>
               <div id="detail-desc"></div>
               <div class="options-row" id="detail-options"></div>
               <div>
@@ -386,7 +377,7 @@
         const price = computeConfigPrice(selected, configPick);
         const afford = wallet && wallet.pixels >= price;
         $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS<span class="price-hours">~${hoursOf(price)}h</span>`;
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS<span class="price-hours">${hoursOf(price)}</span>`;
         $("detail-price").classList.toggle("cant", !afford);
         $("buy-btn").disabled = !afford;
         $("buy-btn").textContent = "BUY";
@@ -483,11 +474,18 @@
         return wallet && wallet.pixels >= p;
       }
 
-      // Every price is hours × 50 at the shop's $3.5/h base rate, so hours
-      // is always just price / 50 — no separate stored value needed.
+      // Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows
+      // a range: hours needed at that lowest rate, then hours needed at the
+      // shop's highest rate ($6/h) - your Restoration Energy multiplier
+      // puts you somewhere between the two.
+      function fmtHours(h) {
+        const r = Math.round(h * 10) / 10;
+        return Number.isInteger(r) ? String(r) : r.toFixed(1);
+      }
       function hoursOf(px) {
-        const h = Math.round((px / 50) * 10) / 10;
-        return Number.isInteger(h) ? String(h) : h.toFixed(1);
+        const lo = px / 50;
+        const hi = (lo * 3.5) / 6;
+        return `${fmtHours(lo)}-${fmtHours(hi)}h`;
       }
       function imgHtml(item) {
         const url = String(item.image_url || "");
@@ -583,7 +581,7 @@
         const total = Number(selected.price) * quantity;
         const afford = wallet && wallet.pixels >= total;
         $("detail-price").innerHTML =
-          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${total.toLocaleString()} PIXELS<span class="price-hours">~${hoursOf(total)}h</span>` +
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${total.toLocaleString()} PIXELS<span class="price-hours">${hoursOf(total)}</span>` +
           (quantity > 1 ? ` <span class="price-hours">(${Number(selected.price).toLocaleString()} × ${quantity})</span>` : "");
         $("detail-price").classList.toggle("cant", !afford);
         $("buy-btn").textContent = "BUY";

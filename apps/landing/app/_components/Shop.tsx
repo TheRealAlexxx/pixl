@@ -69,13 +69,28 @@ const ITEM_IMAGES = [
 ];
 
 // Repriced at the base rate of 1h = $3.5 = 50px (hours rounded to the
-// nearest 0.5). That rate is the floor — it only gets better once a shipped
+// nearest 0.5). $3.5/h is the floor - it only gets better once a shipped
 // project's Restoration Energy multiplier kicks in.
 const ITEM_PRICES = [
   100, 100, 150, 150, 150, 150, 150, 150, 175, 150, 200, 150, 225, 225, 150, 225, 225, 275, 325, 350, 575, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150,
 ];
 
 const NICHE_INDICES = new Set([0, 1, 10, 12, 18]);
+
+function fmtHours(h: number) {
+  const r = Math.round(h * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+// Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows a
+// range: hours needed at that lowest rate, then hours needed at the shop's
+// highest rate ($6/h) - the Restoration Energy multiplier puts you
+// somewhere between the two.
+function hoursRange(price: number) {
+  const lo = price / 50;
+  const hi = (lo * 3.5) / 6;
+  return `${fmtHours(lo)}-${fmtHours(hi)}h`;
+}
 
 function ShopCard({
   item,
@@ -86,7 +101,6 @@ function ShopCard({
 }) {
   const accent = NICHE_INDICES.has(index) ? "#ec3750" : "#ff8c37";
   const price = ITEM_PRICES[index];
-  const hours = price / 50;
   return (
     <div
       className="relative flex flex-col border-2 border-black bg-[#fffaf7] w-44 shrink-0"
@@ -119,7 +133,7 @@ function ShopCard({
           >
             {price} px
           </span>
-          <span className="text-black/40 text-[9px] font-sans">~{hours}h</span>
+          <span className="text-black/40 text-[9px] font-sans">{hoursRange(price)}</span>
         </div>
       </div>
     </div>
