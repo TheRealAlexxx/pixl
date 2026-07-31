@@ -9,8 +9,10 @@ const COLOR_ACCENT := Color(1, 0.819608, 0.4)
 var _player_in_range := false
 var _prompt: Label
 var _sign: Label
+var _glow: Sprite2D
 
 func _ready() -> void:
+	_setup_night_glow()
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
 	_sign = _make_label(sign_text if sign_text != "" else action.to_upper(), -44.0, 20)
@@ -54,7 +56,22 @@ func _on_body_exited(body: Node2D) -> void:
 		_player_in_range = false
 		_prompt.visible = false
 
+func _setup_night_glow() -> void:
+	_glow = Sprite2D.new()
+	_glow.texture = DayNight.glow_texture()
+	_glow.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_glow.z_index = 1
+	_glow.position = Vector2(0, -6)
+	_glow.scale = Vector2.ONE * 1.4
+	_glow.modulate = Color(1.0, 0.82, 0.5, 0.0)
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_glow.material = mat
+	add_child(_glow)
+
 func _process(_delta: float) -> void:
+	if _glow:
+		_glow.modulate.a = DayNight.night_amount() * 0.85
 	if not _player_in_range or not Input.is_action_just_pressed("interact"):
 		return
 	if global.ui_blocked() or ChatHud.is_typing() or Dialogue.is_open:

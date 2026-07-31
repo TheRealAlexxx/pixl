@@ -49,11 +49,8 @@ const BLOCKED = [
 // Insults matched as whole words only (substring would hit "father",
 // "so fa table"…). Tokens are folded first, so fατ / f4t / faaat still count.
 const BLOCKED_EXACT = [
-  "fat",
   "fatty",
   "ugly",
-  "stupid",
-  "dumb",
   "dumbass",
   "idiot",
   "loser",

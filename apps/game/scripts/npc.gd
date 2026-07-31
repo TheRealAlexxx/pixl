@@ -10,8 +10,19 @@ const MONOCRAFT := preload("res://assets/fonts/PixelifySans.ttf")
 @export var opens_projects: bool = false
 @export var opens_explore: bool = false
 @export var quest_project: bool = false
+# Trial-giver mode: this NPC hands out a real Trial (a sidequests row, matched by
+# trial_name). On accept it records the unlock and the player builds toward it.
+# The same pattern is reused by every Trial NPC.
+@export var quest_trial: bool = false
+@export var trial_name: String = ""
+# Check-in copy of a Trial-giver (e.g. Ridit relocated to the Hub village). Skips
+# the accept prompt and just reminds the player of the Trial they're on. The
+# world it lives in reveals it only once the Trial is accepted.
+@export var trial_checkin: bool = false
 @export_multiline var quest_offer: String = ""
 @export_multiline var quest_done: String = ""
+# Shown by a check-in NPC while the Trial is still in progress.
+@export_multiline var trial_reminder: String = ""
 @export var wanders: bool = true
 @export var speed: float = 50.0
 @export var wander_radius: float = 56.0
@@ -70,6 +81,11 @@ func _ready() -> void:
 	await get_tree().process_frame
 	nl.reset_size()
 	nl.position = Vector2(-nl.size.x * nl.scale.x / 2.0, -42.0 - nl.size.y * nl.scale.y)
+	# A node placed hidden (a conditional check-in copy) must also start
+	# non-interactive until its world reveals it — otherwise its InteractArea keeps
+	# monitoring and the player can talk to thin air.
+	if not visible:
+		set_present(false)
 	if wanders:
 		_wait_then_move()
 
@@ -211,6 +227,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			WebPages.open("projects")
 		elif opens_explore:
 			WebPages.open("explore")
+		elif quest_trial:
+			_start_trial_quest()
 		elif quest_project:
 			_start_project_quest()
 		else:
@@ -246,3 +264,124 @@ func _start_project_quest() -> void:
 		_quest_pending = false
 		req.queue_free()
 		Dialogue.open(npc_name, dialogue.split("\n"))
+
+# Trial-giver / check-in interaction. Looks the Trial up by name, then branches on
+# whether the player has finished it, accepted it, or hasn't taken it yet.
+func _start_trial_quest() -> void:
+	if _quest_pending:
+		return
+	_quest_pending = true
+	var quests: Array = await _fetch_sidequests()
+	_quest_pending = false
+	if not _in_range:
+		return
+	var trial := _find_trial(quests)
+	if trial.is_empty():
+		# Trial row missing (e.g. migration not run) — fall back to flavor text so
+		# the NPC never feels broken.
+		Dialogue.open(npc_name, (quest_offer if quest_offer != "" else dialogue).split("\n"))
+		_update_prompt()
+		return
+
+	var completed := bool(trial.get("completed", false))
+	var unlocked := bool(trial.get("unlocked", false))
+	# Carry the Trial id to the Builder Terminal so it shows the brief and helps
+	# the player build to spec (and defaults the ship picker to this Trial).
+	var tid := int(trial.get("id", 0))
+	var proj_path := "projects?trial=%d" % tid if tid > 0 else "projects"
+
+	if completed:
+		Dialogue.open(npc_name, quest_done.split("\n"))
+		_update_prompt()
+		return
+
+	# Check-in copy (Hub Ridit): no accept prompt, just a nudge toward the Terminal.
+	if trial_checkin:
+		var lines := (trial_reminder if trial_reminder != "" else quest_offer).split("\n")
+		Dialogue.open(npc_name, lines)
+		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
+		_update_prompt()
+		return
+
+	# Already accepted, not yet done — remind and open the Terminal.
+	if unlocked:
+		var lines := (trial_reminder if trial_reminder != "" else quest_offer).split("\n")
+		Dialogue.open(npc_name, lines)
+		Dialogue.closed.connect(func(): WebPages.open(proj_path), CONNECT_ONE_SHOT)
+		_update_prompt()
+		return
+
+	# Fresh offer: description + reward, then Accept / build your own / not now.
+	var offer := quest_offer.split("\n") if quest_offer != "" else PackedStringArray([String(trial.get("description", ""))])
+	var reward := String(trial.get("reward", ""))
+	if reward != "":
+		offer.append("Reward on completion: %s." % reward)
+	Dialogue.ask(npc_name, offer,
+		PackedStringArray(["Accept this Trial", "I'll build my own idea", "Not right now"]),
+		PackedStringArray(["accept", "own", "no"]))
+	var picked: Array = await Dialogue.chosen
+	var choice := String(picked[1]) if picked.size() > 1 else "no"
+	if choice == "accept":
+		await _accept_trial(tid)
+		Dialogue.open(npc_name, ["Then it's yours. Get building — I'll be around your village if you need me."])
+		# Fresh accept → run the Builder Terminal walkthrough, tuned to this Trial.
+		var accept_path := "projects?onboard=first-project&trial=%d" % tid if tid > 0 else "projects?onboard=first-project"
+		Dialogue.closed.connect(func(): WebPages.open(accept_path), CONNECT_ONE_SHOT)
+	elif choice == "own":
+		Dialogue.open(npc_name, ["Off-map, huh? The frontier respects that. Build your own thing — same loop, ship it when it's ready."])
+		Dialogue.closed.connect(func(): WebPages.open("projects"), CONNECT_ONE_SHOT)
+	_update_prompt()
+
+func _find_trial(quests: Array) -> Dictionary:
+	# Prefer the exact Trial this NPC was assigned by name.
+	for q in quests:
+		if typeof(q) == TYPE_DICTIONARY and String(q.get("name", "")) == trial_name:
+			return q
+	# Fallback so a name drift (e.g. the seeded Trial was renamed) can't leave the
+	# giver with nothing to hand out: take the first active starter Trial.
+	for q in quests:
+		if typeof(q) == TYPE_DICTIONARY and bool(q.get("starter", false)):
+			return q
+	return {}
+
+func _fetch_sidequests() -> Array:
+	if NetworkManager.session_token == "":
+		return []
+	var req := HTTPRequest.new()
+	add_child(req)
+	var url := NetworkManager.SERVER_HTTP_URL + "/api/sidequests?token=" + NetworkManager.session_token.uri_encode()
+	if req.request(url) != OK:
+		req.queue_free()
+		return []
+	var r: Array = await req.request_completed
+	req.queue_free()
+	if int(r[1]) != 200 or (r[3] as PackedByteArray).size() == 0:
+		return []
+	var json = JSON.parse_string((r[3] as PackedByteArray).get_string_from_utf8())
+	if typeof(json) == TYPE_DICTIONARY and json.get("ok", false):
+		var quests = json.get("quests", [])
+		return quests if typeof(quests) == TYPE_ARRAY else []
+	return []
+
+func _accept_trial(id: int) -> void:
+	if id <= 0 or NetworkManager.session_token == "":
+		return
+	var req := HTTPRequest.new()
+	add_child(req)
+	var url := NetworkManager.SERVER_HTTP_URL + "/api/sidequests/%d/accept?token=%s" % [id, NetworkManager.session_token.uri_encode()]
+	if req.request(url, PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, "{}") != OK:
+		req.queue_free()
+		return
+	await req.request_completed
+	req.queue_free()
+
+# Reveal / hide a conditional NPC (the relocated Hub check-in copy). Hidden means
+# invisible, no interaction, and no body collision so the player walks through the
+# empty space.
+func set_present(present: bool) -> void:
+	visible = present
+	$CollisionShape2D.set_deferred("disabled", not present)
+	$InteractArea.set_deferred("monitoring", present)
+	if not present:
+		_in_range = false
+		_update_prompt()

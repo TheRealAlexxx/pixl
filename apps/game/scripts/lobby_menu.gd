@@ -3,6 +3,16 @@ extends Control
 const COLOR_PUBLIC := Color(0.290196, 0.870588, 0.501961)
 const COLOR_PRIVATE := Color(1, 0.819608, 0.4)
 
+# Village theme upgrades. Ids/prices mirror VILLAGE_THEMES on the server; the
+# world tints for these live in multiplayer_world.gd. "" is the free default.
+const THEME_CATALOG := [
+	{"id": "", "name": "Default", "price": 0},
+	{"id": "autumn", "name": "Autumn", "price": 500},
+	{"id": "blossom", "name": "Blossom", "price": 500},
+	{"id": "verdant", "name": "Verdant", "price": 500},
+	{"id": "dusk", "name": "Dusk", "price": 750},
+]
+
 @onready var status_label: Label = %StatusLabel
 @onready var quick_join_button: Button = %QuickJoinButton
 @onready var refresh_button: Button = %RefreshButton
@@ -16,6 +26,8 @@ const COLOR_PRIVATE := Color(1, 0.819608, 0.4)
 @onready var back_button: Button = %BackButton
 
 var _joining := false
+var _theme_open_id := ""
+var _last_lobbies: Array = []
 
 func _ready() -> void:
 	if NetworkManager.session_token == "":
@@ -85,6 +97,7 @@ func _on_disconnected() -> void:
 		status_label.text = "Disconnected from server."
 
 func _on_list(lobbies: Array) -> void:
+	_last_lobbies = lobbies
 	for child in list_box.get_children():
 		child.queue_free()
 	if status_label.text == "Fetching lobbies":
@@ -112,9 +125,13 @@ func _build_row(lobby: Dictionary) -> Control:
 	var panel := PanelContainer.new()
 	panel.theme_type_variation = &"RowPanel"
 
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 6)
+	panel.add_child(outer)
+
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	panel.add_child(row)
+	outer.add_child(row)
 
 	var dot := ColorRect.new()
 	dot.color = COLOR_PUBLIC if is_public else COLOR_PRIVATE
@@ -164,6 +181,12 @@ func _build_row(lobby: Dictionary) -> Control:
 		del.pressed.connect(_on_row_delete.bind(del, id))
 		row.add_child(del)
 
+		var themes := Button.new()
+		themes.theme_type_variation = &"StepButton"
+		themes.text = "Themes"
+		themes.pressed.connect(_toggle_themes.bind(id))
+		row.add_child(themes)
+
 	var join := Button.new()
 	join.theme_type_variation = &"SmallButton"
 	join.text = "Full" if full else "Join"
@@ -171,7 +194,51 @@ func _build_row(lobby: Dictionary) -> Control:
 	join.pressed.connect(_on_row_join.bind(id, is_public, mine))
 	row.add_child(join)
 
+	if mine and _theme_open_id == id:
+		outer.add_child(_theme_picker(lobby))
+
 	return panel
+
+func _toggle_themes(id: String) -> void:
+	_theme_open_id = "" if _theme_open_id == id else id
+	_on_list(_last_lobbies)
+
+func _theme_picker(lobby: Dictionary) -> Control:
+	var id := String(lobby.get("id", ""))
+	var active := String(lobby.get("theme", ""))
+	var unlocked: Array = lobby.get("themesUnlocked", [])
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	for entry in THEME_CATALOG:
+		var tid := String(entry["id"])
+		var owned: bool = tid == "" or unlocked.has(tid)
+		var trow := HBoxContainer.new()
+		trow.add_theme_constant_override("separation", 8)
+		var label := Label.new()
+		label.theme_type_variation = &"InfoText"
+		label.text = String(entry["name"])
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		trow.add_child(label)
+		if tid == active:
+			var badge := Label.new()
+			badge.theme_type_variation = &"InfoText"
+			badge.text = "active"
+			badge.add_theme_color_override("font_color", COLOR_PUBLIC)
+			trow.add_child(badge)
+		elif owned:
+			var apply := Button.new()
+			apply.theme_type_variation = &"StepButton"
+			apply.text = "Apply"
+			apply.pressed.connect(func(): NetworkManager.send_lobby_theme(id, tid))
+			trow.add_child(apply)
+		else:
+			var buy := Button.new()
+			buy.theme_type_variation = &"StepButton"
+			buy.text = "Buy %d px" % int(entry["price"])
+			buy.pressed.connect(func(): NetworkManager.send_buy_village_theme(id, tid))
+			trow.add_child(buy)
+		box.add_child(trow)
+	return box
 
 func _on_row_join(id: String, is_public: bool, mine: bool) -> void:
 	if is_public or mine:

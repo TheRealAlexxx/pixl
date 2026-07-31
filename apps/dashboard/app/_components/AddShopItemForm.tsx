@@ -5,11 +5,18 @@ import { PendingButton } from "@/app/_components/PendingButton";
 import { OptionsEditor } from "@/app/_components/OptionsEditor";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SHOP_REGIONS, SHOP_REGION_LABELS, type ShopRegion } from "@/lib/shopRegions";
 
 const FILE_INPUT =
   "block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80";
 
-export function AddShopItemForm({ action }: { action: (fd: FormData) => void }) {
+export function AddShopItemForm({
+  action,
+  region,
+}: {
+  action: (fd: FormData) => void;
+  region: ShopRegion;
+}) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
@@ -50,6 +57,21 @@ export function AddShopItemForm({ action }: { action: (fd: FormData) => void }) 
             />
           </Label>
         </div>
+
+        <Label className="block font-normal">
+          <span className="block text-sm font-medium mb-1.5">Region</span>
+          <select
+            name="region"
+            defaultValue={region}
+            className="w-full h-9 text-sm rounded-md border border-border bg-background px-3"
+          >
+            {SHOP_REGIONS.map((r) => (
+              <option key={r} value={r}>
+                {SHOP_REGION_LABELS[r]}
+              </option>
+            ))}
+          </select>
+        </Label>
 
         <Label className="block font-normal">
           <span className="block text-sm font-medium mb-1.5">Description</span>

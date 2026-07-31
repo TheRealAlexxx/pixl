@@ -7,6 +7,16 @@ const COLOR_NIGHT := Color(0.62, 0.66, 0.9)
 const COLOR_DAY := Color(1, 1, 1)
 const COLOR_DUSK := Color(1.0, 0.87, 0.74)
 
+# Village theme tints (id -> colour). Applied as the world's modulate, which
+# multiplies with the day/night CanvasModulate so the two compose. Keep the ids
+# in sync with VILLAGE_THEMES on the server. "" is the default (no tint).
+const VILLAGE_THEMES := {
+	"autumn": Color(1.0, 0.82, 0.55),
+	"blossom": Color(1.0, 0.78, 0.86),
+	"verdant": Color(0.74, 0.95, 0.72),
+	"dusk": Color(0.72, 0.66, 0.95),
+}
+
 var remote_players: Dictionary = {}
 var _local_player = null
 var _day_night: CanvasModulate
@@ -15,6 +25,11 @@ func _ready() -> void:
 	global.player_in_range = false
 	_setup_day_night()
 	setup_multiplayer()
+	_apply_village_theme(NetworkManager.current_lobby_theme)
+	NetworkManager.lobby_theme_changed.connect(_apply_village_theme)
+
+func _apply_village_theme(theme: String) -> void:
+	modulate = VILLAGE_THEMES.get(theme, Color.WHITE)
 
 func _setup_day_night() -> void:
 	if not DAY_NIGHT_SCENES.has(_network_scene_name()):

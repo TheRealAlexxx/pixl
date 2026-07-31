@@ -43,6 +43,18 @@ export default async function ProjectPage({
   const data = await getProject(projectId);
   if (!data) notFound();
   const { project, journals, verdicts } = data;
+  // The Trial this project was shipped for, if the player flagged one at ship
+  // time (joined in getProject). null = they built their own idea.
+  const trial = (
+    project as {
+      sidequests?: {
+        name?: string;
+        region?: string;
+        reward?: string;
+        min_hours?: number | null;
+      } | null;
+    }
+  ).sidequests;
   const journalHours =
     Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) /
     10;
@@ -104,8 +116,9 @@ export default async function ProjectPage({
                   href={`/players/${project.user_id}`}
                   className="font-bold hover:text-brand"
                 >
-                  {ownerHandle ??
-                    project.users.display_name ??
+                  {project.users.real_name ||
+                    ownerHandle ||
+                    project.users.display_name ||
                     project.users.slack_id}
                 </Link>
               ) : (
@@ -195,6 +208,16 @@ export default async function ProjectPage({
             <span className="text-muted-foreground font-normal">No links yet.</span>
           )}
         </div>
+        {trial?.name && (
+          <div className="mt-3">
+            <Badge variant="secondary" className="font-bold">
+              Trial: {trial.name}
+              {trial.region ? ` · ${trial.region}` : ""}
+              {trial.reward ? ` · reward: ${trial.reward}` : ""}
+              {trial.min_hours != null ? ` · min ${trial.min_hours}h` : ""}
+            </Badge>
+          </div>
+        )}
         {project.hackatime_projects?.length > 0 && (
           <div className="text-xs text-muted-foreground mt-3">
             hackatime: {project.hackatime_projects.join(", ")}

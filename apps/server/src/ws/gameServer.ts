@@ -13,8 +13,11 @@ import {
   createLobby,
   renameLobby,
   setLobbyVisibility,
+  setLobbyTheme,
   deleteLobby,
   lobbyInfoFor,
+  VILLAGE_THEMES,
+  themePrice,
 } from "./lobbies.js";
 
 interface ConnectedPlayer {
@@ -180,6 +183,16 @@ function baseSceneName(room: string): string {
   return room;
 }
 
+// Tells a client entering a lobby scene which cosmetic theme the village is
+// wearing, so every entry path (fresh connect, cross-scene walk, reconnect)
+// applies the tint without depending on the lobby_joined reply.
+function sendLobbyTheme(p: ConnectedPlayer) {
+  const lid = lobbyIdFromScene(p.scene);
+  const lobby = lid ? lobbies.get(lid) : undefined;
+  if (!lobby || p.ws.readyState !== WebSocket.OPEN) return;
+  p.ws.send(JSON.stringify({ type: "lobby_theme", theme: lobby.theme }));
+}
+
 // Sends the player their saved NPC positions for a scene so the client can
 // place villagers where they last left them (empty list on a first visit).
 async function sendNpcInit(p: ConnectedPlayer, scene: string) {
@@ -264,6 +277,21 @@ export function listOnlinePlayers(): {
     scene: p.scene,
     skin: p.skin,
   }));
+}
+
+// Push a one-off frame to a specific player's socket if they're connected.
+// Returns whether it was delivered — callers (e.g. village invites) fall back
+// to the inbox for offline players. Best-effort: never throws.
+export function sendToUser(userId: string, payload: unknown): boolean {
+  const p = players.get(userId);
+  if (!p || p.ws.readyState !== WebSocket.OPEN) return false;
+  try {
+    p.ws.send(JSON.stringify(payload));
+    return true;
+  } catch (e) {
+    console.error("sendToUser failed", e);
+    return false;
+  }
 }
 
 // Filter hit: log it, warn from the 3rd violation, auto-ban at the 7th.
@@ -462,6 +490,7 @@ export function attachWebSocketServer(httpServer: Server) {
       );
 
       void sendNpcInit(player, baseSceneName(player.scene));
+      sendLobbyTheme(player);
 
       broadcastToScene(
         player.scene,
@@ -610,6 +639,7 @@ export function attachWebSocketServer(httpServer: Server) {
           );
 
           void sendNpcInit(leaving, baseSceneName(newScene));
+          sendLobbyTheme(leaving);
 
           broadcastToScene(
             newScene,
@@ -789,6 +819,63 @@ export function attachWebSocketServer(httpServer: Server) {
         })().catch(console.error);
       }
 
+      if (msg.type === "lobby_accept_invite") {
+        const inviteId = Number(msg.inviteId ?? 0);
+        const asking = player;
+        void (async () => {
+          const deny = (reason: string) =>
+            ws.send(JSON.stringify({ type: "lobby_denied", reason }));
+          if (!inviteId) return deny("That invite is no longer valid.");
+          const { data, error } = await supabase
+            .from("village_invites")
+            .select("*")
+            .eq("id", inviteId)
+            .limit(1);
+          if (error) {
+            console.error("[village] accept lookup failed", error);
+            return deny("Couldn't reach the village right now.");
+          }
+          const invite = (data ?? [])[0] as
+            | {
+                lobby_id: string;
+                to_user_id: string;
+                status: string;
+                expires_at: string;
+              }
+            | undefined;
+          if (!invite || invite.to_user_id !== asking.userId)
+            return deny("That invite is no longer valid.");
+          if (invite.status !== "pending")
+            return deny("You've already responded to that invite.");
+          if (Date.parse(invite.expires_at) <= Date.now())
+            return deny("That invite has expired.");
+          const lobby = lobbies.get(invite.lobby_id);
+          if (!lobby) return deny("That village no longer exists.");
+          if (lobbyMemberCount(lobby.id, asking.userId) >= lobby.capacity)
+            return deny("That village is full.");
+          const { error: updateError } = await supabase
+            .from("village_invites")
+            .update({ status: "accepted" })
+            .eq("id", inviteId)
+            .eq("status", "pending");
+          if (updateError) {
+            console.error("[village] accept update failed", updateError);
+            return deny("Couldn't reach the village right now.");
+          }
+          asking.lobbyGrant = lobby.id;
+          ws.send(
+            JSON.stringify({
+              type: "lobby_joined",
+              lobby: lobbyInfoFor(
+                lobby,
+                lobbyMemberCount(lobby.id),
+                asking.userId,
+              ),
+            }),
+          );
+        })().catch(console.error);
+      }
+
       if (msg.type === "emote") {
         const key = String(msg.key ?? "");
         if (!EMOTE_KEYS.has(key)) return;
@@ -894,6 +981,72 @@ export function attachWebSocketServer(httpServer: Server) {
           setLobbyVisibility(lobby, !!msg.isPublic);
         } else if (action === "delete") {
           closeLobby(lobby.id);
+        } else if (action === "theme") {
+          const theme = String(msg.theme ?? "");
+          if (!setLobbyTheme(lobby, theme)) {
+            ws.send(
+              JSON.stringify({
+                type: "lobby_denied",
+                reason: "Your village hasn't unlocked that theme yet.",
+              }),
+            );
+            return;
+          }
+          // Everyone standing in the village updates live.
+          broadcastToScene(lobbyScene(lobby.id), {
+            type: "lobby_theme",
+            theme: lobby.theme,
+          });
+        } else if (action === "buy_theme") {
+          const theme = String(msg.theme ?? "");
+          const price = themePrice(theme);
+          if (!VILLAGE_THEMES[theme] || price <= 0) {
+            ws.send(
+              JSON.stringify({
+                type: "lobby_denied",
+                reason: "That theme isn't available.",
+              }),
+            );
+            return;
+          }
+          void (async () => {
+            const { data, error } = await supabase.rpc("buy_village_theme", {
+              p_user_id: player.userId,
+              p_lobby_id: lobby.id,
+              p_theme: theme,
+              p_price: price,
+            });
+            if (error) {
+              console.error("[village] buy_village_theme failed", error);
+              ws.send(
+                JSON.stringify({
+                  type: "lobby_denied",
+                  reason: "Couldn't complete that purchase.",
+                }),
+              );
+              return;
+            }
+            const result = data as { ok?: boolean; error?: string };
+            if (!result?.ok) {
+              const reason =
+                result?.error === "insufficient"
+                  ? "You don't have enough pixels for that theme."
+                  : result?.error === "owned"
+                    ? "Your village already owns that theme."
+                    : "Couldn't complete that purchase.";
+              ws.send(JSON.stringify({ type: "lobby_denied", reason }));
+              return;
+            }
+            lobby.themesUnlocked.add(theme);
+            if (ws.readyState === WebSocket.OPEN)
+              ws.send(
+                JSON.stringify({
+                  type: "lobby_list",
+                  lobbies: lobbyListFor(player.userId),
+                }),
+              );
+          })().catch(console.error);
+          return;
         } else {
           return;
         }

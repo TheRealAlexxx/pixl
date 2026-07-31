@@ -37,7 +37,7 @@ export default async function ViolationsPage({
   if (query)
     rows = rows.filter(
       (v) =>
-        (v.users?.display_name ?? "").toLowerCase().includes(query) ||
+        (v.users?.real_name || v.users?.display_name || "").toLowerCase().includes(query) ||
         (v.content ?? "").toLowerCase().includes(query),
     );
 
@@ -106,7 +106,7 @@ export default async function ViolationsPage({
           <div className="p-6 text-muted-foreground text-sm text-center">No violations match.</div>
         )}
         {slice.map((v) => {
-          const name = v.users?.display_name ?? v.user_id;
+          const name = v.users?.real_name || v.users?.display_name || v.user_id;
           const handle = (v.users?.slack_id && handles.get(v.users.slack_id)) ?? null;
           const initials =
             (name || "?")

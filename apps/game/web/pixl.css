@@ -1,104 +1,334 @@
-@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Rubik:wght@400;500;600;700&display=swap');
+/* ─────────────────────────────────────────────────────────────────────────
+   PIXL — shared web-shell design system.
+
+   The look: a restored fragment of Pixl. A HUD/menu screen that could plausibly
+   ship *inside* the game — a pixel-art outpost UI floating over the Void, not a
+   dark SaaS panel. Deep-indigo night-sky surfaces, chunky Pixelify Sans display
+   type for labels/headings (never for paragraphs), a clean Rubik for body copy,
+   pixel-notch corners on the hero HUD panels, and a faint starfield behind it all.
+
+   Two currencies, two accents, kept deliberately distinct:
+     • --gold  = amber, the PIXELS you personally earn + spend (money)
+     • --teal  = the RESTORATION ENERGY the community pours into the Core (energy)
+
+   Token NAMES are frozen — every page (and the JS-injected tour/dialog) reads
+   --gold/--teal/--panel/--pixel/etc. directly, so only their values change here.
+   ───────────────────────────────────────────────────────────────────────── */
+
 /* ── reset ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;-webkit-text-size-adjust:100%}
 
 :root{
-  --ink:#f4f4f5;--dim:#aeaeb2;--faint:#6c6c75;--muted:#4a4a52;
-  --panel:#1b1b24;--panel-2:#21212b;--panel-deep:#16161d;
-  --gold:#f4b942;--gold-soft:#fad68a;--teal:#127c74;
-  --good:#08804a;--bad:#a02a2a;--stroke:#2a2a35;
-  --btn-ink:#241710;
-  --sans:'PT Root',system-ui,-apple-system,sans-serif;
-  --pixel:'Pixelify Sans',monospace;
-  --drop:0 5px 0 rgba(0,0,0,.44);
+  /* DUSK — a warm-wood outpost under a golden dawn sky. Dark chocolate-brown
+     surfaces, all-gold: a white+yellow palette, no blue/teal/purple anywhere.
+     (Token names --gold/--teal are kept for compatibility; --teal now carries
+     a paler straw-gold so Restoration Energy still reads slightly distinct.) */
+  /* warm cream text on wood */
+  --ink:#efe7da;--dim:#b4a691;--faint:#897b67;--muted:#665a49;
+  /* dark warm-brown surfaces */
+  --panel:#241a12;--panel-2:#30241a;--panel-deep:#150f0a;
+  /* PIXELS — gold/amber, "coins you spend" */
+  --gold:#f4b942;--gold-soft:#ffd270;
+  /* second accent — pale straw/white-gold, keeping the palette white + yellow */
+  --teal:#fff3c9;--teal-hover:#ffe9a3;
+  /* states */
+  --good:#54c06a;--bad:#e0555f;--stroke:#3a2c1d;
+  --btn-ink:#1a1206;
+  /* Fixed (never redefined per-theme) light backing for product images/icons —
+     a lot of shop art is a dark/black silhouette on a transparent PNG, which
+     disappears against --panel-deep in dark mode. Product photos read the
+     same in both themes, like a real e-commerce thumbnail always does. */
+  --img-slot:#fdf6ee;
+  /* Pixelify Sans is the blocky pixel/retro display face — labels, nav,
+     buttons, headings. Rubik carries all body copy + data-dense areas.
+     --pixel stays the var name for the display face (used everywhere). */
+  --sans:'Rubik',system-ui,-apple-system,sans-serif;
+  --pixel:'Pixelify Sans',ui-monospace,system-ui,sans-serif;
+  /* neo-brutalist hard offset shadows (no blur) — the block "pop" */
+  --drop:2px 2px 0 rgba(0,0,0,.4);--drop-lg:4px 4px 0 rgba(0,0,0,.45);
+  --radius:4px;--radius-sm:3px;
+  /* dithered-scanline texture layered onto panels — cheap, no image assets */
+  --dither:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);
+  /* the pixel-stepped corner (8-bit notch). --notch is tuned per component. */
+  --notch:7px;
+  --np:polygon(
+    0 var(--notch),var(--notch) var(--notch),var(--notch) 0,
+    calc(100% - var(--notch)) 0,calc(100% - var(--notch)) var(--notch),100% var(--notch),
+    100% calc(100% - var(--notch)),calc(100% - var(--notch)) calc(100% - var(--notch)),calc(100% - var(--notch)) 100%,
+    var(--notch) 100%,var(--notch) calc(100% - var(--notch)),0 calc(100% - var(--notch)));
+  --sidebar:212px;--toprail:54px;
 }
 
-body{background:var(--panel-deep);color:var(--ink);font-family:var(--sans);line-height:1.5;overflow-y:scroll}
+/* Light mode — warm parchment in daylight. Cream/paper surfaces, darker gold
+   so the accent reads as text. White + yellow throughout, not a cool flip. */
+:root[data-theme="light"]{
+  --ink:#2a1f16;--dim:#5c4d3d;--faint:#8a7962;--muted:#b0a08c;
+  --panel:#fffaf2;--panel-2:#f4ebdd;--panel-deep:#faf4ea;
+  --gold:#b5791a;--gold-soft:#cf8f22;--teal:#8a6a1a;--teal-hover:#6f5514;
+  --good:#2f9e57;--bad:#cc3a48;--stroke:#e9ddca;
+  --btn-ink:#fff7ea;
+  --drop:2px 2px 0 rgba(70,45,20,.16);--drop-lg:4px 4px 0 rgba(70,45,20,.2);
+  --dither:repeating-linear-gradient(0deg,rgba(80,50,20,.02) 0 1px,transparent 1px 3px);
+}
+
+/* Kenney pixel cursor pack (CC0) — the arrow replaces the OS pointer everywhere
+   in the web shell + docs, the pointing hand shows on anything clickable. */
+body,html{
+  cursor:url(/img/cursor/cursor-arrow.png) 2 0,auto;
+}
+a,button,label,.btn,.card,.chip.opt-choice,.tier,.tab,.theme-toggle,.rail-btn,
+.docs-group-head,.docs-nav a,.docs-toc a,.section-link,.modal-close,
+input[type="checkbox"],input[type="radio"],select,.level-btn,.md-btn,
+.jdel,.copy-btn,[onclick],[data-claim]{
+  cursor:url(/img/cursor/cursor-pointer.png) 16 16,pointer!important;
+}
+/* typing fields keep the OS text-beam, not the pixel pointer (selects stay
+   pointer — picking an option isn't typing) */
+.field:not(select),textarea,input:not([type="checkbox"]):not([type="radio"]){cursor:text}
+
+body{
+  background-color:var(--panel-deep);
+  /* golden dawn glow across the top of every page — fixed, fades into the wood */
+  background-image:linear-gradient(180deg,rgba(244,185,66,.35),rgba(200,140,40,.14) 13%,transparent 28%);
+  background-repeat:no-repeat;background-attachment:fixed;
+  color:var(--ink);
+  font-family:var(--sans);line-height:1.5;overflow-y:scroll;
+  transition:color .15s ease;
+}
+/* faint grid texture over the wood — fixed, cheap, no image */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:30px 30px;
+  opacity:.5;
+}
+:root[data-theme="light"] body{
+  background-image:linear-gradient(180deg,rgba(120,180,240,.4),rgba(120,170,230,.14) 13%,transparent 28%);
+}
+:root[data-theme="light"] body::before{
+  background-image:
+    linear-gradient(rgba(70,45,20,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(70,45,20,.05) 1px,transparent 1px);
+  opacity:.6;
+}
 a{color:var(--gold);text-decoration:none}
 a:hover{color:var(--gold-soft)}
 img{display:block}
-.wrap{max-width:1100px;margin:0 auto;padding:0 16px 48px}
+.wrap{max-width:1120px;margin:0 auto;padding:26px 20px 72px}
 
-/* ── topbar ── */
-.topbar{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 14px;background:var(--panel-2);
-  border-bottom:3px solid var(--stroke);flex-wrap:wrap;
+/* ══════════════════════════ app shell / sidebar ══════════════════════════
+   mountTopbar() (pixl.js) injects the sidebar + top rail and adds
+   .has-sidebar to <body>. Pages keep their <main class="wrap"> untouched —
+   the offset here shifts them without any page-level markup change. */
+body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
+
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);z-index:40;
+  display:flex;flex-direction:column;gap:4px;
+  padding:16px 12px;
+  background:var(--panel);border-right:1px solid var(--stroke);
+  background-image:var(--dither);
 }
-.topbar .logo{display:flex;align-items:center;gap:8px;font-family:var(--pixel);font-size:14px;letter-spacing:2px;color:var(--gold);flex-shrink:0}
-.topbar .logo img{width:24px;height:24px}
-.nav{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.sb-logo{
+  display:flex;align-items:center;gap:9px;
+  padding:6px 8px 16px;margin-bottom:4px;
+  font-family:var(--pixel);font-weight:700;font-size:20px;letter-spacing:2px;color:var(--ink);
+}
+.sb-logo span{color:var(--gold)}
+.sb-logo img{width:26px;height:26px;image-rendering:pixelated}
+
+.nav{display:flex;flex-direction:column;gap:3px;flex:1}
 .nav a{
-  display:inline-block;padding:5px 12px 4px;
-  font-family:var(--pixel);font-size:12px;letter-spacing:1.5px;
-  color:var(--faint);border:2px solid transparent;
+  display:flex;align-items:center;gap:11px;
+  padding:9px 11px;border-radius:var(--radius-sm);
+  font-family:var(--pixel);font-size:15px;letter-spacing:1px;font-weight:500;
+  color:var(--faint);border:1px solid transparent;
+  transition:color .13s ease,background .13s ease,border-color .13s ease;
 }
-.nav a:hover{color:var(--gold);border-color:var(--stroke)}
-.nav a.active{color:var(--gold);border-color:var(--gold)}
-.topbar-right{display:flex;gap:10px;align-items:center;margin-left:auto}
-.wallet-chip{
-  display:flex;align-items:center;gap:8px;
-  padding:5px 10px 5px 8px;
-  border:3px solid var(--stroke);background:var(--panel-deep);
-  font-size:13px;cursor:default;
+.nav a svg{width:18px;height:18px;flex-shrink:0}
+.nav a:hover{color:var(--ink);background:var(--panel-2)}
+.nav a.active{
+  color:var(--gold);background:color-mix(in srgb,var(--gold) 14%,transparent);
+  border-color:color-mix(in srgb,var(--gold) 45%,transparent);
 }
-.wallet-chip img{width:17px;height:17px}
-.wallet-chip .px{color:var(--gold);font-weight:700;font-size:15px}
-.wallet-chip .lv{color:var(--faint);font-size:11px;letter-spacing:.5px}
+.sb-foot{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 
-/* ── components ── */
+.toprail{
+  position:fixed;top:0;left:var(--sidebar);right:0;height:var(--toprail);z-index:39;
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  padding:0 20px;
+  background:color-mix(in srgb,var(--panel-deep) 82%,transparent);
+  border-bottom:1px solid var(--stroke);
+  backdrop-filter:blur(6px);
+}
+
+/* mobile: sidebar → bottom icon bar, top rail spans full width */
+@media (max-width:900px){
+  body.has-sidebar{padding-left:0;padding-bottom:64px}
+  .sidebar{
+    top:auto;left:0;right:0;bottom:0;width:auto;height:60px;
+    flex-direction:row;gap:2px;padding:0 6px;
+    border-right:0;border-top:1px solid var(--stroke);
+  }
+  .sb-logo,.sb-foot{display:none}
+  .nav{flex-direction:row;gap:2px;justify-content:space-around}
+  .nav a{
+    flex-direction:column;gap:3px;flex:1;justify-content:center;
+    padding:8px 2px 6px;font-size:10px;letter-spacing:.5px;border:0;border-radius:0;
+    text-align:center;
+  }
+  .nav a svg{width:20px;height:20px}
+  .nav a.active{background:transparent;color:var(--gold);box-shadow:inset 0 2px 0 var(--gold)}
+  .toprail{left:0}
+}
+
+/* ── currency rail (top-right): two chips, deliberately distinct ── */
+.wallet-chip,.rest-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:5px 11px 5px 6px;border-radius:var(--radius-sm);
+  border:1px solid var(--stroke);background:var(--panel);
+  font-size:13px;cursor:default;font-variant-numeric:tabular-nums;
+}
+.wallet-chip .slot,.rest-chip .slot{
+  width:24px;height:24px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel-deep);border:1px solid var(--stroke);border-radius:2px;
+}
+.wallet-chip .slot img{width:16px;height:16px}
+.wallet-chip{border-color:color-mix(in srgb,var(--gold) 40%,var(--stroke))}
+.wallet-chip .px{color:var(--gold);font-family:var(--sans);font-weight:700;font-size:16px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.wallet-chip .lv{color:var(--faint);font-size:11px;letter-spacing:.5px}
+.rest-chip{border-color:color-mix(in srgb,var(--teal) 40%,var(--stroke))}
+.rest-chip .slot svg{width:15px;height:15px}
+.rest-chip .re{color:var(--teal);font-family:var(--sans);font-weight:700;font-size:16px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.rest-chip .rl{color:var(--faint);font-size:11px;letter-spacing:.5px}
+@media (max-width:560px){
+  .wallet-chip .lv,.rest-chip .rl{display:none}
+  .rest-chip{display:none}
+}
+
+/* ── theme toggle + help ── */
+.theme-toggle,.rail-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:var(--radius-sm);flex-shrink:0;
+  border:1px solid var(--stroke);background:var(--panel);color:var(--dim);
+  font-size:15px;cursor:pointer;line-height:1;font-family:var(--pixel);font-weight:700;
+  transition:color .13s ease,border-color .13s ease,background .13s ease;
+}
+.theme-toggle:hover,.rail-btn:hover{color:var(--gold);border-color:var(--gold)}
+.theme-toggle svg,.rail-btn svg{width:16px;height:16px;image-rendering:pixelated}
+
+/* ══════════════════════════ components ══════════════════════════ */
 .btn{
   display:inline-flex;align-items:center;gap:7px;
-  cursor:pointer;border:3px solid var(--stroke);
+  cursor:pointer;border:1px solid transparent;border-radius:var(--radius-sm);
   background:var(--gold);color:var(--btn-ink);
-  font-family:var(--pixel);font-size:14px;letter-spacing:1px;
-  padding:10px 18px 8px;box-shadow:var(--drop);
-  transition:none;text-decoration:none;white-space:nowrap;
+  font-family:var(--pixel);font-size:15px;letter-spacing:.5px;font-weight:600;
+  padding:9px 17px;box-shadow:0 3px 0 color-mix(in srgb,var(--gold) 55%,#000);
+  transition:background .12s ease,box-shadow .12s ease,transform .12s ease,color .12s ease,border-color .12s ease;
+  text-decoration:none;white-space:nowrap;
 }
-.btn:hover{background:var(--gold-soft);transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--stroke)}
-.btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--stroke)}
-.btn.dark{background:var(--panel-2);color:var(--dim)}
-.btn.dark:hover{background:var(--panel);color:var(--gold)}
+.btn:hover{background:var(--gold-soft);color:var(--btn-ink);transform:translateY(-2px);box-shadow:0 5px 0 color-mix(in srgb,var(--gold) 55%,#000)}
+.btn:active{transform:translateY(1px);box-shadow:0 1px 0 color-mix(in srgb,var(--gold) 55%,#000)}
+.btn.dark{background:var(--panel-2);color:var(--dim);border-color:var(--stroke);box-shadow:0 3px 0 var(--panel-deep)}
+.btn.dark:hover{background:var(--panel);color:var(--gold);border-color:var(--gold)}
 .btn.ghost{background:transparent;color:var(--faint);box-shadow:none;border-color:var(--stroke)}
-.btn.ghost:hover{color:var(--gold)}
-.btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:var(--drop)}
-.btn:disabled:hover{background:var(--gold);transform:none;box-shadow:var(--drop)}
-.btn.teal{background:var(--teal);color:var(--ink)}
-.btn.teal:hover{background:#15968c;color:var(--ink)}
+.btn.ghost:hover{color:var(--gold);border-color:var(--gold);background:var(--panel-2);transform:translateY(-2px)}
+.btn.teal{background:var(--teal);color:var(--btn-ink);box-shadow:0 3px 0 color-mix(in srgb,var(--teal) 55%,#000)}
+.btn.teal:hover{background:var(--teal-hover);box-shadow:0 5px 0 color-mix(in srgb,var(--teal) 55%,#000)}
+.btn.red{background:var(--bad);color:#fff;box-shadow:0 3px 0 color-mix(in srgb,var(--bad) 55%,#000)}
+.btn.red:hover{background:color-mix(in srgb,var(--bad) 85%,#fff)}
+.btn:disabled{opacity:.5;cursor:default;transform:none;box-shadow:0 3px 0 color-mix(in srgb,var(--gold) 55%,#000)}
+.btn:disabled:hover{background:var(--gold);transform:none}
 
+/* Chips carry a lot of numbers (hours, levels, px earned) — normal type
+   reads faster here than the pixel display face, which blurs digits together
+   at 12px. Weight + letter-spacing keep the "badge" feel without the blur. */
 .chip{
-  display:inline-block;font-family:var(--pixel);font-size:12px;letter-spacing:1px;
-  padding:5px 10px 4px;border:2px solid var(--stroke);background:var(--panel-deep);color:var(--dim);
+  display:inline-flex;align-items:center;gap:5px;
+  font-family:var(--sans);font-size:12.5px;letter-spacing:.2px;font-weight:700;
+  font-variant-numeric:tabular-nums;
+  padding:4px 9px;border:1px solid var(--stroke);border-radius:var(--radius-sm);
+  background:var(--panel-deep);color:var(--dim);
 }
-.chip.gold{background:var(--gold);color:var(--btn-ink)}
-.chip.green{background:var(--good);color:var(--ink)}
-.chip.teal{background:var(--teal);color:var(--ink)}
-.chip.red{background:var(--bad);color:var(--ink)}
+.chip.gold{background:var(--gold);color:var(--btn-ink);border-color:transparent}
+.chip.green{background:var(--good);color:#fff;border-color:transparent}
+.chip.teal{background:var(--teal);color:var(--btn-ink);border-color:transparent}
+.chip.red{background:var(--bad);color:#fff;border-color:transparent}
 
 .card{
-  cursor:pointer;border:3px solid var(--stroke);background:var(--panel);
-  box-shadow:var(--drop);
-  transition:none;
+  cursor:pointer;border:2px solid var(--stroke);border-radius:var(--radius);
+  background:var(--panel);background-image:var(--dither);box-shadow:var(--drop);
+  transition:border-color .13s ease,background-color .13s ease,box-shadow .12s ease,transform .12s ease;
 }
-.card:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--stroke);background:var(--panel-2)}
-.card:active{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--stroke)}
+/* brutalist pop: lift toward the light + grow the hard shadow, snap down on press */
+.card:hover{border-color:var(--gold);box-shadow:var(--drop-lg);transform:translate(-2px,-2px)}
+.card:active{transform:translate(0,0);box-shadow:var(--drop)}
 
-.panel{border:3px solid var(--stroke);background:var(--panel);box-shadow:var(--drop)}
-.panel-deep{border:3px solid var(--stroke);background:var(--panel-deep);box-shadow:var(--drop)}
+.panel{border:2px solid var(--stroke);border-radius:var(--radius);background:var(--panel);background-image:var(--dither);box-shadow:var(--drop)}
+.panel-deep{border:2px solid var(--stroke);border-radius:var(--radius);background:var(--panel-deep);box-shadow:var(--drop)}
+
+/* HUD panel — the "Game Boy menu window" hero surface with true pixel-stepped
+   corners. Double-layer so the notch keeps a crisp border. Direct children ride
+   above the fill via z-index. Use for hero/feature blocks, not every card. */
+.hud{
+  position:relative;isolation:isolate;--notch:8px;
+  background:var(--stroke);clip-path:var(--np);padding:2px;
+}
+.hud::before{
+  content:"";position:absolute;inset:2px;z-index:0;clip-path:var(--np);
+  background:var(--panel);background-image:var(--dither);
+}
+.hud.deep::before{background:var(--panel-deep);background-image:var(--dither)}
+.hud>*{position:relative;z-index:1}
+/* notched accent frame variants */
+.hud.gold{background:color-mix(in srgb,var(--gold) 60%,var(--stroke))}
+.hud.teal{background:color-mix(in srgb,var(--teal) 55%,var(--stroke))}
+
+/* ── page headers (were undefined — now the blocky HUD title style) ── */
+.page-title{
+  font-family:var(--pixel);font-weight:700;font-size:34px;line-height:1.05;
+  letter-spacing:1px;color:var(--ink);
+  text-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+.page-sub{
+  font-family:var(--pixel);font-weight:500;font-size:13px;letter-spacing:2px;
+  color:var(--faint);margin-top:8px;text-transform:uppercase;
+}
+
+/* ── restoration / progress bar (pixelated fill, energy glow) ── */
+.rbar{position:relative;height:16px;background:var(--panel-deep);border:1px solid var(--stroke);border-radius:2px;overflow:hidden}
+.rbar>i{
+  display:block;height:100%;
+  background:repeating-linear-gradient(90deg,var(--teal) 0 7px,var(--teal-hover) 7px 14px);
+  box-shadow:0 0 10px color-mix(in srgb,var(--teal) 70%,transparent);
+  transition:width .5s ease;
+}
+.rbar.gold>i{background:repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px);box-shadow:0 0 10px color-mix(in srgb,var(--gold) 70%,transparent)}
+
+/* ── status dots ── */
+.dot{width:9px;height:9px;border:1px solid var(--stroke);border-radius:1px;display:inline-block;flex-shrink:0}
+.dot.on{background:var(--good)}
+.dot.off{background:var(--bad)}
+.dot.gold{background:var(--gold)}
+.dot.teal{background:var(--teal)}
 
 .field{
   font-family:var(--sans);background:var(--panel-deep);color:var(--ink);
-  border:3px solid var(--stroke);padding:10px 14px 8px;font-size:15px;
-  outline:none;box-shadow:inset 0 2px 0 rgba(0,0,0,.32);
+  border:2px solid var(--stroke);border-radius:var(--radius-sm);padding:10px 14px;font-size:15px;
+  outline:none;transition:border-color .13s ease,box-shadow .12s ease;
 }
-.field:focus{border-color:var(--gold)}
+.field:focus{border-color:var(--gold);box-shadow:var(--drop)}
 .field::placeholder{color:var(--muted)}
 select.field{cursor:pointer}
 
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.empty-note{text-align:center;padding:40px 20px;color:var(--faint);font-size:16px;line-height:1.8}
-.divider{height:4px;background:var(--stroke);margin:30px 0}
+.empty-note{text-align:center;padding:40px 20px;color:var(--faint);font-size:16px;line-height:1.8;font-family:var(--pixel);letter-spacing:1px}
+.divider{height:1px;background:var(--stroke);margin:30px 0}
 .faint{color:var(--faint)}
 .muted{color:var(--muted)}
 .gold{color:var(--gold)}
@@ -109,48 +339,37 @@ select.field{cursor:pointer}
 .overlay{
   position:fixed;inset:0;z-index:100;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(4,4,8,.72);
+  background:rgba(4,4,10,.74);
   opacity:0;pointer-events:none;transition:opacity .2s;
 }
 .overlay.show{opacity:1;pointer-events:all}
-.modal{
-  width:90%;max-width:720px;max-height:90vh;overflow-y:auto;
-  position:relative;padding:32px 30px 24px;
-}
-.modal-close{
-  position:absolute;top:12px;right:16px;
-  background:none;border:none;color:var(--faint);
-  font-size:22px;cursor:pointer;line-height:1;
-}
+.modal{width:90%;max-width:720px;max-height:90vh;overflow-y:auto;position:relative;padding:32px 30px 24px}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;color:var(--faint);font-size:22px;cursor:pointer;line-height:1;font-family:var(--pixel)}
 .modal-close:hover{color:var(--gold)}
 
-/* ── spinner ── */
-.spin{
-  width:32px;height:32px;margin:40px auto;
-  border:5px solid var(--panel);border-top-color:var(--gold);
-  border-radius:50%;animation:spin .6s linear infinite;
-}
+/* ── spinner (stepped, pixel-ish) ── */
+.spin{width:30px;height:30px;margin:40px auto;border:4px solid var(--panel-2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s steps(8) infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── toast ── */
-.toast-slot{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-  z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;
-}
+.toast-slot{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .toast{
   background:var(--panel-2);color:var(--ink);
-  border:3px solid var(--stroke);padding:12px 20px 10px;
-  font-size:15px;box-shadow:var(--drop);
-  animation:toast-in .2s steps(4) both;
+  border:1px solid var(--stroke);border-radius:var(--radius-sm);padding:12px 20px;
+  font-size:15px;box-shadow:0 4px 16px rgba(0,0,0,.4);
+  animation:toast-in .2s ease both;
 }
-.toast.bad{background:var(--bad);color:var(--ink)}
+.toast.bad{background:var(--bad);color:#fff;border-color:transparent}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px)}}
 
 /* ── gate (no token) ── */
-.gate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--panel-deep);}
-.gate-card{text-align:center;padding:50px 40px;max-width:450px}
-.gate-card h1{font-family:var(--pixel);font-size:38px;color:var(--gold);margin-bottom:10px}
-.gate-card p{color:var(--dim);font-size:15px;line-height:1.6;margin-bottom:24px}
+.gate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--panel-deep)}
+.gate-card{text-align:center;padding:50px 40px;max-width:460px}
+.gate-card h1{font-family:var(--pixel);font-size:44px;letter-spacing:3px;color:var(--gold);margin-bottom:10px;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+.gate-card p{color:var(--dim);font-size:15px;line-height:1.7;margin-bottom:24px}
 
 /* ── misc ── */
 audio{display:none}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}

@@ -3,6 +3,10 @@ extends CanvasLayer
 const THEME := preload("res://themes/main_theme.tres")
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const SEEN_PATH := "user://guide_seen.dat"
+# Shared cross-app onboarding counter (mirrors apps/server .../profile.ts and
+# apps/game/web/pixl.js): 0 = new, 1 = this in-game guide done / dashboard tour
+# pending, 2 = fully onboarded. This side only writes 1 (hand-off to the dash)
+# and treats step 0 as "auto-open the guide".
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
 const COLOR_ACCENT := Color(1, 0.819608, 0.4)
 const COLOR_DIM := Color(0.788235, 0.694118, 0.54902)
@@ -16,6 +20,9 @@ var _back_button: Button
 var _next_button: Button
 var _page := 0
 var _open := false
+# True when the guide is running as the first-run onboarding (adds the story and
+# a "open my dashboard" hand-off at the end) vs. the plain F1 manual.
+var _onboarding := false
 
 func _readable_theme() -> Theme:
 	var f := SystemFont.new()
@@ -50,13 +57,74 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func maybe_show_intro() -> void:
+	# Signed out / offline: keep the old once-per-device behaviour so the guide
+	# still shows in dev and before the server knows about this player.
+	if NetworkManager.session_token == "":
+		if FileAccess.file_exists(SEEN_PATH):
+			return
+		_mark_seen_file()
+		open(true)
+		return
+	# Signed in: the shared onboarding counter decides. Only brand-new players
+	# (step 0) get the in-game guide auto-opened; once they've done the game leg
+	# (step 1) the dashboard tour resumes on its own when they open it. The local
+	# seen-file is a secondary guard so we don't replay every session in the
+	# window before the 0046 migration lets the server persist progress.
 	if FileAccess.file_exists(SEEN_PATH):
 		return
+	_fetch_onboarding(func(step):
+		if step == 0:
+			_mark_seen_file()
+			open(true)
+	)
+
+func _mark_seen_file() -> void:
 	var f := FileAccess.open(SEEN_PATH, FileAccess.WRITE)
 	if f:
 		f.store_string("1")
 		f.close()
-	open()
+
+# Public: read the shared onboarding step, then call cb(step). Used by the
+# village to decide whether to launch the first-run arrival flow (onboarding.gd).
+func fetch_onboarding_step(cb: Callable) -> void:
+	_fetch_onboarding(cb)
+
+# Read the player's shared onboarding step, then call cb(step). Silently does
+# nothing on any error (offline, pre-migration) — better to skip onboarding than
+# to spam it.
+func _fetch_onboarding(cb: Callable) -> void:
+	if NetworkManager.session_token == "":
+		return
+	var req := HTTPRequest.new()
+	add_child(req)
+	var url := NetworkManager.SERVER_HTTP_URL + "/api/profile/onboarding?token=" + NetworkManager.session_token.uri_encode()
+	req.request_completed.connect(func(_result, code, _headers, data):
+		req.queue_free()
+		if code != 200:
+			return
+		var json = JSON.parse_string(data.get_string_from_utf8()) if data.size() > 0 else null
+		if typeof(json) != TYPE_DICTIONARY or not json.get("ok", false):
+			return
+		cb.call(int(json.get("step", 0)))
+	)
+	req.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
+
+# Advance the shared onboarding counter (forward-only server-side). Fire-and-forget.
+func _post_step(step: int) -> void:
+	if NetworkManager.session_token == "":
+		return
+	var req := HTTPRequest.new()
+	add_child(req)
+	var url := NetworkManager.SERVER_HTTP_URL + "/api/profile/onboarding?token=" + NetworkManager.session_token.uri_encode()
+	req.request_completed.connect(func(_result, _code, _headers, _data): req.queue_free())
+	req.request(url, PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify({ "step": step }))
+
+# End of the in-game leg: record progress and hand the player off to the web
+# dashboard, where the tour picks up automatically (server step is now 1).
+func _go_to_dashboard() -> void:
+	_post_step(1)
+	close()
+	WebPages.open("projects")
 
 func _toggle() -> void:
 	if _open:
@@ -69,9 +137,10 @@ func _toggle() -> void:
 func is_open() -> bool:
 	return _open
 
-func open() -> void:
+func open(onboarding := false) -> void:
 	if _open:
 		return
+	_onboarding = onboarding
 	_open = true
 	global.push_ui_blocker()
 	_root.visible = true
@@ -186,7 +255,10 @@ func _build_ui() -> void:
 
 func _step(dir: int) -> void:
 	if dir > 0 and _page == _pages.size() - 1:
-		close()
+		if _onboarding:
+			_go_to_dashboard()
+		else:
+			close()
 		return
 	_show_page(clampi(_page + dir, 0, _pages.size() - 1))
 
@@ -196,10 +268,13 @@ func _show_page(n: int) -> void:
 		_pages[i].visible = i == n
 	for i in _dots.size():
 		_dots[i].color = COLOR_ACCENT if i == n else Color(COLOR_DIM, 0.35)
-	var titles := ["WELCOME TO PIXL", "GETTING AROUND", "HANG OUT", "SIDEQUESTS", "HANDY KEYS"]
-	_plate_label.text = titles[n]
+	var titles := ["WELCOME TO PIXL", "THE STORY", "WHY YOU'RE HERE", "GETTING AROUND", "HANG OUT", "PROJECTS & PIXELS", "SHOP & TRIALS", "EXPLORE", "HANDY KEYS"]
+	_plate_label.text = titles[n] if n < titles.size() else "PIXL"
 	_back_button.visible = n > 0
-	_next_button.text = "Let's go!" if n == _pages.size() - 1 else "Next"
+	if n == _pages.size() - 1:
+		_next_button.text = "Open my Dashboard →" if _onboarding else "Let's go!"
+	else:
+		_next_button.text = "Next"
 	_next_button.grab_focus()
 
 	var page := _pages[n]
@@ -216,6 +291,16 @@ func _build_pages() -> void:
 		_para("Walk around the village, meet other hack clubbers, and turn the hours you spend coding into pixels."),
 		_spacer(),
 		_hint("Use Next (or the arrow keys) to flip through this guide. Press F1 any time to open it again.")
+	]))
+	_pages.append(_page_body([
+		_para("Long ago, Origin was the greatest digital world ever built — powered by a single Core that held every invention its people ever made."),
+		_para("Then the Core overloaded. In one blinding surge — the Great Static — Origin shattered into thousands of pixelated islands, adrift in an endless Void."),
+	]))
+	_pages.append(_page_body([
+		_para("The Core couldn't rebuild alone, so it reached across worlds and pulled in Hack Clubbers — Builders — to help. Together with the survivors you renamed the ruins Pixl. Everyone here is a Pixelian now."),
+		_para("You rebuild by shipping real projects — sites, games, bots, hardware. Every hour of real work becomes Restoration Energy that repairs Pixl and pushes back the Void."),
+		_spacer(),
+		_hint("You don't need to memorise the lore — just build things. The rest follows.")
 	]))
 	_pages.append(_page_body([
 		_row("WASD / Arrows", "Move around"),
@@ -243,8 +328,8 @@ func _build_pages() -> void:
 		_para("Spend pixels in the Shop — stickers, licenses, plushies, hardware, all real. It opens in a new browser tab."),
 		_row("B", "Open the shop (or walk into the shop house)"),
 		_spacer(),
-		_para("Sidequests are themed challenges from NPCs with special rewards on top."),
-		_row("J", "Quest log — see every sidequest and who unlocks it"),
+		_para("Trials are themed challenges from NPCs with special rewards on top."),
+		_row("J", "Trial log — see every Trial and who unlocks it"),
 	]))
 	_pages.append(_page_body([
 		_para("Explore what everyone's making — player cards, projects and the leaderboard."),
@@ -256,7 +341,7 @@ func _build_pages() -> void:
 		_row("N", "Inbox"),
 		_row("H", "Projects"),
 		_row("B", "Shop"),
-		_row("J", "Quest log"),
+		_row("J", "Trial log"),
 		_row("E", "Explore"),
 		_row("F1", "This guide"),
 		_row("Esc", "Pause / settings"),

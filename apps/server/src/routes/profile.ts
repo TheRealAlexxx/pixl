@@ -67,6 +67,50 @@ router.get("/api/profile/wallet", async (req, res) => {
   });
 });
 
+// Coding-experience answer Pixo asks for during arrival. Drives the starter-
+// Trial recommendation (sidequests.ts) and how much the web first-project
+// walkthrough explains. null = never asked. See drizzle/0050.
+const EXPERIENCE_VALUES = ["beginner", "intermediate", "advanced"] as const;
+type Experience = (typeof EXPERIENCE_VALUES)[number];
+
+router.get("/api/profile/experience", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("coding_experience")
+    .eq("id", session.userId)
+    .maybeSingle();
+  // Before 0050 the column doesn't exist — treat as "not asked yet".
+  const raw = error ? null : (data?.coding_experience ?? null);
+  const experience = EXPERIENCE_VALUES.includes(raw as Experience)
+    ? (raw as Experience)
+    : null;
+  res.json({ ok: true, experience });
+});
+
+router.post("/api/profile/experience", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const value = typeof req.body?.experience === "string" ? req.body.experience : "";
+  if (!EXPERIENCE_VALUES.includes(value as Experience))
+    return res.status(400).json({ ok: false, error: "bad_experience" });
+
+  const { error } = await supabase
+    .from("users")
+    .update({ coding_experience: value })
+    .eq("id", session.userId);
+  if (error) {
+    console.error("[profile] experience update failed", error.message);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, experience: value });
+});
+
 // The player's own pixel ledger, newest first, with project names attached.
 router.get("/api/profile/transactions", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
@@ -149,6 +193,73 @@ router.post("/api/profile/card-image", async (req, res) => {
     return res.status(500).json({ ok: false });
   }
   res.json({ ok: true });
+});
+
+// Cross-app onboarding progress — a single forward-only counter shared by the
+// in-game first-run guide (apps/game/scripts/guide_hud.gd) and the web dashboard
+// tour (apps/game/web/pixl.js) so they hand off to each other rather than
+// running as two separate walkthroughs. 0 = new, 1 = game intro done (dashboard
+// tour pending), 2 = fully onboarded.
+const ONBOARDING_DONE = 2;
+
+// Rollout gate: while the redesigned arrival flow is being tested, only these
+// Slack IDs get it. Everyone else reads as fully onboarded so neither the game
+// nor the dashboard runs it. Empty set = allow everyone. Both apps gate on this
+// one endpoint, so this keeps the game and the dashboard in sync automatically.
+const ONBOARDING_ALLOWLIST = new Set<string>(["U0ARC79GEAV"]);
+
+router.get("/api/profile/onboarding", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("onboarding_step, slack_id")
+    .eq("id", session.userId)
+    .maybeSingle();
+
+  // Not on the allowlist → report fully onboarded so onboarding never triggers.
+  if (
+    ONBOARDING_ALLOWLIST.size > 0 &&
+    !ONBOARDING_ALLOWLIST.has(String(data?.slack_id ?? ""))
+  ) {
+    return res.json({ ok: true, step: ONBOARDING_DONE, done: true });
+  }
+
+  // Before the 0046 migration is applied the column doesn't exist — treat that
+  // as "brand new" rather than failing the request.
+  const step = error ? 0 : Math.max(0, Number(data?.onboarding_step) || 0);
+  res.json({ ok: true, step, done: step >= ONBOARDING_DONE });
+});
+
+router.post("/api/profile/onboarding", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const raw = Number(req.body?.step);
+  if (!Number.isFinite(raw)) return res.status(400).json({ ok: false, error: "bad_step" });
+  const want = Math.max(0, Math.min(ONBOARDING_DONE, Math.round(raw)));
+
+  // Forward-only: a stale client (older tab, a replay) must never rewind a
+  // player who's already further along.
+  const { data: cur } = await supabase
+    .from("users")
+    .select("onboarding_step")
+    .eq("id", session.userId)
+    .maybeSingle();
+  const step = Math.max(Math.max(0, Number(cur?.onboarding_step) || 0), want);
+
+  const { error } = await supabase
+    .from("users")
+    .update({ onboarding_step: step })
+    .eq("id", session.userId);
+  if (error) {
+    console.error("[profile] onboarding update failed", error.message);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, step, done: step >= ONBOARDING_DONE });
 });
 
 router.post("/api/profile/card-pixelate", async (req, res) => {

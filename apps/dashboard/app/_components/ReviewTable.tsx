@@ -75,9 +75,10 @@ export function ReviewTable({
         <TableBody>
           {rows.map((p) => {
             const maker =
-              (p.users?.slack_id && handles.get(p.users.slack_id)) ??
-              p.users?.display_name ??
-              p.users?.slack_id ??
+              p.users?.real_name ||
+              (p.users?.slack_id && handles.get(p.users.slack_id)) ||
+              p.users?.display_name ||
+              p.users?.slack_id ||
               p.user_id;
             return (
               <TableRow key={p.id} className="relative cursor-pointer">

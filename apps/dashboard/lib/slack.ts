@@ -96,19 +96,15 @@ export async function postToChannel(channel: string, text: string): Promise<void
   await slackCall("chat.postMessage", { channel, text, unfurl_links: false });
 }
 
-// Opens (or reuses) a DM with the user and sends the message.
-const EXTERNAL_DM_URL =
-  process.env.EXTERNAL_DM_URL ?? "https://dashboard.gabintavernier.com/api/external/dm";
-
-// All player-facing DMs (warns, bans, project approve/reject/ban, notices) go
-// out as Pixorpheus via the external DM API, not the internal dashboard bot.
-export async function dmUser(slackUserId: string, text: string): Promise<void> {
-  const key = process.env.EXTERNAL_API_KEY;
-  if (!key) throw new Error("EXTERNAL_API_KEY is not set");
-  const res = await fetch(EXTERNAL_DM_URL, {
+// Relays a DM through Pixorpheus's external DM API. Only used when BOTH
+// EXTERNAL_DM_URL and EXTERNAL_API_KEY are set , otherwise we DM straight from
+// the dashboard's Slack bot (see dmUser). No hardcoded host fallback: an unset
+// URL must never silently POST player DMs to some other deployment.
+async function dmViaPixorpheus(url: string, key: string, userId: string, text: string): Promise<void> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "x-api-key": key, "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: slackUserId, message: text }),
+    body: JSON.stringify({ userId, message: text }),
     signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
@@ -118,4 +114,20 @@ export async function dmUser(slackUserId: string, text: string): Promise<void> {
     } catch {}
     throw new Error(`Pixorpheus DM failed (${res.status})${detail ? `: ${detail}` : ""}`);
   }
+}
+
+// All player-facing DMs (warns, bans, project approve/reject/ban, shipping
+// tracking, notices). By default these go out directly from the dashboard's
+// Slack bot , the same token the tickets/avatar helpers already use , so DMs
+// don't depend on a separate Pixorpheus process being deployed and reachable.
+// Set EXTERNAL_DM_URL (+ EXTERNAL_API_KEY) to route through Pixorpheus instead.
+export async function dmUser(slackUserId: string, text: string): Promise<void> {
+  const url = process.env.EXTERNAL_DM_URL;
+  const key = process.env.EXTERNAL_API_KEY;
+  if (url && key) {
+    await dmViaPixorpheus(url, key, slackUserId, text);
+    return;
+  }
+  // chat.postMessage with a user id as the channel opens (or reuses) the IM.
+  await slackCall("chat.postMessage", { channel: slackUserId, text });
 }

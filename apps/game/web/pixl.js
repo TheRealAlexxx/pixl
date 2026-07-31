@@ -1,4 +1,42 @@
 const Pixl = (() => {
+  // play.pixl.rsvp is the raw game origin; the canonical host is the apex
+  // pixl.rsvp (which proxies these same pages). Bounce direct visitors to the
+  // apex so every link lives on one host. This is client-side and host-keyed, so
+  // it can only fire on a direct play.* visit — never on the proxied apex load
+  // (hostname there is pixl.rsvp), which is why it can't loop with the proxy.
+  try {
+    const h = location.hostname;
+    if (h.indexOf("play.") === 0) {
+      const dest = (location.pathname === "/" || location.pathname === "") ? "/play" : location.pathname;
+      location.replace(location.protocol + "//" + h.substring(5) + dest + location.search + location.hash);
+    }
+  } catch {}
+
+  // Applied as early as possible (top of the IIFE) to minimize the flash of
+  // the default theme before this loads. Shares the "pixl_theme" key with the
+  // docs app's own inline head script so the choice is consistent across both.
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("pixl_theme") || "dark";
+  } catch {
+    document.documentElement.dataset.theme = "dark";
+  }
+
+  function syncThemeToggles() {
+    const light = document.documentElement.dataset.theme === "light";
+    document.querySelectorAll(".theme-toggle").forEach((btn) => {
+      btn.innerHTML = light ? MOON_ICON : SUN_ICON;
+      btn.setAttribute("aria-label", light ? "Switch to dark theme" : "Switch to light theme");
+      btn.onclick = toggleTheme;
+    });
+  }
+
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("pixl_theme", next); } catch {}
+    syncThemeToggles();
+  }
+
   const API = "https://server.pixl.rsvp";
   // On the standalone play.* host the game is at the root; when the same build
   // is served under pixl.rsvp (via rewrites) it lives at /play. Keep the
@@ -16,6 +54,16 @@ const Pixl = (() => {
     history.replaceState({}, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
   } else {
     try { token = localStorage.getItem("pixl_token") || ""; } catch {}
+  }
+
+  // The in-game First Project guide opens the Builder Terminal with
+  // ?onboard=first-project to launch its own project-creation walkthrough. Grab
+  // the flag, then strip it from the URL so a manual refresh doesn't replay it.
+  const firstProjectOnboard = params.get("onboard") === "first-project";
+  if (params.has("onboard")) {
+    params.delete("onboard");
+    const oqs = params.toString();
+    history.replaceState({}, "", location.pathname + (oqs ? "?" + oqs : "") + location.hash);
   }
 
   function phase() {
@@ -102,7 +150,10 @@ const Pixl = (() => {
   }
 
   const PAGES = [
+    ["docs", "DOCS"],
     ["shop", "SHOP"],
+    ["orders", "ORDERS"],
+    ["collectibles", "COLLECT"],
     // VAULT and QUESTS are hidden from the dash for now — not ready for players.
     // Re-enable when they are.
     // ["vault", "VAULT"],
@@ -115,27 +166,67 @@ const Pixl = (() => {
     ["report", "REPORT"],
   ];
 
+  // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
+  const ICONS = {
+    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 3h5c.6 0 1 .3 1 .6V14c0-.3-.4-.6-1-.6H2zM14 3H9c-.6 0-1 .3-1 .6V14c0-.3.4-.6 1-.6h5z"/></svg>`,
+    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 5h10l-1 9H4z"/><path d="M6 3h4v1H6z"/><rect x="6" y="4" width="1" height="1.6"/><rect x="9" y="4" width="1" height="1.6"/></svg>`,
+    orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2h9l3 3v9H2z"/><rect x="4" y="6" width="8" height="1.4"/><rect x="4" y="9" width="8" height="1.4"/><rect x="4" y="12" width="5" height="1.4"/></svg>`,
+    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l2 4 4 .5-3 3 .8 4L8 14.5 4.2 12.5 5 8.5 2 5.5 6 5z"/></svg>`,
+    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
+    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
+    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,
+  };
+  // Teal energy shard — the Restoration Energy motif, reused in the top rail.
+  const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
+  // Blocky pixel-art glyphs for the top-rail controls (help + theme toggle),
+  // matching the sidebar nav icons instead of leaving these as raw text glyphs.
+  const HELP_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="11" y="4" width="2" height="2"/><rect x="11" y="6" width="2" height="2"/><rect x="9" y="8" width="2" height="2"/><rect x="7" y="9" width="2" height="3"/><rect x="7" y="13" width="2" height="2"/></svg>`;
+  const SUN_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="4" height="4"/><rect x="7" y="1" width="2" height="2"/><rect x="7" y="13" width="2" height="2"/><rect x="1" y="7" width="2" height="2"/><rect x="13" y="7" width="2" height="2"/><rect x="3" y="3" width="2" height="2"/><rect x="11" y="3" width="2" height="2"/><rect x="3" y="11" width="2" height="2"/><rect x="11" y="11" width="2" height="2"/></svg>`;
+  const MOON_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="3" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="2" y="6" width="5" height="1"/><rect x="2" y="7" width="5" height="1"/><rect x="2" y="8" width="5" height="1"/><rect x="2" y="9" width="6" height="1"/><rect x="2" y="10" width="8" height="1"/><rect x="3" y="11" width="10" height="1"/><rect x="4" y="12" width="8" height="1"/><rect x="5" y="13" width="6" height="1"/></svg>`;
+
   function mountTopbar(active) {
     const nav = PAGES.map(([slug, label]) =>
-      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${label}</a>`,
+      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${ICONS[slug] || ""}<span>${label}</span></a>`,
     ).join("");
-    document.body.insertAdjacentHTML("afterbegin", `
-      <header class="topbar">
-        <a class="logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PIXL</a>
-        <nav class="nav">${nav}</nav>
-        <div class="topbar-right">
+    // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
+    // rail: no wallet, no tour replay, and the CTA invites them into the game.
+    const themeBtn = `<button class="theme-toggle" id="pixl-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>`;
+    const rail = token
+      ? `<div class="rest-chip" id="pixl-rest" title="Core Integrity — the community's Restoration progress" hidden>
+            <span class="slot">${RE_ICON}</span>
+            <span class="re">—</span>
+            <span class="rl">CORE</span>
+          </div>
           <div class="wallet-chip" id="pixl-wallet" title="Your pixels">
-            <img src="/img/pixel.png" alt="px">
+            <span class="slot"><img src="/img/pixel.png" alt="px"></span>
             <span class="px">—</span>
             <span class="lv"></span>
           </div>
-          <a class="btn dark" href="${GAME}">BACK TO GAME</a>
-        </div>
-      </header>`);
+          <button class="rail-btn" id="pixl-help-btn" type="button" title="New here? Replay the tour" aria-label="Replay the tour">${HELP_ICON}</button>
+          ${themeBtn}`
+      : `<a class="btn" href="${GAME}">ENTER THE GAME</a>${themeBtn}`;
+    const foot = token
+      ? `<a class="btn dark" href="${GAME}">◄ BACK TO GAME</a>`
+      : `<a class="btn" href="${GAME}">ENTER GAME</a>`;
+    document.body.classList.add("has-sidebar");
+    document.body.insertAdjacentHTML("afterbegin", `
+      <aside class="sidebar">
+        <a class="sb-logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt="">PI<span>XL</span></a>
+        <nav class="nav">${nav}</nav>
+        <div class="sb-foot">${foot}</div>
+      </aside>
+      <div class="toprail">${rail}</div>`);
+    const help = document.getElementById("pixl-help-btn");
+    if (help) help.onclick = () => runTour();
+    syncThemeToggles();
+    // Auto-run the walkthrough once, on whichever dash page a newcomer lands on.
+    maybeOnboard();
   }
 
   async function loadWallet() {
     const el = document.getElementById("pixl-wallet");
+    // Kick off the collective Core Integrity chip alongside the personal wallet.
+    loadRestoration();
     if (!el) return null;
     try {
       const w = await api("/api/profile/wallet");
@@ -143,6 +234,26 @@ const Pixl = (() => {
       el.querySelector(".px").textContent = Math.round(w.pixels).toLocaleString();
       el.querySelector(".lv").textContent = `LVL ${w.level} · ${w.pxPerHour} px/h`;
       return w;
+    } catch {
+      return null;
+    }
+  }
+
+  // Fills the teal "Core Integrity" chip from the live community goal, if one is
+  // running. No active goal → the chip stays hidden (never shows fake data).
+  async function loadRestoration() {
+    const el = document.getElementById("pixl-rest");
+    if (!el) return null;
+    try {
+      const d = await api("/api/events/active");
+      const goal = (d.events || []).find(
+        (e) => e.type === "community_goal" && Number(e.target) > 0,
+      );
+      if (!goal) return null;
+      const pct = Math.max(0, Math.min(100, Math.round((goal.progress / goal.target) * 100)));
+      el.querySelector(".re").textContent = pct + "%";
+      el.removeAttribute("hidden");
+      return goal;
     } catch {
       return null;
     }
@@ -314,46 +425,155 @@ const Pixl = (() => {
    *     img     URL of a .gif/.png to show in the card instead of a video
    * A step whose target isn't on the current page falls back to a centered card.
    */
+  // A hands-on "ship your first project" walkthrough — Pixo hands the player
+  // here from the game, and this drives them through the actual create→ship flow
+  // on the projects page (not a tour of the UI). Steps can carry:
+  //   target   CSS selector to spotlight (omit → centered card)
+  //   onNext   fn run when the player hits Next (e.g. open the editor for them)
+  //   extra    { label, href } secondary button — used to detour into the docs;
+  //            the tour is resumable so it picks back up when they return here.
   const ONBOARDING_STEPS = [
     {
-      title: "Welcome to Pixl 👋",
-      body: "New here? Take 30 seconds and we'll show you the ropes. You can skip anytime.",
-      // video: "/img/onboarding/welcome.mp4",
-    },
-    {
-      title: "What's Hack Club?",
-      body: "Hack Club is a worldwide community of teenage hackers, makers and builders. You learn by shipping real things , and they send real prizes and grants for what you make.",
-      // video: "/img/onboarding/hackclub.mp4",
-    },
-    {
-      title: "So what's Pixl?",
-      body: "Pixl is a pixel-art world you actually build. Ship real projects for the characters inside it, repair the world, and earn <b>pixels</b> , the in-game currency , plus real-world rewards.",
-    },
-    {
-      target: ".nav",
-      title: "Getting around",
-      body: "Jump between the shop, explore, your projects and more from up here.",
-    },
-    {
-      target: "#pixl-wallet",
-      title: "Your pixels",
-      body: "This is your wallet. Earn pixels by shipping projects, then spend them in the shop on real rewards.",
+      title: "Let's ship your first project",
+      body: "This is your <b>Builder Terminal</b> — where every project lives. I'll walk you through making your first one and shipping it. Skip anytime.",
     },
     {
       target: "#new-btn",
-      title: "Start a project",
-      body: "Tap here to create your first project. Give it a name, link a GitHub repo and a demo, and log your time with Hackatime.",
+      title: "Open a new project",
+      body: "Hit <b>Next</b> and I'll open a fresh project for you.",
+      onNext: () => document.getElementById("new-btn")?.click(),
+    },
+    {
+      target: "#f-name",
+      title: "Name it",
+      body: "Say what you're building — like <b>“My portfolio site”</b> or <b>“Weather bot”</b>. Keep it short and real; you can rename it later.",
+    },
+    {
+      target: "#f-repo",
+      title: "Link your code",
+      body: "Paste your <b>GitHub repo</b> here (and a live demo link below, if you have one) so a reviewer can actually see what you built. No repo yet? There's a Git guide in the docs.",
+      extra: { label: "Git guide", href: "/docs/git" },
+    },
+    {
+      target: "#ht-connect",
+      title: "Track your time with Hackatime",
+      body: "This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so your time counts.",
+      extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
+    },
+    {
+      target: "#f-save",
+      title: "Create it",
+      body: "Save your project. Now go build it for real — come back whenever you've made progress and journal what you did.",
     },
     {
       target: "#s-ship",
-      title: "Ship it for review",
-      body: "When your project is ready, ship it. A reviewer checks it out and credits you pixels + a prize for the work.",
+      title: "Ship when it's ready",
+      body: "Once it runs and you've logged at least <b>1 hour</b> on Hackatime, ship it for review. A reviewer credits you pixels + the prize. That's the whole loop.",
     },
     {
-      title: "That's it , go build 🚀",
-      body: "Pick a sidequest or make your own thing. Stuck? Ask in <b>#pixl-help</b> on the Hack Club Slack.",
+      title: "That's it — go build",
+      body: "Not sure where to start? I wrote a step-by-step on making your first project. Hit <b>Done</b> to head back into the game whenever you're ready.",
+      extra: { label: "Build your first project →", href: "/docs/first-project" },
     },
   ];
+
+  // The NEW-onboarding walkthrough — launched explicitly by the in-game First
+  // Project guide (?onboard=first-project), separate from the counter-synced
+  // auto-tour above. It only sets the project up (create → link → track); the
+  // in-game checklist owns building and shipping, so this ends by sending the
+  // player back to the game rather than marking them fully onboarded.
+  //
+  // Built per-run so it can speak to the specific Trial the player took on (from
+  // Ridit): when a Trial is active it drops in a "what to build" brief and points
+  // the naming/closing steps at that Trial. With no Trial it's the generic first
+  // project. The player is always free to build their own thing instead.
+  function firstProjectSteps(trial) {
+    const t = trial;
+    const intro = t
+      ? {
+          title: "Let's build your Trial",
+          body: `Pixo sent you over. You're building for <b>${esc(t.name)}</b> — this is your <b>Builder Terminal</b>. I'll get the project set up here, then you build it to the brief. Pop back to the game anytime; the checklist keeps your place.`,
+        }
+      : {
+          title: "Let's make your first project",
+          body: "Pixo sent you over. This is your <b>Builder Terminal</b> — I'll get your first project set up here. Pop back to the game anytime; the checklist there keeps your place.",
+        };
+    const brief = t
+      ? [
+          {
+            title: "What to build",
+            body: `<b>${esc(t.name)}</b>${t.region ? " · " + esc(t.region) : ""}<br><br>${esc(t.description || "")}${t.reward ? `<br><br><b>Reward:</b> ${esc(t.reward)}` : ""}<br><br>Build to this — you'll flag it for the Trial when you ship.`,
+          },
+        ]
+      : [];
+    const nameStep = t
+      ? {
+          target: "#f-name",
+          title: "Name it",
+          body: `Name your project for the Trial — something like <b>“${esc(t.name)}”</b>. Short and real; you can rename it later.`,
+        }
+      : {
+          target: "#f-name",
+          title: "Name it",
+          body: "Say what you're building — like <b>“My portfolio site”</b>. Short and real; you can rename it later.",
+        };
+    const closing = t
+      ? {
+          title: "Now go build it",
+          body: `Head back into the game whenever — your <b>First Trial</b> checklist tracks the rest (build it, then ship it for <b>${esc(t.name)}</b>). Want a starting point? I wrote a first-site walkthrough with code.`,
+          extra: { label: "First site (code) →", href: "/docs/first-site" },
+        }
+      : {
+          title: "Now go build it",
+          body: "Head back into the game whenever — your <b>First Project</b> checklist tracks the rest (build it, then ship it). Want a starting point? I wrote the whole first site out for you, code and all.",
+          extra: { label: "Your first site (code) →", href: "/docs/first-site" },
+        };
+    return [
+      intro,
+      ...brief,
+      {
+        target: "#new-btn",
+        title: "Open a new project",
+        body: "Hit <b>Next</b> and I'll open a fresh project for you.",
+        onNext: () => document.getElementById("new-btn")?.click(),
+      },
+      nameStep,
+      {
+        target: "#f-repo",
+        title: "Link your code",
+        body: "Paste your <b>GitHub repo</b> here (and a demo link below, if you have one) so a reviewer can see what you built. No repo yet? There's a Git guide.",
+        extra: { label: "Git guide", href: "/docs/git" },
+      },
+      {
+        target: "#ht-connect",
+        title: "Track your time with Hackatime",
+        body: "The important one. <b>Hackatime</b> logs your build hours, and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so the time counts.",
+        extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
+      },
+      {
+        target: "#f-save",
+        title: "Create it",
+        body: "Save your project. That's the first checklist item done — hop back to the game and Pixo will point you at what's next.",
+      },
+      closing,
+    ];
+  }
+
+  // The Trial the player is currently building for: ?trial=<id> (Ridit hand-off)
+  // or the single accepted-and-unfinished Trial. null → generic first project.
+  async function getActiveTrial() {
+    try {
+      const tid = Number(new URLSearchParams(location.search).get("trial"));
+      const d = await api("/api/sidequests");
+      const open = (d.quests || []).filter((q) => q.unlocked && !q.completed);
+      return (
+        (tid && open.find((q) => Number(q.id) === tid)) ||
+        (open.length === 1 ? open[0] : null)
+      );
+    } catch (e) {
+      return null;
+    }
+  }
 
   function injectTourCSS() {
     if (document.getElementById("pixl-tour-css")) return;
@@ -361,21 +581,23 @@ const Pixl = (() => {
     s.id = "pixl-tour-css";
     s.textContent = `
       #pixl-tour{position:fixed;inset:0;z-index:99999;font-family:var(--sans,sans-serif)}
-      #pixl-tour .pt-veil{position:absolute;inset:0;background:rgba(10,10,14,.72)}
-      #pixl-tour .pt-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,10,14,.72);transition:all .25s ease;pointer-events:none;border:2px solid var(--gold,#f4b942)}
+      #pixl-tour .pt-veil{position:absolute;inset:0;background:rgba(10,10,14,.5)}
+      #pixl-tour .pt-hole{position:absolute;border-radius:10px;box-shadow:0 0 0 9999px rgba(10,10,14,.5);transition:all .25s ease;pointer-events:none;border:2px solid var(--gold,#ec4899)}
       #pixl-tour .pt-card{position:absolute;max-width:340px;width:calc(100% - 32px);background:var(--panel,#1b1b24);color:var(--ink,#f4f4f5);border:2px solid var(--stroke,#2a2a35);border-radius:14px;padding:18px;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:top .2s ease,left .2s ease}
       #pixl-tour .pt-card.center{top:50%;left:50%;transform:translate(-50%,-50%)}
       #pixl-tour .pt-media{width:100%;border-radius:10px;margin-bottom:12px;display:block;background:#000;aspect-ratio:16/9;object-fit:cover}
-      #pixl-tour .pt-title{font-family:var(--pixel,var(--sans));font-size:18px;letter-spacing:.5px;color:var(--gold,#f4b942);margin-bottom:8px}
+      #pixl-tour .pt-title{font-family:var(--pixel,var(--sans));font-size:18px;letter-spacing:.5px;color:var(--gold,#ec4899);margin-bottom:8px}
       #pixl-tour .pt-body{font-size:14px;line-height:1.55;color:var(--dim,#cfcfd6)}
       #pixl-tour .pt-body b{color:var(--ink,#f4f4f5)}
       #pixl-tour .pt-foot{display:flex;align-items:center;gap:10px;margin-top:16px}
       #pixl-tour .pt-dots{display:flex;gap:5px;margin-right:auto}
       #pixl-tour .pt-dot{width:7px;height:7px;border-radius:50%;background:var(--muted,#4a4a52)}
-      #pixl-tour .pt-dot.on{background:var(--gold,#f4b942)}
+      #pixl-tour .pt-dot.on{background:var(--gold,#ec4899)}
       #pixl-tour .pt-skip{background:none;border:0;color:var(--faint,#8a8a93);cursor:pointer;font-size:12px;padding:6px}
-      #pixl-tour .pt-btn{background:var(--gold,#f4b942);color:var(--btn-ink,#241710);border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
+      #pixl-tour .pt-btn{background:var(--gold,#ec4899);color:var(--btn-ink,#241710);border:0;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;font-size:14px}
       #pixl-tour .pt-back{background:none;border:1px solid var(--stroke,#2a2a35);color:var(--dim,#cfcfd6);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px}
+      #pixl-tour .pt-extra{display:block;width:100%;margin-top:12px;background:none;border:1px solid var(--gold,#ec4899);color:var(--gold,#ec4899);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;font-weight:700}
+      #pixl-tour .pt-extra:hover{background:var(--gold,#ec4899);color:var(--btn-ink,#241710)}
     `;
     document.head.appendChild(s);
   }
@@ -384,7 +606,34 @@ const Pixl = (() => {
     try { localStorage.setItem("pixl_onboarded", "1"); } catch {}
   }
 
-  function runTour(steps = ONBOARDING_STEPS, startAt = 0) {
+  // Shared cross-app onboarding counter (see apps/server .../profile.ts and
+  // apps/game/scripts/guide_hud.gd). 0 = new, 1 = game intro done / dash pending,
+  // 2 = fully onboarded.
+  async function getOnboarding() {
+    try { return await api("/api/profile/onboarding"); } catch { return null; }
+  }
+  function setOnboarding(step) {
+    // Fire-and-forget; the counter is forward-only server-side so this is safe.
+    send("POST", "/api/profile/onboarding", { step }).catch(() => {});
+  }
+
+  // Which tour step is in progress, so a docs detour resumes rather than restarts.
+  const TOUR_STEP_KEY = "pixl_tour_step";
+  function saveTourStep(n) { try { localStorage.setItem(TOUR_STEP_KEY, String(n)); } catch (e) {} }
+  function clearTourStep() { try { localStorage.removeItem(TOUR_STEP_KEY); } catch (e) {} }
+  function getTourStep() {
+    try {
+      const v = localStorage.getItem(TOUR_STEP_KEY);
+      if (v == null) return null;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? n : null;
+    } catch (e) { return null; }
+  }
+
+  // `sync` marks the shared onboarding as complete when the tour ends — used for
+  // the auto-run (the dashboard leg of the game→dash journey), not the manual
+  // "?" replay.
+  function runTour(steps = ONBOARDING_STEPS, startAt = 0, sync = false) {
     injectTourCSS();
     document.getElementById("pixl-tour")?.remove();
     const root = document.createElement("div");
@@ -396,7 +645,24 @@ const Pixl = (() => {
     const card = root.querySelector(".pt-card");
     let i = Math.max(0, Math.min(startAt, steps.length - 1));
 
-    function close() { root.remove(); markOnboarded(); }
+    function close(completed) {
+      root.remove();
+      markOnboarded();
+      if (sync) {
+        clearTourStep();
+        setOnboarding(2); // dashboard leg done → fully onboarded
+        // Finishing the guided flow hands the player back to the game; skipping
+        // or dismissing just closes the tour and leaves them on the dashboard.
+        if (completed) location.href = GAME;
+      }
+    }
+    // While a synced tour is live, remember which step we're on so a detour into
+    // the docs (and ◄ BACK to this page) resumes here instead of restarting.
+    function advance(to) {
+      i = to;
+      if (sync) saveTourStep(i);
+      render();
+    }
 
     function media(step) {
       if (step.video) return `<video class="pt-media" src="${esc(step.video)}" autoplay muted loop playsinline></video>`;
@@ -404,29 +670,59 @@ const Pixl = (() => {
       return "";
     }
 
+    let placeTries = 0;
     function render() {
       const step = steps[i];
-      const el = step.target ? document.querySelector(step.target) : null;
+      if (sync) saveTourStep(i);
       const dots = steps.map((_, n) => `<span class="pt-dot ${n === i ? "on" : ""}"></span>`).join("");
+      const extraBtn = step.extra ? `<button class="pt-extra">${esc(step.extra.label)}</button>` : "";
       card.innerHTML = `
         ${media(step)}
         <div class="pt-title">${esc(step.title)}</div>
         <div class="pt-body">${step.body}</div>
+        ${extraBtn}
         <div class="pt-foot">
           <div class="pt-dots">${dots}</div>
           ${i > 0 ? `<button class="pt-back">Back</button>` : `<button class="pt-skip">Skip</button>`}
           <button class="pt-btn">${i === steps.length - 1 ? "Done" : "Next"}</button>
         </div>`;
-      card.querySelector(".pt-btn").onclick = () => (i === steps.length - 1 ? close() : (i++, render()));
+      card.querySelector(".pt-btn").onclick = () => {
+        try { step.onNext && step.onNext(); } catch (e) {}
+        if (i === steps.length - 1) close(true);
+        else advance(i + 1);
+      };
       const back = card.querySelector(".pt-back");
-      if (back) back.onclick = () => { i--; render(); };
+      if (back) back.onclick = () => advance(i - 1);
       const skip = card.querySelector(".pt-skip");
       if (skip) skip.onclick = close;
+      const extra = card.querySelector(".pt-extra");
+      if (extra) extra.onclick = () => {
+        // Detour (usually into the docs). Persist the *next* step so we resume
+        // past this one when the player comes back to the projects page.
+        if (sync) saveTourStep(Math.min(i + 1, steps.length - 1));
+        if (step.extra.onClick) step.extra.onClick();
+        else location.href = step.extra.href;
+      };
 
+      placeTries = 0;
+      place(step);
+    }
+
+    // Position the spotlight. If the target isn't in the DOM yet (e.g. the editor
+    // form is still rendering after we clicked "+ NEW PROJECT"), poll briefly
+    // before falling back to a centered card.
+    function place(step) {
+      const el = step.target ? document.querySelector(step.target) : null;
+      if (step.target && (!el || !el.getClientRects().length)) {
+        if (placeTries++ < 20) { setTimeout(() => place(step), 100); return; }
+      }
       if (el && el.getClientRects().length) {
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
-        // wait a tick for the smooth scroll before measuring
-        setTimeout(() => {
+        // Instant (not smooth) scroll so the element is at its final position by
+        // the time we measure — a smooth scroll is still animating when we read
+        // the rect, which left the spotlight offset from the real box.
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+        // Measure on the next frame, after layout settles from the scroll.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
           const r = el.getBoundingClientRect();
           const pad = 6;
           hole.style.display = "block";
@@ -441,7 +737,7 @@ const Pixl = (() => {
           const ch = card.offsetHeight || 200;
           card.style.top = `${room > ch + 20 ? below : Math.max(14, r.top - ch - 14)}px`;
           card.style.left = `${Math.min(Math.max(14, r.left + r.width / 2 - cw / 2), window.innerWidth - cw - 14)}px`;
-        }, 260);
+        }));
       } else {
         hole.style.display = "none";
         card.classList.add("center");
@@ -449,21 +745,105 @@ const Pixl = (() => {
         card.style.left = "";
       }
     }
-    veil.onclick = close;
+    // Clicking the dimmed backdrop is inert — the tour only closes via Skip/Done,
+    // so a stray click outside the card doesn't drop the player out of onboarding.
+    veil.onclick = null;
     render();
   }
 
-  // Run the tour once, the first time a signed-in newcomer opens the dash.
-  function maybeOnboard(steps = ONBOARDING_STEPS) {
+  // Auto-run the "ship your first project" walkthrough. It drives the real
+  // create→ship flow, so it only belongs on the projects page — that's also
+  // where the in-game hand-off (WebPages.open("projects?from=game")) lands. If a
+  // step is already saved (the player detoured into the docs and came back), we
+  // resume there instead of restarting.
+  async function maybeOnboard(steps = ONBOARDING_STEPS) {
+    if (!token) return; // signed-out (public docs) never auto-runs
+    if (!/\/projects(\/|$)/.test(location.pathname)) return;
+    // New First Project guide hand-off: run its own self-contained walkthrough
+    // and STOP — never also fire the old counter-synced auto-tour (which would
+    // mark them fully onboarded and yank them back to the game mid-flow).
+    if (firstProjectOnboard) {
+      let shown = false;
+      try { shown = sessionStorage.getItem("pixl_fp_shown") === "1"; } catch {}
+      if (!shown) {
+        try { sessionStorage.setItem("pixl_fp_shown", "1"); } catch {}
+        const trial = await getActiveTrial();
+        setTimeout(() => runTour(firstProjectSteps(trial), 0, false), 700);
+      }
+      return;
+    }
+    const saved = getTourStep();
+    const ob = await getOnboarding();
+    if (ob && ob.ok) {
+      if (ob.done) { markOnboarded(); clearTourStep(); return; }
+      const startAt = saved != null ? saved : 0;
+      setTimeout(() => runTour(steps, startAt, true), 700);
+      return;
+    }
+    // Server unreachable / pre-migration — fall back to the local guard.
     let done = true;
-    try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch {}
-    if (done || !token) return;
-    setTimeout(() => runTour(steps), 700);
+    try { done = localStorage.getItem("pixl_onboarded") === "1"; } catch (e) {}
+    if (!done) setTimeout(() => runTour(steps, saved != null ? saved : 0, true), 700);
   }
 
-  if (!token) {
+  /* ─────────────────── custom confirm dialog ───────────────────
+   * Drop-in async replacement for the browser's native confirm(). Returns a
+   * Promise<boolean>. Usage: if (!(await Pixl.confirm({ title, body, danger }))) return;
+   */
+  function injectDialogCSS() {
+    if (document.getElementById("pixl-dialog-css")) return;
+    const s = document.createElement("style");
+    s.id = "pixl-dialog-css";
+    s.textContent = `
+      .pxl-dialog{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--sans,sans-serif)}
+      .pxl-dialog .pxl-veil{position:absolute;inset:0;background:rgba(10,10,14,.66);backdrop-filter:blur(2px)}
+      .pxl-dialog .pxl-box{position:relative;width:100%;max-width:400px;background:var(--panel,#1b1b24);color:var(--ink,#f4f4f5);border:2px solid var(--stroke,#2a2a35);border-radius:14px;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.55);animation:pxl-pop .16s ease}
+      @keyframes pxl-pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+      .pxl-dialog .pxl-t{font-family:var(--pixel,var(--sans));font-size:17px;color:var(--gold,#ec4899);margin-bottom:8px;letter-spacing:.5px}
+      .pxl-dialog .pxl-b{font-size:14px;line-height:1.55;color:var(--dim,#cfcfd6)}
+      .pxl-dialog .pxl-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+      .pxl-dialog button{border-radius:8px;padding:9px 16px;font-weight:700;font-size:14px;cursor:pointer;border:1px solid var(--stroke,#2a2a35);background:none;color:var(--dim,#cfcfd6)}
+      .pxl-dialog .pxl-ok{background:var(--gold,#ec4899);color:var(--btn-ink,#241710);border-color:transparent}
+      .pxl-dialog .pxl-ok.danger{background:var(--bad,#a02a2a);color:#fff}
+    `;
+    document.head.appendChild(s);
+  }
+
+  function confirmDialog(opts = {}) {
+    const { title = "Are you sure?", body = "", confirmText = "Confirm", cancelText = "Cancel", danger = false } = opts;
+    injectDialogCSS();
+    return new Promise((resolve) => {
+      const root = document.createElement("div");
+      root.className = "pxl-dialog";
+      root.tabIndex = -1;
+      root.innerHTML = `
+        <div class="pxl-veil"></div>
+        <div class="pxl-box" role="dialog" aria-modal="true">
+          <div class="pxl-t">${esc(title)}</div>
+          ${body ? `<div class="pxl-b">${esc(body)}</div>` : ""}
+          <div class="pxl-acts">
+            <button class="pxl-cancel">${esc(cancelText)}</button>
+            <button class="pxl-ok ${danger ? "danger" : ""}">${esc(confirmText)}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(root);
+      const done = (v) => { root.remove(); resolve(v); };
+      root.querySelector(".pxl-veil").onclick = () => done(false);
+      root.querySelector(".pxl-cancel").onclick = () => done(false);
+      root.querySelector(".pxl-ok").onclick = () => done(true);
+      root.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") done(false);
+        if (e.key === "Enter") done(true);
+      });
+      root.querySelector(".pxl-ok").focus();
+    });
+  }
+
+  // Pages can opt out of the sign-in gate (e.g. the public docs) by setting
+  // window.PIXL_PUBLIC = true before loading this script.
+  if (!token && !window.PIXL_PUBLIC) {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS };
+  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
 })();

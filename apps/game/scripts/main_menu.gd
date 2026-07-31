@@ -10,6 +10,9 @@ extends Control
 @onready var logout_button: Button = $CenterContainer/VBoxContainer/LogoutButton
 
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
+# Main menu & pause menu keep the original Monocraft face; the rest of the game
+# moved its default menu font to Pixelify Sans (see commit b8b1360).
+const OLD_MENU_FONT := preload("res://assets/fonts/Monocraft.ttf")
 
 var _logout_armed := false
 var _logout_revert: Timer
@@ -19,6 +22,26 @@ var _name_warn: Label
 var _name_save: Button
 
 func _ready() -> void:
+	# Swap the shared theme's default font back to Monocraft for this scene only
+	# (duplicate first so we don't mutate the resource other menus share).
+	theme = theme.duplicate(true)
+	theme.default_font = OLD_MENU_FONT
+	# Menu is laid out for a 1600x900 desktop canvas — on touch devices, bump
+	# the theme's font sizes and the explicit control sizes below instead of
+	# Control.scale (a transform just blurs the already-rasterized pixel
+	# font instead of actually growing it).
+	if DisplayServer.is_touchscreen_available():
+		var factor := Settings.menu_scale_factor()
+		theme = Settings.touch_menu_theme(theme)
+		var vbox: VBoxContainer = $CenterContainer/VBoxContainer
+		vbox.custom_minimum_size *= factor
+		var logo: Control = $CenterContainer/VBoxContainer/TitleLogo
+		logo.custom_minimum_size *= factor
+		var footer: Control = $Footer
+		footer.offset_left *= factor
+		footer.offset_right *= factor
+		footer.offset_top *= factor
+		footer.offset_bottom *= factor
 	if NetworkManager.session_token == "":
 		get_tree().change_scene_to_file("res://scenes/login.tscn")
 		return

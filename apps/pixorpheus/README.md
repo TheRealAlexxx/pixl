@@ -192,11 +192,11 @@ The FAQ check runs in parallel with the ticket creation flow - it never slows an
 
 ## Auto-Close
 
-Tickets that have been open for more than **7 days** with no activity are automatically closed.
+Tickets that have been open for more than **5 days** with no activity are automatically closed.
 
 ### Rules
 
-- A ticket qualifies if: it has been open for 7+ days AND the last message in the thread is also 7+ days old
+- A ticket qualifies if: it has been open for 5+ days AND the last message in the thread is also 5+ days old
 - At closure, Pixorpheus posts a message in the thread explaining the ticket was auto-closed due to inactivity, and tells the user to open a new ticket if the issue is still relevant
 - The ticket channel message is updated to show the resolved status
 

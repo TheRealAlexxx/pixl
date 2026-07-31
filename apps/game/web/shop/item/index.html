@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixl · Shop</title>
+    <link rel="icon" href="/index.icon.png" />
+    <link rel="stylesheet" href="/pixl.css" />
+    <style>
+      /* back link */
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        margin: 4px 0 16px;
+        font-family: var(--pixel);
+        font-size: 13px;
+        letter-spacing: 1px;
+        color: var(--faint);
+      }
+      .back-link:hover { color: var(--teal); }
+
+      /* keeper strip (compact — mirrors the shop hero) */
+      .keeper-strip {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+        padding: 14px 18px;
+      }
+      .keeper-slot {
+        width: 72px;
+        height: 72px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        background: var(--panel-deep);
+        border: 1px solid var(--stroke);
+        border-radius: 3px;
+        overflow: hidden;
+        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
+      }
+      .keeper {
+        width: 32px;
+        height: 32px;
+        background: url("/img/gabin_char.png") no-repeat 0 -64px;
+        transform: scale(2.4);
+        transform-origin: bottom center;
+        image-rendering: pixelated;
+        animation: keeper-bob 1.6s steps(2) infinite;
+      }
+      @keyframes keeper-bob {
+        0%, 100% { transform: scale(2.4) translateY(0); }
+        50% { transform: scale(2.4) translateY(-0.6px); }
+      }
+      .bubble {
+        position: relative;
+        background: var(--panel-deep);
+        color: var(--ink);
+        border: 1px solid var(--teal);
+        border-radius: 3px;
+        padding: 11px 15px;
+        font-family: var(--pixel);
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      .bubble::after {
+        content: "";
+        position: absolute;
+        left: -6px;
+        top: 16px;
+        width: 9px;
+        height: 9px;
+        background: var(--panel-deep);
+        border-left: 1px solid var(--teal);
+        border-bottom: 1px solid var(--teal);
+        transform: rotate(45deg);
+      }
+
+      /* ── item detail ── */
+      .detail-card { padding: 22px 24px 24px; }
+      #detail-img {
+        width: 300px;
+        height: 300px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--img-slot);
+        border: 1px solid var(--stroke);
+        border-radius: 3px;
+        overflow: hidden;
+        image-rendering: pixelated;
+      }
+      #detail-img img { max-width: 100%; max-height: 100%; }
+      #detail-img .ph {
+        width: 56px;
+        height: 56px;
+        opacity: 0.5;
+        background: var(--stroke);
+        clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      }
+      .detail-row { display: flex; gap: 28px; flex-wrap: wrap; }
+      .detail-info {
+        flex: 1;
+        min-width: 260px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      #detail-name {
+        font-family: var(--pixel);
+        font-size: 28px;
+        letter-spacing: 0.5px;
+        color: var(--gold);
+      }
+      #detail-desc {
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--ink);
+        white-space: pre-wrap;
+      }
+      .price {
+        color: var(--gold);
+        font-family: var(--sans);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .price img { width: 20px; height: 20px; }
+      .price.cant { color: var(--bad); }
+      .price-hours {
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--faint);
+        margin-left: 2px;
+      }
+      .options-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .qty-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .qty-label {
+        font-family: var(--pixel);
+        font-size: 13px;
+        letter-spacing: 1px;
+        color: var(--dim);
+      }
+      .qty-stepper {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+      }
+      .qty-stepper button {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: var(--panel-2);
+        color: var(--ink);
+        font-family: var(--pixel);
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .qty-stepper button:hover:not(:disabled) { background: var(--panel-deep); }
+      .qty-stepper button:disabled { opacity: 0.4; cursor: default; }
+      .qty-stepper input {
+        width: 44px;
+        height: 32px;
+        border: none;
+        border-left: 1px solid var(--stroke);
+        border-right: 1px solid var(--stroke);
+        background: var(--panel-deep);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-weight: 700;
+        text-align: center;
+        font-size: 14px;
+      }
+      .qty-stepper input::-webkit-outer-spin-button,
+      .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      .opt-group { display: flex; flex-direction: column; gap: 6px; }
+      .opt-group-name {
+        font-family: var(--pixel);
+        font-size: 13px;
+        letter-spacing: 1px;
+        color: var(--dim);
+      }
+      .opt-choices { display: flex; gap: 9px; flex-wrap: wrap; }
+      .opt-choice {
+        user-select: none;
+        font-size: 15px;
+        padding: 10px 16px;
+      }
+      .opt-choice.on {
+        color: var(--btn-ink);
+        background: var(--gold);
+        border-color: transparent;
+      }
+      .cfg-delta { opacity: 0.7; font-size: 0.9em; }
+      .opt-choice.on .cfg-delta { opacity: 0.85; }
+      .cfg-ref-note {
+        font-size: 13px;
+        color: var(--dim);
+        background: var(--panel-2);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        padding: 9px 12px;
+        margin-bottom: 4px;
+      }
+      .cfg-ref-note a { color: var(--gold); text-decoration: underline; }
+      .afford-bar {
+        height: 14px;
+        border: 1px solid var(--stroke);
+        border-radius: 2px;
+        background: var(--panel-deep);
+        overflow: hidden;
+      }
+      .afford-bar > div {
+        height: 100%;
+        background: repeating-linear-gradient(90deg, var(--gold) 0 7px, var(--gold-soft) 7px 14px);
+        transition: width 0.3s ease;
+      }
+      .btn-row { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <a class="back-link" href="/shop/">← BACK TO SHOP</a>
+
+      <div class="spin" id="loading"></div>
+
+      <div class="empty-note" id="notfound" hidden>
+        CAN'T FIND THAT ITEM.<br />IT MAY HAVE SOLD OUT OR VANISHED.
+        <div style="margin-top: 14px"><a class="btn dark" href="/shop/">BACK TO THE SHELVES</a></div>
+      </div>
+
+      <div id="detail" hidden>
+        <div class="keeper-strip hud">
+          <div class="keeper-slot"><div class="keeper" id="keeper"></div></div>
+          <div class="bubble" id="bubble">TAKE YOUR TIME.</div>
+        </div>
+
+        <section class="hud detail-card">
+          <div class="detail-row">
+            <div id="detail-img"></div>
+            <div class="detail-info">
+              <div id="detail-name"></div>
+              <div id="detail-limited"></div>
+              <div class="price" id="detail-price"></div>
+              <div id="detail-desc"></div>
+              <div class="options-row" id="detail-options"></div>
+              <div>
+                <div
+                  class="muted"
+                  style="font-size: 13px; margin-bottom: 6px; font-family: var(--sans); font-weight: 700; letter-spacing: 0.2px"
+                  id="afford-label"
+                ></div>
+                <div class="afford-bar"><div id="afford-fill"></div></div>
+              </div>
+              <div class="qty-row" id="qty-row" hidden>
+                <span class="qty-label">QTY</span>
+                <div class="qty-stepper">
+                  <button type="button" id="qty-minus">-</button>
+                  <input id="qty-input" type="number" min="1" max="999" step="1" value="1" inputmode="numeric" />
+                  <button type="button" id="qty-plus">+</button>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn" id="buy-btn">BUY</button>
+                <a class="btn dark" href="/shop/">KEEP BROWSING</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script src="/pixl.js"></script>
+    <script>
+      Pixl.mountTopbar("shop");
+
+      const $ = (id) => document.getElementById(id);
+      const itemId = Number(new URLSearchParams(location.search).get("id"));
+      let selected = null;
+      let wallet = null;
+      let xp = 0;
+      let claimedIds = new Set();
+      let buying = false;
+      let optionPick = {};
+      let configPick = {};
+      let quantity = 1;
+
+      function clampQty(n) {
+        n = Math.round(Number(n));
+        if (!Number.isFinite(n)) return 1;
+        return Math.max(1, Math.min(999, n));
+      }
+      function setQty(n) {
+        quantity = clampQty(n);
+        $("qty-input").value = quantity;
+        $("qty-minus").disabled = quantity <= 1;
+        $("qty-plus").disabled = quantity >= 999;
+        renderDetail();
+      }
+
+      // ── real price-varying configurator (Framework 13/16 DIY etc.) ──
+      function computeConfigPrice(item, picks) {
+        const cfg = item.config_options;
+        if (!cfg) return Number(item.price);
+        let total = Number(cfg.base_price) || 0;
+        for (const g of cfg.groups || []) {
+          if (g.type === "multi") {
+            const chosen = new Set(picks[g.name] || []);
+            for (const c of g.choices) if (chosen.has(c.label)) total += Number(c.price) || 0;
+          } else {
+            const pick = picks[g.name] ?? g.choices[0]?.label;
+            const c = g.choices.find((c) => c.label === pick) ?? g.choices[0];
+            total += Number(c?.price) || 0;
+          }
+        }
+        return total;
+      }
+
+      function renderConfigurator() {
+        const cfg = selected.config_options;
+        const refNote = cfg.reference_url
+          ? `<div class="cfg-ref-note">Want the exact spec sheet (all language/layout variants, full details)? <a href="${Pixl.esc(cfg.reference_url)}" target="_blank" rel="noopener">Check the real configurator ↗</a> then pick the matching options below.</div>`
+          : "";
+        $("detail-options").innerHTML =
+          refNote +
+          cfg.groups
+            .map((g) => {
+              const isMulti = g.type === "multi";
+              const chosen = isMulti
+                ? new Set(configPick[g.name] || [])
+                : new Set([configPick[g.name] ?? g.choices[0]?.label]);
+              const chips = g.choices
+                .map((c) => {
+                  const on = chosen.has(c.label);
+                  const priceTag = c.price ? ` <span class="cfg-delta">+${c.price}px</span>` : "";
+                  return `<span class="chip opt-choice ${on ? "on" : ""}" data-g="${Pixl.esc(g.name)}" data-c="${Pixl.esc(c.label)}" ${isMulti ? 'data-multi="1"' : ""}>${Pixl.esc(c.label)}${priceTag}</span>`;
+                })
+                .join("");
+              return `<div class="opt-group"><div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}${isMulti ? " (pick any)" : ""}</div><div class="opt-choices">${chips}</div></div>`;
+            })
+            .join("");
+        for (const chip of $("detail-options").querySelectorAll(".opt-choice")) {
+          chip.addEventListener("click", () => {
+            const g = chip.dataset.g;
+            const c = chip.dataset.c;
+            if (chip.dataset.multi) {
+              const set = new Set(configPick[g] || []);
+              if (set.has(c)) set.delete(c);
+              else set.add(c);
+              configPick[g] = [...set];
+            } else {
+              configPick[g] = c;
+            }
+            renderConfigurator();
+            updateConfigPriceUI();
+          });
+        }
+      }
+
+      function updateConfigPriceUI() {
+        const price = computeConfigPrice(selected, configPick);
+        const afford = wallet && wallet.pixels >= price;
+        $("detail-price").innerHTML =
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${price.toLocaleString()} PIXELS<span class="price-hours">${hoursOf(price)}</span>`;
+        $("detail-price").classList.toggle("cant", !afford);
+        $("buy-btn").disabled = !afford;
+        $("buy-btn").textContent = "BUY";
+        const have = wallet ? wallet.pixels : 0;
+        const pct = Math.max(0, Math.min(100, (have / Math.max(1, price)) * 100));
+        $("afford-fill").style.width = pct + "%";
+        $("afford-fill").style.background =
+          pct >= 100
+            ? "var(--good)"
+            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
+        $("afford-label").textContent =
+          `YOU HAVE ${Math.round(have)} / ${price.toLocaleString()} PX` + (pct >= 100 ? "  —  EASY." : "");
+      }
+
+      function optionGroups(item) {
+        const named = [];
+        const loose = [];
+        for (const raw of Array.isArray(item.options) ? item.options : []) {
+          const o = String(raw);
+          const idx = o.indexOf(":");
+          if (idx > 0) {
+            const name = o.slice(0, idx).trim();
+            const choices = o
+              .slice(idx + 1)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            if (choices.length) named.push({ name, choices });
+          } else if (o.trim()) {
+            loose.push(o.trim());
+          }
+        }
+        if (loose.length) named.unshift({ name: "", choices: loose });
+        return named;
+      }
+
+      function optionSummary() {
+        if (!selected) return "";
+        if (selected.config_options) {
+          return (selected.config_options.groups || [])
+            .map((g) => {
+              if (g.type === "multi") {
+                const picks = configPick[g.name] || [];
+                return picks.length ? `${g.name}: ${picks.join(", ")}` : null;
+              }
+              const pick = configPick[g.name] ?? g.choices[0]?.label;
+              return `${g.name}: ${pick}`;
+            })
+            .filter(Boolean)
+            .join(" · ");
+        }
+        return optionGroups(selected)
+          .map((g, gi) => {
+            const pick = optionPick[gi] ?? g.choices[0];
+            return g.name ? `${g.name}: ${pick}` : pick;
+          })
+          .join(" · ");
+      }
+
+      function renderOptions() {
+        const groups = optionGroups(selected);
+        $("detail-options").innerHTML = groups
+          .map((g, gi) => {
+            const pick = optionPick[gi] ?? g.choices[0];
+            const chips = g.choices
+              .map(
+                (c) =>
+                  `<span class="chip opt-choice ${c === pick ? "on" : ""}" data-g="${gi}" data-c="${Pixl.esc(c)}">${Pixl.esc(c.toUpperCase())}</span>`,
+              )
+              .join("");
+            const label = g.name
+              ? `<div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}</div>`
+              : "";
+            return `<div class="opt-group">${label}<div class="opt-choices">${chips}</div></div>`;
+          })
+          .join("");
+        for (const chip of $("detail-options").querySelectorAll(".opt-choice")) {
+          chip.addEventListener("click", () => {
+            optionPick[Number(chip.dataset.g)] = chip.dataset.c;
+            renderOptions();
+          });
+        }
+      }
+
+      function isTrophy(item) {
+        return Number(item.unlock_xp) > 0;
+      }
+      function trophyState(item) {
+        if (claimedIds.has(item.id)) return "claimed";
+        return xp >= Number(item.unlock_xp) ? "claimable" : "locked";
+      }
+      function canAfford(item) {
+        const p = item.config_options ? Number(item.config_options.base_price) : Number(item.price);
+        return wallet && wallet.pixels >= p;
+      }
+
+      // Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows
+      // a range: hours needed at that lowest rate, then hours needed at the
+      // shop's highest rate ($6/h) - your Restoration Energy multiplier
+      // puts you somewhere between the two.
+      function fmtHours(h) {
+        const r = Math.round(h * 10) / 10;
+        return Number.isInteger(r) ? String(r) : r.toFixed(1);
+      }
+      function hoursOf(px) {
+        const lo = px / 50;
+        const hi = (lo * 3.5) / 6;
+        return `${fmtHours(lo)}-${fmtHours(hi)}h`;
+      }
+      function imgHtml(item) {
+        const url = String(item.image_url || "");
+        if (!url) return `<span class="ph"></span>`;
+        return `<img src="${Pixl.esc(url)}" alt="" onerror="this.outerHTML='<span class=ph></span>'">`;
+      }
+
+      let bubbleTimer = null;
+      function say(text, hold = 4000) {
+        $("bubble").textContent = text;
+        clearTimeout(bubbleTimer);
+        if (hold)
+          bubbleTimer = setTimeout(() => {
+            $("bubble").textContent = "TAKE YOUR TIME.";
+          }, hold);
+      }
+      function nudgeKeeper() {
+        const k = $("keeper");
+        k.style.animation = "none";
+        void k.offsetWidth;
+        k.style.animation = "";
+      }
+
+      function renderDetail() {
+        $("detail-img").innerHTML = imgHtml(selected);
+        $("detail-name").textContent = selected.name;
+        $("detail-desc").innerHTML = Pixl.bbcode(selected.description || "");
+        document.title = `Pixl · ${selected.name}`;
+
+        $("qty-row").hidden = true;
+
+        if (isTrophy(selected)) {
+          $("detail-options").innerHTML = optionGroups(selected)
+            .flatMap((g) => g.choices)
+            .map((o) => `<span class="chip teal">${Pixl.esc(o.toUpperCase())}</span>`)
+            .join("");
+          const state = trophyState(selected);
+          const need = Number(selected.unlock_xp);
+          const pct = Math.max(0, Math.min(100, (xp / Math.max(1, need)) * 100));
+          $("detail-limited").innerHTML =
+            `<span class="chip ${state === "locked" ? "" : "teal"}">LEVEL ${need} TROPHY — EARNED, NOT BOUGHT</span>`;
+          $("detail-price").innerHTML =
+            state === "claimed"
+              ? "CLAIMED"
+              : state === "claimable"
+                ? "READY TO CLAIM!"
+                : `LOCKED — REACH ${need} XP`;
+          $("detail-price").classList.toggle("cant", state === "locked");
+          $("afford-fill").style.width = pct + "%";
+          $("afford-fill").style.background =
+            pct >= 100
+              ? "var(--good)"
+              : "repeating-linear-gradient(90deg,var(--teal) 0 7px,var(--teal-hover) 7px 14px)";
+          $("afford-label").textContent =
+            `YOU'RE AT ${Math.floor(xp)} / ${need} XP` +
+            (pct >= 100 ? "  —  EARNED!" : `  ·  ${need - Math.floor(xp)} to go`);
+          $("buy-btn").textContent =
+            state === "claimed" ? "CLAIMED" : state === "claimable" ? "CLAIM" : "LOCKED";
+          $("buy-btn").disabled = state !== "claimable";
+          $("buy-btn").classList.toggle("teal", state === "claimable");
+          say(
+            state === "claimable"
+              ? "YOU EARNED THAT ONE!"
+              : state === "claimed"
+                ? "A TRUE LEGEND."
+                : "SHIP MORE TO EARN IT!",
+            5000,
+          );
+          return;
+        }
+
+        $("buy-btn").classList.remove("teal");
+
+        if (selected.config_options) {
+          configPick = {};
+          renderConfigurator();
+          $("detail-limited").innerHTML =
+            `<span class="chip gold">FULLY CUSTOM — PRICE UPDATES AS YOU PICK</span>`;
+          updateConfigPriceUI();
+          say("LET'S BUILD YOUR DREAM MACHINE.", 5000);
+          return;
+        }
+
+        optionPick = {};
+        renderOptions();
+        $("detail-limited").innerHTML = selected.limited
+          ? `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`
+          : "";
+        $("qty-row").hidden = false;
+        $("qty-input").value = quantity;
+        $("qty-minus").disabled = quantity <= 1;
+        $("qty-plus").disabled = quantity >= 999;
+        const total = Number(selected.price) * quantity;
+        const afford = wallet && wallet.pixels >= total;
+        $("detail-price").innerHTML =
+          `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${total.toLocaleString()} PIXELS<span class="price-hours">${hoursOf(total)}</span>` +
+          (quantity > 1 ? ` <span class="price-hours">(${Number(selected.price).toLocaleString()} × ${quantity})</span>` : "");
+        $("detail-price").classList.toggle("cant", !afford);
+        $("buy-btn").textContent = "BUY";
+        $("buy-btn").disabled = !afford;
+        const have = wallet ? wallet.pixels : 0;
+        const pct = Math.max(0, Math.min(100, (have / Math.max(1, total)) * 100));
+        $("afford-fill").style.width = pct + "%";
+        $("afford-fill").style.background =
+          pct >= 100
+            ? "var(--good)"
+            : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
+        $("afford-label").textContent =
+          `YOU HAVE ${Math.round(have)} / ${total.toLocaleString()} PX` +
+          (pct >= 100 ? "  —  EASY." : "");
+        say(afford ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
+      }
+
+      async function claimTrophy(id) {
+        const r = await Pixl.send("POST", `/api/shop/claim/${id}`);
+        if (r.ok && r.claimed) {
+          claimedIds.add(id);
+          Pixl.toast("🏆 TROPHY CLAIMED! The team will reach out.");
+          say("A LEGEND CLAIMS THEIR PRIZE!", 5000);
+          renderDetail();
+        } else if (r.error === "not_eligible") {
+          Pixl.toast(`Not yet — you're at ${Math.floor(r.xp)} / ${r.need} XP.`, true);
+        } else {
+          Pixl.toast("Couldn't claim that right now.", true);
+        }
+      }
+
+      async function buyItem(id) {
+        if (buying) return;
+        buying = true;
+        $("buy-btn").disabled = true;
+        $("buy-btn").textContent = "BUYING...";
+        const option = optionSummary();
+        const body = { option };
+        if (selected && selected.config_options) body.config = configPick;
+        else body.quantity = quantity;
+        const r = await Pixl.send("POST", `/api/shop/buy/${id}`, body);
+        buying = false;
+        if (r.ok) {
+          if (wallet && typeof r.balance === "number") wallet.pixels = r.balance;
+          const el = document.getElementById("pixl-wallet");
+          if (el && typeof r.balance === "number")
+            el.querySelector(".px").textContent = Math.round(r.balance).toLocaleString();
+          Pixl.toast("ORDER PLACED! The team will reach out.");
+          say("GREAT PICK! WE'LL BE IN TOUCH\nABOUT GETTING IT TO YOU.", 0);
+          $("buy-btn").outerHTML = `<a class="btn teal" href="/orders/">VIEW MY ORDERS</a>`;
+        } else if (r.error === "insufficient") {
+          Pixl.toast("Not enough pixels for that.", true);
+          $("buy-btn").disabled = false;
+          $("buy-btn").textContent = "BUY";
+        } else if (r.error === "not_for_sale") {
+          Pixl.toast("That one isn't for sale.", true);
+          $("buy-btn").disabled = false;
+          $("buy-btn").textContent = "BUY";
+        } else {
+          Pixl.toast("Couldn't place that order right now.", true);
+          $("buy-btn").disabled = false;
+          $("buy-btn").textContent = "BUY";
+        }
+      }
+
+      $("buy-btn").addEventListener("click", () => {
+        if (!selected) return;
+        if (isTrophy(selected)) {
+          if (trophyState(selected) === "claimable") claimTrophy(selected.id);
+          return;
+        }
+        const price = selected.config_options
+          ? computeConfigPrice(selected, configPick)
+          : Number(selected.price) * quantity;
+        if (!wallet || wallet.pixels < price) {
+          Pixl.toast("BIT PRICEY FOR YOU, FOR NOW.", true);
+          say("SHIP A FEW MORE PROJECTS\nAND COME BACK!", 4000);
+          nudgeKeeper();
+          return;
+        }
+        buyItem(selected.id);
+      });
+
+      $("qty-minus").addEventListener("click", () => setQty(quantity - 1));
+      $("qty-plus").addEventListener("click", () => setQty(quantity + 1));
+      $("qty-input").addEventListener("change", (e) => setQty(e.target.value));
+
+      // limited-item countdown refresh
+      setInterval(() => {
+        if (selected && selected.limited && selected.limited_until && !isTrophy(selected))
+          $("detail-limited").innerHTML =
+            `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`;
+      }, 1000);
+
+      async function boot() {
+        if (!Pixl.hasToken) {
+          $("loading").remove();
+          $("notfound").hidden = false;
+          return;
+        }
+        wallet = await Pixl.loadWallet();
+        try {
+          const data = await Pixl.api("/api/shop/items");
+          const items = (data.items || []).map((i) => ({
+            ...i,
+            id: Number(i.id),
+            price: Number(i.price),
+            unlock_xp: Number(i.unlock_xp || 0),
+          }));
+          xp = Number(data.xp || 0);
+          claimedIds = new Set((data.claimed || []).map(Number));
+          selected = items.find((i) => i.id === itemId) || null;
+        } catch (e) {
+          if (e.message !== "unauthorized")
+            Pixl.toast("Couldn't reach the shop server.", true);
+        }
+        $("loading").remove();
+        if (!selected) {
+          $("notfound").hidden = false;
+          return;
+        }
+        $("detail").hidden = false;
+        renderDetail();
+      }
+      boot();
+    </script>
+  </body>
+</html>

@@ -13,7 +13,8 @@
     "alreadyIn": "você já está dentro",
     "viewYourRsvp": "ver seu RSVP",
     "errorNoEmail": "ei, coloca teu email primeiro 👀",
-    "errorInvalidEmail": "isso não parece um email de verdade kkk"
+    "errorInvalidEmail": "isso não parece um email de verdade kkk",
+    "scrollHint": "continue rolando"
   },
   "description": {
     "title": "O que é Pixl?",
@@ -28,7 +29,7 @@
         "description": "Descubra cidades cyberpunk, zonas subaquáticas e muito mais"
       },
       {
-        "title": "Aceite missões secundárias",
+        "title": "Aceite provas",
         "description": "Crie apps, sites e hardware para os personagens do jogo"
       },
       {
@@ -41,7 +42,7 @@
       }
     ],
     "youRepair": "Você repara",
-    "youRepairDesc": "Entregue missões reais de hardware e software para os NPCs. Cada projeto vira Energia de Restauração que reconstrói um pedaço quebrado do Pixl",
+    "youRepairDesc": "Entregue provas reais de hardware e software para os NPCs. Cada projeto vira Energia de Restauração que reconstrói um pedaço quebrado do Pixl",
     "theCorePays": "O Núcleo paga",
     "theCorePaysDesc": "O Núcleo é um cofre de tecnologia pixeliana antiga. À medida que você o repara, ele devolve seus tesouros: prêmios reais e bolsas condizentes com o que você construiu",
     "comingSoon": "Em breve"
@@ -52,7 +53,7 @@
     "subtitle": "O Pixl acontece como uma história em temporadas: os capítulos fazem o mundo avançar, e tudo o que você entrega o repara.",
     "paths": [
       {
-        "title": "Pegue uma missão secundária",
+        "title": "Pegue uma prova",
         "text": "O Núcleo já conhece essas: problemas que os NPCs das regiões desbloqueadas precisam resolver. Escolha uma e entregue."
       },
       {
@@ -64,7 +65,7 @@
     "rhythm": [
       {
         "title": "Capítulos (~3 semanas)",
-        "text": "A história avança em capítulos. Cada capítulo é um esforço para reparar uma parte do mundo: você pega missões das regiões já desbloqueadas, entrega projetos reais, e seu trabalho conta para a meta de restauração do capítulo. Quando a comunidade a atinge, a história avança: uma nova região abre, novos NPCs voltam, novas missões aparecem."
+        "text": "A história avança em capítulos. Cada capítulo é um esforço para reparar uma parte do mundo: você pega provas das regiões já desbloqueadas, entrega projetos reais, e seu trabalho conta para a meta de restauração do capítulo. Quando a comunidade a atinge, a história avança: uma nova região abre, novos NPCs voltam, novas provas aparecem."
       },
       {
         "title": "Operações (~1 semana)",
@@ -72,7 +73,7 @@
       },
       {
         "title": "Chegando atrasado? Tudo certo",
-        "text": "As regiões desbloqueadas nunca fecham. Sempre que você chegar, pode escolher qualquer missão disponível, entregá-la e ganhar seus prêmios e pixels como todo mundo. Os capítulos só decidem o que desbloqueia a seguir, nunca o que você pode construir."
+        "text": "As regiões desbloqueadas nunca fecham. Sempre que você chegar, pode escolher qualquer prova disponível, entregá-la e ganhar seus prêmios e pixels como todo mundo. Os capítulos só decidem o que desbloqueia a seguir, nunca o que você pode construir."
       }
     ],
     "mechanics": [
@@ -99,13 +100,13 @@
   },
   "sidequests": {
     "badge": "Exemplos",
-    "title": "Missões secundárias e recompensas",
+    "title": "Provas e recompensas",
     "description": "Estes são apenas exemplos e podem mudar ao longo das semanas.",
     "howRewardsWork": "Como funcionam as recompensas",
-    "howRewardsWorkDesc": "Você recebe o prêmio base por cada missão que completa. Quanto mais horas você dedica, mais moeda ganha para gastar na loja. Não quer o prêmio listado ou já tem? Sem problema, troque-o por qualquer coisa de valor equivalente.",
+    "howRewardsWorkDesc": "Você recebe o prêmio base por cada prova que completa. Quanto mais horas você dedica, mais moeda ganha para gastar na loja. Não quer o prêmio listado ou já tem? Sem problema, troque-o por qualquer coisa de valor equivalente.",
     "seeFullExample": "Ver um exemplo completo de envio",
     "seeFullExampleDesc": "Não sabe como é um envio completo? Confira este exemplo que cumpre cada prazo.",
-    "sidequestLabel": "Missão",
+    "sidequestLabel": "Prova",
     "prizeLabel": "Prêmio",
     "levels": [
       {
@@ -161,7 +162,7 @@
         "hours": "mín. 20h de trabalho",
         "quest": {
           "title": "Projete a sua própria região",
-          "description": "Crie uma nova região para o mundo do Pixl: mapa, NPCs, assets e missões. Depois programe-a numa demo jogável, não é só uma missão de arte. Se estiver bem polida, é adicionada ao jogo de verdade."
+          "description": "Crie uma nova região para o mundo do Pixl: mapa, NPCs, assets e provas. Depois programe-a numa demo jogável, não é só uma prova de arte. Se estiver bem polida, é adicionada ao jogo de verdade."
         },
         "prize": {
           "title": "Mesa digitalizadora",
@@ -223,12 +224,16 @@
         "description": "Uma foto assinada de um membro da orga, enviada à sua porta."
       },
       {
+        "name": "Pacote de Memes da Comunidade (5 un.)",
+        "description": "5 memes aleatórios feitos pela community team, impressos em papel fotográfico de verdade e enviados até você."
+      },
+      {
         "name": "Bolsa de assets de jogo",
         "description": "Uma bolsa acumulável de US$ 10 para comprar tilesets, sprites, músicas e sons para o seu jogo."
       },
       {
         "name": "Pacote de adesivos do Hack Club",
-        "description": "Um envelope de adesivos do Hack Club e do Pixl."
+        "description": "Um envelope de adesivos da Hack Club e Pixl, feitos em colaboração com vários artistas."
       },
       {
         "name": "Créditos de IA",
@@ -239,12 +244,40 @@
         "description": "Uma bolsa acumulável de US$ 10 para gastar em instrumentos, plugins, samples ou qualquer equipamento musical. Não use para assinatura de Spotify/Apple Music etc."
       },
       {
+        "name": "Bolsa de ferramentas de solda",
+        "description": "Uma bolsa acumulável de $10 para ferramentas e suprimentos de solda."
+      },
+      {
+        "name": "Bolsa de hardware",
+        "description": "Uma bolsa acumulável de $10 para gastar em hardware para seus projetos."
+      },
+      {
+        "name": "Bolsa de domínio",
+        "description": "Uma bolsa acumulável de $12 para registrar um domínio para seu projeto."
+      },
+      {
+        "name": "Bolsa de hospedagem",
+        "description": "Uma bolsa acumulável de $10 para hospedagem, como Railway ou qualquer plataforma em nuvem."
+      },
+      {
         "name": "Objeto de mesa aleatório",
         "description": "Um objeto aleatório das nossas mesas: uma PCB, um estoque de adesivos, qualquer coisa. Vem com uma carta assinada. Só restam alguns!"
       },
       {
         "name": "Bolsa de material de arte",
         "description": "Uma bolsa acumulável de US$ 10 para gastar em tintas, canetas, telas ou qualquer material de arte."
+      },
+      {
+        "name": "Cortador de Biscoito PIXL",
+        "description": "Cortadores de biscoito gigantes com as letras pixeladas do PIXL, desenhados pelo Ricky. Asse uma fornada para o Barnav, nosso devorador de biscoitos oficial."
+      },
+      {
+        "name": "Ferro de solda",
+        "description": "Um kit de ferro de solda com pontas novas e fluxo — útil para o kit Tamagotchi e outros projetos de hardware."
+      },
+      {
+        "name": "Bolsa de comida",
+        "description": "Uma bolsa acumulável de $10 para comida e lanches enquanto você constrói."
       },
       {
         "name": "Licença do Pixel Composer",
@@ -263,6 +296,10 @@
         "description": "O editor de pixel art. Sprites animados, tilesets e mais."
       },
       {
+        "name": "Licença de desenvolvedor Google Play",
+        "description": "Uma bolsa de $25 para sua licença de desenvolvedor Google Play."
+      },
+      {
         "name": "Kit DIY Tamagotchi Pixl",
         "description": "Solde e programe o seu próprio bichinho de bolso, projetado pelo mangoman."
       },
@@ -271,8 +308,16 @@
         "description": "Escolha da nossa seleção de jogos indie legais. Enviado como link de presente na Steam ou Humble Bundle."
       },
       {
+        "name": "Kit de chave de fenda elétrica",
+        "description": "Um kit de chave de fenda elétrica para construir e consertar seus projetos de hardware."
+      },
+      {
         "name": "Kit inicial ESP32",
         "description": "Placa de desenvolvimento ESP32 com uma protoboard e componentes para começar a mexer."
+      },
+      {
+        "name": "FURYCUBE 68%",
+        "description": "Um teclado mecânico hot-swap barato para suas game jams noturnas."
       },
       {
         "name": "Pelúcia do Godot (edição limitada)",
@@ -283,6 +328,22 @@
         "description": "Moletom PIXL de edição limitada com o logo no peito."
       },
       {
+        "name": "Pelúcia Blahaj",
+        "description": "Uma pelúcia tubarão Blahaj enviada para sua casa."
+      },
+      {
+        "name": "Bolsa de CPU",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de CPU."
+      },
+      {
+        "name": "Bolsa de GPU",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de GPU."
+      },
+      {
+        "name": "Bolsa de RAM",
+        "description": "Uma bolsa acumulável de $50 exclusiva para upgrades de RAM."
+      },
+      {
         "name": "Wacom Intuos (Small)",
         "description": "Uma mesa digitalizadora Wacom, a clássica da arte digital."
       },
@@ -291,32 +352,60 @@
         "description": "Um portátil retrô para jogar suas criações e os clássicos onde estiver."
       },
       {
-        "name": "Epomaker TH80 V2 Pro",
+        "name": "Epomaker x Aula S75 Pro",
         "description": "Teclado mecânico hot-swap com uma telinha. Adicione uma nota para escolher sua cor."
-      },
-      {
-        "name": "Epomaker x Aula F75",
-        "description": "Teclado mecânico hot-swap de 75%. Adicione uma nota para escolher sua cor."
       },
       {
         "name": "GameMaker Pro",
         "description": "Licença do GameMaker Professional para exportar seus jogos para todo lugar."
       },
       {
+        "name": "Licença Steam",
+        "description": "Uma bolsa de $100 para Steam, já que os jogos nem sempre podem ser enviados como presente direto."
+      },
+      {
+        "name": "Licença de desenvolvedor Apple",
+        "description": "Uma bolsa de $100 para sua assinatura do programa de desenvolvedor Apple."
+      },
+      {
         "name": "Bolsa de monitor (acumulável)",
         "description": "Uma bolsa acumulável de US$ 100 para o monitor da sua escolha. Seus pixels merecem mais pixels."
+      },
+      {
+        "name": "Apple Pencil Pro",
+        "description": "O Apple Pencil Pro, perfeito com nosso iPad para desenhar e fazer pixel art."
       },
       {
         "name": "Raspberry Pi 5",
         "description": "Uma Raspberry Pi 5 (4GB) para rodar seus servidores, emuladores e experimentos. Versão de 8GB por 3150 px."
       },
       {
+        "name": "Sony WH-CH720N",
+        "description": "Fones leves com cancelamento de ruído, fáceis no bolso."
+      },
+      {
+        "name": "Creality Ender 3 V3",
+        "description": "Uma impressora 3D de entrada confiável para props e protótipos."
+      },
+      {
+        "name": "AirPods Pro 3",
+        "description": "Os fones com cancelamento de ruído da Apple, compactos e fáceis de levar para qualquer lugar."
+      },
+      {
         "name": "Bambu Lab A1 Mini",
         "description": "Uma impressora 3D rápida e silenciosa. Imprima seus próprios props e cases de jogo."
       },
       {
+        "name": "SSD externo Samsung T7 (1TB)",
+        "description": "Um SSD portátil rápido para backups, builds e arquivos grandes."
+      },
+      {
         "name": "Sony WH-1000XM5",
         "description": "Fones com cancelamento de ruído para entrar no foco."
+      },
+      {
+        "name": "Creality Sparkx i7",
+        "description": "Uma impressora 3D rápida e capaz para seus projetos maiores."
       },
       {
         "name": "Bambu Lab A1",
@@ -335,16 +424,44 @@
         "description": "A A1 junto com o AMS Lite para impressões multicoloridas assim que sai da caixa."
       },
       {
+        "name": "Samsung Galaxy S24",
+        "description": "Um flagship Android sólido para o dia a dia e testar seus apps."
+      },
+      {
         "name": "AirPods Max 2",
         "description": "Os fones over-ear com cancelamento de ruído da Apple. O flex definitivo."
       },
       {
+        "name": "Nothing Phone (4a) Pro",
+        "description": "Um celular Android elegante com o design transparente característico da Nothing."
+      },
+      {
         "name": "MacBook Neo",
-        "description": "Um MacBook leve e portátil para código, arte e tudo mais. 256GB mostrado; adicione uma nota para escolher 512GB por 11500 px."
+        "description": "Um MacBook leve e portátil para código, arte e tudo mais. 256GB mostrado; adicione uma nota para escolher 512GB por 11425 px."
+      },
+      {
+        "name": "iPad Air (M4, 128GB)",
+        "description": "Um iPad mais rápido e espaçoso com o chip M4. Compatível com caneta para desenhar e testar seu jogo."
       },
       {
         "name": "MacBook Air M5",
-        "description": "O notebook Air da Apple, 16GB/512GB mostrado; adicione uma nota para escolher 24GB/1TB por 24250 px."
+        "description": "O notebook Air da Apple, 16GB/512GB mostrado; adicione uma nota para escolher 24GB/1TB por 24275 px."
+      },
+      {
+        "name": "Framework 13 DIY",
+        "description": "Um notebook modular e reparável de 13 polegadas que você monta você mesmo."
+      },
+      {
+        "name": "Framework 16 DIY",
+        "description": "O irmão maior de 16 polegadas do Framework, para montar você mesmo."
+      },
+      {
+        "name": "Mac Mini (24GB/512GB)",
+        "description": "Um Mac de mesa compacto para programar, fazer streaming e projetos do dia a dia."
+      },
+      {
+        "name": "Nintendo Switch 2",
+        "description": "O mais novo híbrido portátil/console da Nintendo. Jogue seus projetos e tudo mais em qualquer lugar ou na tela grande."
       }
     ]
   },
@@ -375,6 +492,14 @@
       {
         "question": "Isso é grátis?",
         "answer": "Sim! Cada um dos seus projetos será financiado, e o evento em si é 100% grátis."
+      },
+      {
+        "question": "Quanto posso ganhar?",
+        "answer": "Você ganha pixels por cada hora de trabalho entregue , 1 hora = 50 pixels, cerca de US$ 3,50 no começo. À medida que sua Energia de Restauração sobe de nível, sua taxa aumenta, até cerca de US$ 6/h. Gaste seus pixels na loja em prêmios reais, de adesivos a um MacBook Air."
+      },
+      {
+        "question": "O que é Energia de Restauração?",
+        "answer": "É o seu XP. Cada entrega ganha Energia de Restauração com base em quantas horas você dedica E em quão complexo é o projeto , então projetos maiores e mais difíceis ganham mais. A cada 10 níveis seu multiplicador de pixels sobe (começando em cerca de 50 px/h e subindo para ~79 px/h, taxas exatas a definir). A Energia de Restauração de toda a comunidade também desbloqueia metas da comunidade, como novas skins para a sua casa no jogo."
       },
       {
         "question": "Quem organiza o Pixl?",

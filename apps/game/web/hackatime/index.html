@@ -6,9 +6,13 @@
 <title>Pixl · Projects</title>
 <link rel="icon" href="/index.icon.png">
 <script>
-  // Hackatime moved into the Projects page — carry the token across.
-  var qs = location.search || "";
-  location.replace("/projects/" + qs + (location.hash || ""));
+  // Hackatime moved into the Projects page — carry the token across. And if this
+  // is the raw play.* host, land on the canonical apex in the same hop.
+  var qs = location.search || "", hash = location.hash || "";
+  if (location.hostname.indexOf("play.") === 0)
+    location.replace(location.protocol + "//" + location.hostname.substring(5) + "/projects/" + qs + hash);
+  else
+    location.replace("/projects/" + qs + hash);
 </script>
 </head>
 <body></body>

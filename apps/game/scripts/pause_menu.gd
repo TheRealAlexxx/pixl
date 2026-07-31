@@ -1,9 +1,13 @@
 extends CanvasLayer
 
 const THEME := preload("res://themes/main_theme.tres")
+const ONBOARDING := preload("res://scripts/onboarding.gd")
 
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const ACCENT_GOLD := Color(0.85098, 0.643137, 0.25098)
+# Main menu & pause menu keep the original Monocraft face; the rest of the game
+# moved its default menu font to Pixelify Sans (see commit b8b1360).
+const OLD_MENU_FONT := preload("res://assets/fonts/Monocraft.ttf")
 
 var _root: Control
 var _resume_button: Button
@@ -20,6 +24,17 @@ var _name_save: Button
 var _name_status: Label
 var _name_saving := false
 
+# Menus are laid out for a 1600x900 desktop canvas — on touch devices, use a
+# theme with bumped-up font sizes/constants/stylebox margins instead of
+# Control.scale (a transform just blurs the already-rasterized pixel font
+# instead of actually growing it — reads as the wrong font entirely).
+func _touch_theme() -> Theme:
+	# touch_menu_theme always hands back a duplicate, so swapping the default
+	# font here is safe and never touches the shared THEME resource.
+	var t := Settings.touch_menu_theme(THEME)
+	t.default_font = OLD_MENU_FONT
+	return t
+
 func _ready() -> void:
 	layer = 100
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -27,6 +42,9 @@ func _ready() -> void:
 	_build_settings_ui()
 	_root.visible = false
 	NetworkManager.name_result.connect(_on_name_result)
+	Settings.font_scale_changed.connect(func():
+		_root.theme = _touch_theme()
+		_settings_root.theme = _touch_theme())
 
 func _make_modal(title: String, width: float) -> Dictionary:
 	var wrap := VBoxContainer.new()
@@ -81,7 +99,7 @@ func _make_modal(title: String, width: float) -> Dictionary:
 func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_root.theme = THEME
+	_root.theme = _touch_theme()
 	add_child(_root)
 
 	var backdrop := ColorRect.new()
@@ -94,7 +112,7 @@ func _build_ui() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(center)
 
-	var modal := _make_modal("MENU", 400)
+	var modal := _make_modal("MENU", 400 * Settings.menu_scale_factor())
 	center.add_child(modal["root"])
 	var body: VBoxContainer = modal["body"]
 
@@ -113,6 +131,13 @@ func _build_ui() -> void:
 	character_button.pressed.connect(_on_character)
 	body.add_child(character_button)
 
+	# Replay the first-run arrival flow (cinematic → Pixo → naming → first Trial)
+	# on demand — runs regardless of the saved onboarding step, so no reset needed.
+	var replay_button := Button.new()
+	replay_button.text = "Replay intro"
+	replay_button.pressed.connect(_replay_onboarding)
+	body.add_child(replay_button)
+
 	var menu_button := Button.new()
 	menu_button.text = "Quit to Main Menu"
 	menu_button.theme_type_variation = &"GreyButton"
@@ -122,7 +147,7 @@ func _build_ui() -> void:
 func _build_settings_ui() -> void:
 	_settings_root = Control.new()
 	_settings_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_settings_root.theme = THEME
+	_settings_root.theme = _touch_theme()
 	_settings_root.visible = false
 	add_child(_settings_root)
 
@@ -136,7 +161,7 @@ func _build_settings_ui() -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_settings_root.add_child(center)
 
-	var modal := _make_modal("SETTINGS", 500)
+	var modal := _make_modal("SETTINGS", 500 * Settings.menu_scale_factor())
 	center.add_child(modal["root"])
 	var body: VBoxContainer = modal["body"]
 
@@ -145,6 +170,12 @@ func _build_settings_ui() -> void:
 	music_check.button_pressed = Settings.music_enabled
 	music_check.toggled.connect(Settings.set_music_enabled)
 	body.add_child(music_check)
+
+	var daynight_check := CheckButton.new()
+	daynight_check.text = "Day/night cycle"
+	daynight_check.button_pressed = Settings.day_night_enabled
+	daynight_check.toggled.connect(Settings.set_day_night_enabled)
+	body.add_child(daynight_check)
 
 	var vol_label := Label.new()
 	vol_label.text = "Music volume"
@@ -480,6 +511,16 @@ func resume_game() -> void:
 	global.pop_ui_blocker()
 	_settings_root.visible = false
 	_root.visible = false
+
+func _replay_onboarding() -> void:
+	var scene := get_tree().current_scene
+	resume_game()
+	if scene == null:
+		return
+	var flow := ONBOARDING.new()
+	scene.add_child(flow)
+	flow.finished.connect(func(): flow.queue_free())
+	flow.start()
 
 func _on_character() -> void:
 	var current := get_tree().current_scene

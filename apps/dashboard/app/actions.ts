@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import sharp from "sharp";
 import {
   db,
   getAdmin,
@@ -16,11 +17,13 @@ import {
   removeReportViewer,
   addHelper,
   removeHelper,
+  nextReviewId,
   EVENT_TYPES,
   type DashEventRow,
 } from "@/lib/db";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
 import { serializeGroups } from "@/lib/shopOptions";
+import { SHOP_REGIONS, type ShopRegion } from "@/lib/shopRegions";
 import { kickOnlinePlayer } from "@/lib/gameServer";
 import { dmOrEmail } from "@/lib/notify";
 import {
@@ -43,6 +46,31 @@ const DASH_URL = "https://pixl-dash.ridit.space";
 
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
+}
+
+// Where to send a reviewer after they finish a verdict: straight to the next
+// project in their queue if there is one, otherwise back to the list. `stage`
+// is the stage of the project they just closed, so we keep them in the same
+// pass (first vs final) when possible. Never throws — returns a path to redirect.
+async function nextReviewPath(
+  access: AdminAccess,
+  by: string,
+  stage: string,
+  justReviewedId: number,
+): Promise<string> {
+  try {
+    const nextId = await nextReviewId({
+      viewer: access.session.slackId,
+      by,
+      canSecondPass: access.canSecondPass,
+      isSuper: access.isSuper,
+      excludeId: justReviewedId,
+      prefer: stage === "second_review" ? "second_review" : "shipped",
+    });
+    return nextId ? `/review/${nextId}` : "/review";
+  } catch {
+    return "/review";
+  }
 }
 
 // XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
@@ -304,6 +332,33 @@ async function settleFirstPassPayouts(
   }
 }
 
+// A project sent back to first pass never got a real verdict, so the pending
+// first-pass payout is void , no pixels, no dock against the reviewer. Distinct
+// from settleFirstPassPayouts, which always resolves to 'paid' (possibly cut).
+async function voidFirstPassPayouts(projectId: number): Promise<void> {
+  const { error } = await db
+    .from("review_payouts")
+    .update({
+      status: "voided",
+      paid_pixels: 0,
+      cut_pct: 100,
+      cut_reason: "sent back for a redo before a final verdict",
+      settled_at: new Date().toISOString(),
+    })
+    .eq("project_id", projectId)
+    .eq("status", "pending");
+  if (error) console.error("voidFirstPassPayouts failed", error.message);
+}
+
+// How a reviewer is credited in maker-facing notes. Prefers the Slack @handle;
+// never leaks a raw Slack user id (login stores the id as the name when Slack
+// gives us no real name) — attribute it to the review team instead.
+async function reviewerLabel(slackId: string, name: string): Promise<string> {
+  const handle = await slackHandle(slackId);
+  if (handle) return handle;
+  return /^[UW][A-Z0-9]{6,}$/.test(name) ? "the review team" : name;
+}
+
 async function notifyOwner(
   userId: string,
   title: string,
@@ -314,11 +369,11 @@ async function notifyOwner(
   await dmOrEmail(userId, title, body);
 }
 
-// Two-pass review. A shipped project gets a first pass from any reviewer; if
-// approved it moves to 'second_review' for a final reviewer's sign-off (unless
-// that first reviewer is themselves a final reviewer, in which case it's
-// approved outright). Pixels are credited only on final approval. "Request
-// changes" bounces it back to the maker from either stage.
+// Two-pass review. A shipped project always gets a first pass from *some*
+// reviewer , even a final reviewer's first look on a fresh 'shipped' project is
+// only a proposal, same as anyone else's. It moves to 'second_review' and needs
+// a DIFFERENT final reviewer to confirm or overturn it before pixels are
+// credited. "Request changes" bounces it back to the maker from either stage.
 export async function reviewProject(formData: FormData): Promise<void> {
   const access = await requirePerm("review");
   const by = actorName(access);
@@ -329,12 +384,33 @@ export async function reviewProject(formData: FormData): Promise<void> {
 
   const { data: current } = await db
     .from("projects")
-    .select("status, user_id, name, first_pass_by, first_pass_hours, first_pass_verdict, shipped_at")
+    .select(
+      "status, user_id, name, first_pass_by, first_pass_hours, first_pass_verdict, shipped_at, sidequest_id, trial_prize_order_id",
+    )
     .eq("id", projectId)
     .single();
   if (!current) return;
   const stage = String(current.status);
   const back = `/review/${projectId}`;
+
+  // The Trial this project was shipped for, if any (see [[trial-ship-review-reward]]
+  // in project memory) , carries an optional min-hours gate and prize.
+  type LinkedTrial = {
+    id: number;
+    name: string;
+    reward: string;
+    min_hours: number | null;
+    prize_shop_item_id: number | null;
+  };
+  let linkedTrial: LinkedTrial | null = null;
+  if (current.sidequest_id) {
+    const { data: sq } = await db
+      .from("sidequests")
+      .select("id, name, reward, min_hours, prize_shop_item_id")
+      .eq("id", current.sidequest_id)
+      .maybeSingle();
+    linkedTrial = sq as LinkedTrial | null;
+  }
   const own = await isOwnProject(access, current.user_id);
   if (stage === "shipped" && !access.isSuper && own)
     redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project , another reviewer has to take it.")}`);
@@ -355,13 +431,14 @@ export async function reviewProject(formData: FormData): Promise<void> {
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
   }
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
-  // First pass by a non-final reviewer: EVERY verdict (approve, request changes,
-  // ban) is only a PROPOSAL. Hold the project in 'second_review' carrying what
-  // was proposed, so a final reviewer confirms or overturns it. Seniors skip
-  // this and act outright below.
-  if (stage === "shipped" && !access.canSecondPass) {
+  // First pass on a freshly-shipped project: approve and ban are only PROPOSALS,
+  // regardless of the reviewer's own permissions — the project is held in
+  // 'second_review' carrying what was proposed so a different final reviewer
+  // confirms or overturns it. "Request changes" is the exception: it never needs
+  // a second pass, so it falls through to bounce straight back to the maker.
+  if (stage === "shipped" && verdict !== "needs_changes") {
     const proposedKey = verdict === "ban" ? "banned" : verdict;
     const { data: project, error } = await db
       .from("projects")
@@ -388,12 +465,15 @@ export async function reviewProject(formData: FormData): Promise<void> {
     await insertReviewAudit(formData, projectId, project.user_id, by, `first_pass_${proposedKey}`, note, claimedHours, approvedHours);
     if (!own) await recordPendingPayout(projectId, access, formData);
     await logModAction(project.user_id, "project_first_pass", `${project.name}: proposed ${proposedKey.replace("_", " ")} , ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
-    redirect("/review");
+    redirect(nextPath);
   }
 
-  // From here, a FINAL reviewer is deciding , a senior first-passing a shipped
-  // project outright, or confirming/overturning a second_review proposal.
+  // From here the project is in 'second_review' (a final reviewer confirming or
+  // overturning the first-pass proposal) — or it's a first-pass "request changes"
+  // falling through to bounce straight back to the maker. These two guards only
+  // apply to the second_review case.
   if (stage === "second_review" && !access.canSecondPass)
     redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can decide this stage.")}`);
   if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
@@ -437,8 +517,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
       `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
     );
     await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
-    redirect("/review");
+    redirect(nextPath);
   }
 
   // Ban , a final reviewer confirms a proposed ban (or a senior bans outright).
@@ -469,12 +550,25 @@ export async function reviewProject(formData: FormData): Promise<void> {
     await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
     await dmOrEmail(project.user_id, "Project banned", banBody);
     await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
+    const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
     revalidatePath("/", "layout");
-    redirect("/review");
+    redirect(nextPath);
   }
 
   const creditHours = approvedHours ?? claimedHours;
+
+  // A Trial's min-hours requirement is a hard floor on approval: if the
+  // credited hours (after any deflation) don't clear it, this can't be
+  // approved , the reviewer has to request changes instead.
+  if (linkedTrial?.min_hours != null && creditHours < Number(linkedTrial.min_hours)) {
+    redirect(
+      `${back}?error=${encodeURIComponent(
+        `Credited hours (${creditHours}h) are below "${linkedTrial.name}"'s ${linkedTrial.min_hours}h minimum , use Request Changes instead, or credit at least ${linkedTrial.min_hours}h.`,
+      )}`,
+    );
+  }
+
   const { data: project, error } = await db
     .from("projects")
     .update({
@@ -586,6 +680,53 @@ export async function reviewProject(formData: FormData): Promise<void> {
     credited += ` Bounty "${bounty.name}" met , +${reward} pixels!`;
     await logModAction(project.user_id, "bounty_awarded", `${bounty.name}: +${reward} pixels (${project.name})`, by);
   }
+
+  // Trial prize: granted once per project, alongside (not instead of) the
+  // normal per-hour pixel credit above. Prefers a linked catalog item; falls
+  // back to a $0 order with the Trial's free-text reward as the item name,
+  // same as any custom order ops fulfils by hand.
+  if (linkedTrial && !current.trial_prize_order_id) {
+    let prizeItemId: number | null = null;
+    let prizeName = linkedTrial.reward || linkedTrial.name;
+    if (linkedTrial.prize_shop_item_id) {
+      const { data: prizeItem } = await db
+        .from("shop_items")
+        .select("id, name")
+        .eq("id", linkedTrial.prize_shop_item_id)
+        .maybeSingle();
+      if (prizeItem) {
+        prizeItemId = prizeItem.id as number;
+        prizeName = prizeItem.name as string;
+      }
+    }
+    if (prizeName) {
+      const { data: order, error: orderError } = await db
+        .from("shop_orders")
+        .insert({
+          user_id: project.user_id,
+          item_id: prizeItemId,
+          item_name: prizeName,
+          option: `Trial: ${linkedTrial.name}`,
+          price: 0,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (!orderError && order) {
+        await db.from("projects").update({ trial_prize_order_id: order.id }).eq("id", projectId);
+        credited += ` Trial "${linkedTrial.name}" complete , "${prizeName}" added to your orders!`;
+        await logModAction(
+          project.user_id,
+          "trial_prize_granted",
+          `${linkedTrial.name}: ${prizeName} (${project.name})`,
+          by,
+        );
+      } else if (orderError) {
+        console.error("reviewProject (trial prize)", orderError.message);
+      }
+    }
+  }
+
   await notifyOwner(
     project.user_id,
     "Project approved!",
@@ -597,8 +738,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
     `${project.name}: ${deltaPx >= 0 ? "+" : ""}${deltaPx} pixels (total ${totalPx})`,
     by,
   );
+  const nextPath = await nextReviewPath(access, by, stage, projectId);
   revalidatePath("/review");
-  redirect("/review");
+  redirect(nextPath);
 }
 
 // Reviewers can re-grade the difficulty level (L1–L4) a maker self-assigned.
@@ -695,6 +837,85 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+// A final reviewer looking at a second_review project isn't confident enough
+// to confirm or overturn the first pass , send it back to the front of the
+// 'shipped' queue for a fresh first-pass look instead of forcing a verdict.
+// The first-pass reviewer's pending payout only gets voided if this was THEIR
+// mistake (a checkbox on the form) , otherwise it's paid out in full, same as
+// a normal confirmed first pass, since it's not fair to dock them for
+// something outside their control (flaky demo, ambiguous scope, etc).
+// Distinct from reReviewProject, which reopens a project that already got a
+// FINAL verdict.
+export async function sendBackToFirstPass(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const voidPayout = formData.get("voidPayout") === "1";
+  const back = `/review/${projectId}`;
+  if (!projectId) return;
+  if (!access.canSecondPass)
+    redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can send a project back to first pass.")}`);
+  if (!reason)
+    redirect(`${back}?error=${encodeURIComponent("Say why you're sending this back to first pass.")}`);
+
+  const { data: current } = await db
+    .from("projects")
+    .select("status, user_id, name")
+    .eq("id", projectId)
+    .single();
+  if (!current) return;
+  if (current.status !== "second_review")
+    redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting a final pass.")}`);
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({
+      status: "shipped",
+      review_note: "",
+      approved_hours: null,
+      reviewing_by: "",
+      reviewing_at: null,
+      first_pass_by: "",
+      first_pass_at: null,
+      first_pass_note: "",
+      first_pass_hours: null,
+      first_pass_verdict: null,
+    })
+    .eq("id", projectId)
+    .eq("status", "second_review")
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("sendBackToFirstPass failed", error?.message);
+    return;
+  }
+
+  if (voidPayout) await voidFirstPassPayouts(projectId);
+  else await settleFirstPassPayouts(projectId, project.name, false, false);
+
+  const claimedHours = await claimedHoursFor(projectId);
+  const { error: auditError } = await db.from("review_audits").insert({
+    project_id: projectId,
+    user_id: project.user_id,
+    reviewer: by,
+    verdict: "sent_to_first_pass",
+    note: reason,
+    audit_note: "",
+    claimed_hours: claimedHours,
+  });
+  if (auditError) console.error("send-back audit insert failed", auditError.message);
+
+  await logModAction(
+    project.user_id,
+    "project_sent_to_first_pass",
+    `${project.name}: back at the front of the queue, first-pass payout ${voidPayout ? "voided" : "paid in full"} , ${reason}`,
+    by,
+  );
+  revalidatePath("/review");
+  redirect("/review");
+}
+
 // Manual pixel correction from the Pixels tab. Deducts (or grants) whole
 // pixels with a mandatory reason; owners only, everything lands in the ledger.
 export async function adjustPixels(formData: FormData): Promise<void> {
@@ -780,7 +1001,7 @@ export async function rejectProject(formData: FormData): Promise<void> {
   if (target && (await isOwnProject(access, target.user_id)))
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   const { data: project, error } = await db
     .from("projects")
@@ -849,7 +1070,7 @@ export async function banProject(formData: FormData): Promise<void> {
   if (target && (await isOwnProject(access, target.user_id)))
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   const { data: project, error } = await db
     .from("projects")
@@ -1099,10 +1320,11 @@ export async function sendNotification(formData: FormData): Promise<void> {
 
   let targetId = userId;
   if (!targetId && playerName) {
+    const likeName = playerName.replace(/[,()%*\\]/g, " ").trim();
     const { data } = await db
       .from("users")
-      .select("id, display_name")
-      .ilike("display_name", playerName)
+      .select("id, display_name, real_name")
+      .or(`display_name.ilike.${likeName},real_name.ilike.${likeName}`)
       .limit(2);
     if (!data || data.length !== 1) {
       if (backTo)
@@ -1156,8 +1378,8 @@ export async function searchPlayers(query: string): Promise<PlayerHit[]> {
   if (clean.length < 2) return [];
   const { data, error } = await db
     .from("users")
-    .select("id, display_name, slack_id")
-    .ilike("display_name", `%${clean}%`)
+    .select("id, display_name, real_name, slack_id")
+    .or(`display_name.ilike.%${clean}%,real_name.ilike.%${clean}%`)
     .order("display_name", { ascending: true })
     .limit(8);
   if (error) {
@@ -1166,7 +1388,7 @@ export async function searchPlayers(query: string): Promise<PlayerHit[]> {
   }
   return (data ?? []).map((u) => ({
     id: u.id as string,
-    name: (u.display_name as string) ?? "(unnamed)",
+    name: (u.real_name as string) || (u.display_name as string) || "(unnamed)",
     hasSlack: Boolean(u.slack_id),
   }));
 }
@@ -1441,21 +1663,28 @@ export async function kickPlayer(formData: FormData): Promise<void> {
 }
 
 // Upload a shop image to Supabase Storage (public "shop" bucket, created on
-// first use) and return its public URL.
+// first use) and return its public URL. Resized/re-encoded to WebP first —
+// shop images are shown at most at 300×300 (the item detail page), but
+// admins often upload straight-from-phone photos that can be several MB,
+// which made shop pages painfully slow to load. Capping at 900×900 (a 3x
+// retina margin) and re-encoding to WebP keeps every upload small regardless
+// of what was submitted.
 async function uploadShopImage(file: File): Promise<string> {
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
-  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
-  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const body = Buffer.from(await file.arrayBuffer());
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const body = await sharp(Buffer.from(await file.arrayBuffer()))
+    .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
   const upload = () =>
     fetch(`${base}/storage/v1/object/shop/${name}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         apikey: key,
-        "Content-Type": file.type || "image/png",
+        "Content-Type": "image/webp",
       },
       body,
     });
@@ -1474,6 +1703,10 @@ async function uploadShopImage(file: File): Promise<string> {
   }
   if (!res.ok) throw new Error(`image upload failed (${res.status})`);
   return `${base}/storage/v1/object/public/shop/${name}`;
+}
+
+function readRegion(raw: string): ShopRegion {
+  return (SHOP_REGIONS as readonly string[]).includes(raw) ? (raw as ShopRegion) : "US";
 }
 
 function readOptions(raw: string): string[] {
@@ -1505,6 +1738,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim().slice(0, 300);
   const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
   const options = readOptions(String(formData.get("options") ?? ""));
+  const region = readRegion(String(formData.get("region") ?? ""));
   if (!name) return;
   // Double-submit guard: an identical name created in the last minute is the
   // same click arriving twice, not a new item.
@@ -1512,6 +1746,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
     .from("shop_items")
     .select("id")
     .eq("name", name)
+    .eq("region", region)
     .gte("created_at", new Date(Date.now() - 60_000).toISOString())
     .limit(1);
   if (recent && recent.length > 0) {
@@ -1530,6 +1765,7 @@ export async function addShopItem(formData: FormData): Promise<void> {
     price,
     image_url: imageUrl,
     options,
+    region,
     created_by: actorName(access),
   });
   if (error) throw new Error(error.message);
@@ -1543,8 +1779,9 @@ export async function updateShopItem(formData: FormData): Promise<void> {
   const description = String(formData.get("description") ?? "").trim().slice(0, 300);
   const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
   const options = readOptions(String(formData.get("options") ?? ""));
+  const region = readRegion(String(formData.get("region") ?? ""));
   if (!id || !name) return;
-  const patch: Record<string, unknown> = { name, description, price, options };
+  const patch: Record<string, unknown> = { name, description, price, options, region };
   const image = formData.get("image");
   if (image instanceof File && image.size > 0) {
     if (image.size > 4 * 1024 * 1024) throw new Error("Image too big (max 4 MB).");
@@ -1574,9 +1811,172 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
-// Mark a shop order shipped/handed over. Only flips a pending order so a repeat
-// click is a no-op, and drops the player a note so they know it's on the way.
-export async function fulfillOrder(formData: FormData): Promise<void> {
+// Claim an unclaimed (pending) order: the fulfiller has placed the real order
+// and now owns it. It moves into their queue at the 'ordered' stage (placed, not
+// yet credited by HCB) and nobody else advances it unless they reassign it.
+export async function claimOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "pending") {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const now = new Date().toISOString();
+  const { error } = await db
+    .from("shop_orders")
+    .update({
+      status: "ordered",
+      claimed_by: actorName(access),
+      claimed_by_slack: access.session.slackId,
+      claimed_at: now,
+      ordered_at: now,
+    })
+    .eq("id", id)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+  const placedBody = `Your "${order.item_name}" order has been placed and is being fulfilled. We'll let you know when it ships.`;
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order placed! 📦",
+    body: placedBody,
+  });
+  await dmOrEmail(order.user_id, "Order placed! 📦", placedBody);
+  revalidatePath("/fulfillment");
+}
+
+// Owner of an order re-checks the caller is the fulfiller who claimed it (or lets
+// a super take it over via reassignOrder). Advancing a claimed order past the
+// stage where someone else owns it would step on their queue.
+function ownsOrder(access: AdminAccess, claimedSlack: string): boolean {
+  return claimedSlack === access.session.slackId;
+}
+
+// HCB credited the card and the fulfiller uploaded the receipt: ordered ->
+// credited (paid, not shipped yet). Only the claiming fulfiller can advance it.
+export async function markOrderCredited(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("status, claimed_by_slack")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "ordered" || !ownsOrder(access, order.claimed_by_slack)) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { error } = await db
+    .from("shop_orders")
+    .update({ status: "credited", credited_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "ordered");
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
+// The order shipped: credited -> shipped with a tracking number. The number is
+// DM'd to the buyer by Pixo and also lands as an in-game notification. Only the
+// claiming fulfiller can ship it, and tracking is required.
+export async function shipOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  const tracking = String(formData.get("tracking") ?? "").trim().slice(0, 120);
+  if (!id) return;
+  if (!tracking) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status, claimed_by_slack")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "credited" || !ownsOrder(access, order.claimed_by_slack)) {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { error } = await db
+    .from("shop_orders")
+    .update({
+      status: "shipped",
+      shipped_at: new Date().toISOString(),
+      fulfilled_at: new Date().toISOString(),
+      fulfilled_by: actorName(access),
+      tracking,
+    })
+    .eq("id", id)
+    .eq("status", "credited");
+  if (error) throw new Error(error.message);
+
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order shipped! 📦",
+    body: `Your "${order.item_name}" order shipped. Tracking: ${tracking}`,
+  });
+  // DM the tracking number to the buyer through Pixo. Best-effort , a missing
+  // Slack link shouldn't block shipping, and the in-game notification still lands.
+  const { data: buyer } = await db
+    .from("users")
+    .select("slack_id")
+    .eq("id", order.user_id)
+    .maybeSingle();
+  if (buyer?.slack_id) {
+    try {
+      await dmUser(
+        buyer.slack_id,
+        `📦 Your "${order.item_name}" order shipped! Tracking number: ${tracking}`,
+      );
+    } catch (err) {
+      console.error("shipOrder DM", err instanceof Error ? err.message : err);
+    }
+  }
+  revalidatePath("/fulfillment");
+}
+
+// Close a shipped order out: shipped -> done, once the buyer has it in hand.
+// Any super can mark it done (it's the final administrative close, not a queue
+// advance), and it's a no-op on anything that isn't shipped.
+export async function markOrderDone(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("shop_orders")
+    .update({ status: "done", done_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "shipped");
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
+// Take over a claimed order that isn't yet shipped/cancelled. Escape hatch for
+// when the original fulfiller can't finish it , the caller becomes the new owner
+// and the order stays at its current stage.
+export async function reassignOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("shop_orders")
+    .update({ claimed_by: actorName(access), claimed_by_slack: access.session.slackId })
+    .eq("id", id)
+    .in("status", ["ordered", "credited"]);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fulfillment");
+}
+
+// Cancel a live order (pending / ordered / credited) and refund the pixels , e.g.
+// a blocked Amazon account killed it. The refund + status flip happen inside
+// cancel_shop_order so they can't drift apart; it's idempotent, so a double-click
+// won't refund twice and a shipped order is a no-op.
+export async function cancelOrder(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const id = Number(formData.get("id") ?? 0);
   const note = String(formData.get("note") ?? "").trim().slice(0, 300);
@@ -1586,42 +1986,12 @@ export async function fulfillOrder(formData: FormData): Promise<void> {
     .select("user_id, item_name, status")
     .eq("id", id)
     .maybeSingle();
-  if (!order || order.status !== "pending") {
-    revalidatePath("/fulfillment");
-    return;
-  }
-  const { error } = await db
-    .from("shop_orders")
-    .update({
-      status: "fulfilled",
-      fulfilled_at: new Date().toISOString(),
-      fulfilled_by: actorName(access),
-      note,
-    })
-    .eq("id", id)
-    .eq("status", "pending");
-  if (error) throw new Error(error.message);
-  await db.from("notifications").insert({
-    user_id: order.user_id,
-    title: "Order on its way! 📦",
-    body: `Your "${order.item_name}" order has been fulfilled.${note ? ` ${note}` : ""}`,
-  });
-  revalidatePath("/fulfillment");
-}
-
-// Cancel a pending order and refund the pixels. The refund + status flip happen
-// inside cancel_shop_order so they can't drift apart; it's idempotent, so a
-// double-click won't refund twice.
-export async function cancelOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
-  const id = Number(formData.get("id") ?? 0);
-  if (!id) return;
-  const { data: order } = await db
-    .from("shop_orders")
-    .select("user_id, item_name, status")
-    .eq("id", id)
-    .maybeSingle();
-  if (!order || order.status !== "pending") {
+  if (
+    !order ||
+    order.status === "shipped" ||
+    order.status === "done" ||
+    order.status === "cancelled"
+  ) {
     revalidatePath("/fulfillment");
     return;
   }
@@ -1630,12 +2000,15 @@ export async function cancelOrder(formData: FormData): Promise<void> {
     p_by: actorName(access),
   });
   if (error) throw new Error(error.message);
+  if (note) await db.from("shop_orders").update({ note }).eq("id", id);
   const amount = Number(refunded ?? 0);
+  const cancelBody = `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.${note ? ` ${note}` : ""}`;
   await db.from("notifications").insert({
     user_id: order.user_id,
     title: "Order cancelled",
-    body: `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.`,
+    body: cancelBody,
   });
+  await dmOrEmail(order.user_id, "Order cancelled", cancelBody);
   revalidatePath("/fulfillment");
   revalidatePath("/pixels");
 }
@@ -1676,14 +2049,19 @@ export async function addSidequest(formData: FormData): Promise<void> {
   const npc = String(formData.get("npc") ?? "").trim().slice(0, 40);
   const description = String(formData.get("description") ?? "").trim().slice(0, 500);
   const reward = String(formData.get("reward") ?? "").trim().slice(0, 120);
+  const minHoursRaw = String(formData.get("minHours") ?? "").trim();
+  const minHours = minHoursRaw === "" ? null : Math.max(0, Number(minHoursRaw));
   if (!name)
     redirect(`/sidequests?error=${encodeURIComponent("A sidequest needs a name.")}`);
+  if (minHoursRaw !== "" && !Number.isFinite(minHours))
+    redirect(`/sidequests?error=${encodeURIComponent("Minimum hours must be a number.")}`);
   const { error } = await db.from("sidequests").insert({
     name,
     region,
     npc,
     description,
     reward,
+    min_hours: minHours,
     created_by: actorName(access),
   });
   if (error) {
@@ -1831,10 +2209,10 @@ export async function resolveReport(formData: FormData): Promise<void> {
   if (updated?.reporter_id) {
     const { data: target } = await db
       .from("users")
-      .select("display_name")
+      .select("display_name, real_name")
       .eq("id", updated.target_id)
       .single();
-    const name = target?.display_name ?? "a player";
+    const name = target?.real_name || target?.display_name || "a player";
     const title = "Report reviewed";
     const body = dismissed
       ? `Your report on ${name} was reviewed and closed , no action was needed this time. Thanks for helping keep Pixl safe.`

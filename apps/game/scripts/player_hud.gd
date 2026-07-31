@@ -1,6 +1,9 @@
 extends CanvasLayer
 
 const THEME := preload("res://themes/main_theme.tres")
+# The HUD keeps the original pixel font (Monocraft) even though the rest of
+# the game moved to Pixelify Sans — everything else stays on the theme default.
+const HUD_FONT := preload("res://assets/fonts/Monocraft.ttf")
 const GAMEPLAY_SCENES := ["village", "open_world", "house_interior", "shop_interior"]
 const COLOR_ONLINE := Color(0.290196, 0.870588, 0.501961)
 const COLOR_ACCENT := Color(1, 0.819608, 0.4)
@@ -23,6 +26,17 @@ var _list_box: VBoxContainer
 var _tx_root: Control
 var _tx_box: VBoxContainer
 var _scaled: Array = []
+var _hud_theme: Theme
+
+# A copy of the shared theme with the HUD's fonts pinned back to Monocraft —
+# main_theme.tres itself stays on Pixelify Sans for everything else (menus,
+# dialogue, world-space prompts), this override only ever touches the HUD.
+func _make_hud_theme() -> Theme:
+	var t: Theme = THEME.duplicate()
+	t.default_font = HUD_FONT
+	t.set_font("font", "SubText", HUD_FONT)
+	t.set_font("font", "TitlePlateText", HUD_FONT)
+	return t
 
 func _ssize(c: Control, base: int) -> void:
 	c.add_theme_font_size_override("font_size", Settings.fs(base))
@@ -36,6 +50,7 @@ func _apply_font_scale() -> void:
 
 func _ready() -> void:
 	layer = 95
+	_hud_theme = _make_hud_theme()
 	_build_ui()
 	_build_list_ui()
 	NetworkManager.logged_in.connect(_on_logged_in)
@@ -80,7 +95,7 @@ func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.theme = THEME
+	_root.theme = _hud_theme
 	_root.visible = false
 	add_child(_root)
 
@@ -269,7 +284,7 @@ func _build_ui() -> void:
 
 	var quest_label := Label.new()
 	_ssize(quest_label, 16)
-	quest_label.text = "Quests  [J]"
+	quest_label.text = "Trials  [J]"
 	quest_row.add_child(quest_label)
 
 	var inbox_chip := PanelContainer.new()
@@ -415,7 +430,7 @@ func _tx_row(t: Dictionary) -> Control:
 func _build_tx_ui() -> void:
 	_tx_root = Control.new()
 	_tx_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_tx_root.theme = THEME
+	_tx_root.theme = _hud_theme
 	_tx_root.visible = false
 	add_child(_tx_root)
 
@@ -543,7 +558,7 @@ func _fmt_amount(v: float) -> String:
 func _build_list_ui() -> void:
 	_list_root = Control.new()
 	_list_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_list_root.theme = THEME
+	_list_root.theme = _hud_theme
 	_list_root.visible = false
 	add_child(_list_root)
 

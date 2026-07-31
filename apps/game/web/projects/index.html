@@ -33,7 +33,8 @@
       .ht-dot {
         width: 12px;
         height: 12px;
-        border: 2px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 50%;
       }
       .ht-dot.on {
         background: var(--good);
@@ -63,7 +64,8 @@
       }
       .bar {
         height: 14px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: 999px;
         background: var(--panel-deep);
         overflow: hidden;
       }
@@ -78,13 +80,13 @@
       .section-h {
         font-size: 20px;
         color: var(--gold);
-        text-shadow: 2px 2px 0 var(--stroke);
         margin: 26px 0 16px;
         letter-spacing: 1px;
       }
       .proj-thumb {
         height: 140px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -132,7 +134,8 @@
         flex-shrink: 0;
         align-self: stretch;
         min-height: 120px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -197,13 +200,46 @@
         font-size: 13.5px;
         line-height: 1.6;
         padding: 10px 12px;
-        border: 2px solid var(--stroke);
-        background: rgba(255, 209, 102, 0.1);
-        color: var(--gold);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: color-mix(in srgb, var(--bad) 12%, var(--panel));
+        color: var(--bad);
       }
       .note-strip.teal {
-        background: rgba(18, 124, 116, 0.1);
+        background: color-mix(in srgb, var(--teal) 12%, var(--panel));
         color: var(--teal);
+      }
+      .trial-brief {
+        border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--stroke));
+        border-radius: var(--radius-sm);
+        background: color-mix(in srgb, var(--gold) 9%, var(--panel));
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+      .trial-brief-h {
+        font-family: var(--pixel, var(--sans));
+        color: var(--gold);
+        font-size: 15px;
+        letter-spacing: 0.02em;
+        margin-bottom: 8px;
+      }
+      .trial-brief-desc {
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0 0 8px;
+      }
+      .trial-brief-reward {
+        font-family: var(--sans);
+        font-size: 13.5px;
+        color: var(--teal);
+        margin-bottom: 8px;
+      }
+      .trial-brief-note {
+        font-family: var(--sans);
+        font-size: 12.5px;
+        line-height: 1.5;
+        opacity: 0.75;
       }
       .tl-list {
         display: flex;
@@ -228,10 +264,25 @@
       }
       .tl-dot {
         position: absolute;
-        left: -2px;
-        top: 0;
-        font-size: 17px;
-        line-height: 1;
+        left: 3px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--faint);
+        box-shadow: 0 0 0 3px var(--panel);
+      }
+      .tl-dot.ok {
+        background: var(--good);
+      }
+      .tl-dot.rev {
+        background: var(--teal);
+      }
+      .tl-dot.warn {
+        background: var(--gold);
+      }
+      .tl-dot.bad {
+        background: var(--bad);
       }
       .tl-head {
         display: flex;
@@ -265,7 +316,8 @@
         line-height: 1.6;
         margin-top: 6px;
         padding: 8px 11px;
-        border: 2px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         color: var(--ink);
         white-space: pre-wrap;
@@ -338,8 +390,8 @@
         }
       }
       .level-btn {
-        cursor: pointer;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         color: var(--dim);
         font-size: 15px;
@@ -369,7 +421,8 @@
       .thumb-preview {
         width: 200px;
         height: 130px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background:
           repeating-conic-gradient(
               rgba(22, 22, 30, 0.05) 0% 25%,
@@ -394,7 +447,8 @@
         gap: 6px;
         max-height: 220px;
         overflow-y: auto;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
         padding: 10px;
       }
@@ -404,7 +458,6 @@
         gap: 10px;
         font-size: 15px;
         color: var(--ink);
-        cursor: pointer;
         letter-spacing: 0;
         padding: 3px 0;
       }
@@ -424,7 +477,6 @@
         gap: 10px;
         font-size: 15.5px;
         color: var(--ink);
-        cursor: pointer;
       }
       .check-row input {
         accent-color: var(--gold);
@@ -437,12 +489,13 @@
         flex-direction: column;
         gap: 10px;
         padding: 15px 17px;
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
         background: var(--panel-deep);
       }
       .disclosure.update {
-        background: rgba(255, 209, 102, 0.06);
-        box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.25);
+        background: color-mix(in srgb, var(--gold) 6%, var(--panel-deep));
+        border-color: color-mix(in srgb, var(--gold) 35%, var(--stroke));
       }
       .disclosure-check {
         display: flex;
@@ -451,7 +504,6 @@
         font-size: 15.5px;
         font-weight: 600;
         color: var(--ink);
-        cursor: pointer;
       }
       .disclosure.update > .disclosure-check:first-child {
         color: var(--gold);
@@ -520,7 +572,6 @@
       }
       .journal-entry .jdel {
         margin-left: auto;
-        cursor: pointer;
         background: none;
         border: none;
         color: var(--faint);
@@ -555,8 +606,9 @@
         flex-wrap: wrap;
         padding: 7px 8px;
         background: var(--panel-deep);
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
         border-bottom-width: 0;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
       }
       .md-btn {
         font-family: var(--pixel);
@@ -571,24 +623,19 @@
         gap: 5px;
         background: var(--panel);
         color: var(--ink);
-        border: 2px solid var(--stroke);
-        box-shadow: 2px 2px 0 var(--stroke);
-        cursor: pointer;
+        border: 1px solid var(--stroke);
+        border-radius: 6px;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
       }
       .md-btn:hover {
         background: var(--gold);
         color: var(--btn-ink);
-        transform: translate(-1px, -1px);
-        box-shadow: 3px 3px 0 var(--stroke);
-      }
-      .md-btn:active {
-        transform: translate(1px, 1px);
-        box-shadow: 1px 1px 0 var(--stroke);
+        border-color: var(--gold);
       }
       .md-btn.active {
         background: var(--gold);
         color: var(--btn-ink);
-        box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25);
+        border-color: var(--gold);
       }
       .md-btn i {
         font-style: italic;
@@ -601,9 +648,10 @@
         opacity: 0.3;
       }
       .md-preview {
-        border: 3px solid var(--stroke);
+        border: 1px solid var(--stroke);
         border-top-width: 0;
-        background: #20160e;
+        border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+        background: var(--panel-deep);
         padding: 12px 14px;
         min-height: 140px;
         font-size: 15.5px;
@@ -671,7 +719,6 @@
       .connect-card h2 {
         color: var(--gold);
         font-size: 24px;
-        text-shadow: 3px 3px 0 var(--stroke);
         margin-bottom: 12px;
       }
       .connect-card p {
@@ -684,7 +731,7 @@
   </head>
   <body>
     <main class="wrap">
-      <section class="hero panel-deep">
+      <section class="hero hud deep">
         <div>
           <h1 class="page-title">PROJECTS</h1>
           <div class="page-sub">
@@ -708,15 +755,15 @@
 
       const $ = (id) => document.getElementById(id);
       const LEVELS = [
-        ["L1 Greenhorn", "A first ship: simple site, script, or tiny tool."],
-        ["L2 Deputy", "A focused app, CLI, or game with clean polish."],
+        ["L1 Spark", "A first spark of Restoration: a simple site, script, or tiny tool."],
+        ["L2 Signal", "A focused app, CLI, or game with clean polish — one system back online."],
         [
-          "L3 Outlaw",
+          "L3 Grid",
           "Multiple systems working together: backend, state, infra.",
         ],
         [
-          "L4 Legend",
-          "Deep systems work: complex architecture, serious scope.",
+          "L4 Beacon",
+          "Deep systems work: complex architecture and serious scope.",
         ],
       ];
       const ERRORS = {
@@ -743,11 +790,14 @@
         journal_too_short:
           "Log more detail — journals need ~100 characters per hour.",
         not_in_review: "This project isn't in review.",
+        trial_hours_below_minimum: "This Trial needs more tracked hours before you can ship it.",
       };
       const err = (e) => ERRORS[e] || "Something went wrong — try again.";
 
       let stats = null;
       let projects = [];
+      let trials = []; // Trials the player has accepted and not yet finished
+      let activeTrial = null; // the Trial the player arrived to build for, if any
       let form = null;
 
       function statusInfo(p) {
@@ -891,6 +941,33 @@
       }
 
       /* ---------- editor view ---------- */
+
+      // Optional "which Trial is this for?" picker for the ship panel. Only the
+      // Trials the player has accepted (plus whatever this project is already
+      // linked to) are offered; empty when there's nothing to pick.
+      function trialPickerHtml(p) {
+        const opts = [...trials];
+        const linkedId = p.sidequest_id != null ? Number(p.sidequest_id) : null;
+        if (linkedId && !opts.some((t) => Number(t.id) === linkedId))
+          opts.push({ id: linkedId, name: p.sidequest_name || "Linked Trial", region: "" });
+        if (!opts.length) return "";
+        // Default to the linked Trial, or auto-select the one accepted Trial.
+        const current =
+          linkedId != null ? linkedId : trials.length === 1 ? Number(trials[0].id) : "";
+        const options = [`<option value="">Not for a Trial — my own idea</option>`]
+          .concat(
+            opts.map(
+              (t) =>
+                `<option value="${Number(t.id)}" ${Number(t.id) === current ? "selected" : ""}>${Pixl.esc(t.name)}${t.region ? " · " + Pixl.esc(t.region) : ""}</option>`,
+            ),
+          )
+          .join("");
+        return `
+        <label class="check-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+          <span>Submitting this for a Trial?</span>
+          <select class="field" id="s-trial" style="max-width:340px">${options}</select>
+        </label>`;
+      }
 
       function formHtml(p) {
         const linked = new Set(p.hackatime_projects || []);
@@ -1129,9 +1206,11 @@
         ${Pixl.esc(p.name)}
         <span class="chip ${cls}">${label}</span>
         ${p.pixels_earned ? `<span class="chip gold">+${Math.round(p.pixels_earned)} PX EARNED</span>` : ""}
+        ${p.sidequest_name ? `<span class="chip teal">TRIAL: ${Pixl.esc(p.sidequest_name)}</span>` : ""}
       </div>
       ${p.status === "needs_changes" && p.review_note ? `<div class="note-strip" style="margin-bottom:14px">REVIEWER: ${Pixl.esc(p.review_note)}</div>` : ""}
       ${p.rejected_at ? `<div class="note-strip" style="margin-bottom:14px">REJECTED${p.reject_reason ? ": " + Pixl.esc(p.reject_reason) : ""} — fix it up and ship again.</div>` : ""}
+      ${inReview ? "" : trialBriefHtml(trialForProject(p))}
       ${formHtml(p)}
 
       <div class="section-h">SHIP IT</div>
@@ -1142,6 +1221,7 @@
           <div class="ship-item"><span class="${p.image_url ? "ok" : "no"}">${p.image_url ? "+" : "-"}</span> Thumbnail uploaded</div>
           <div class="ship-item" id="ship-ht"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
         </div>
+        ${inReview ? "" : trialPickerHtml(p)}
         ${
           !isUpdate
             ? `
@@ -1303,9 +1383,11 @@
 
       async function unship(p) {
         if (
-          !confirm(
-            "Unship this project? It leaves the review queue and goes back to a draft so you can edit it. You'll need to ship it again.",
-          )
+          !(await Pixl.confirm({
+            title: "Unship this project?",
+            body: "It leaves the review queue and goes back to a draft so you can edit it. You'll need to ship it again.",
+            confirmText: "Unship",
+          }))
         )
           return;
         $("s-unship").disabled = true;
@@ -1344,26 +1426,37 @@
         const body = { otherYsws: $("s-ysws") ? $("s-ysws").checked : false };
         if (isUpdate && $("f-update") && $("f-update").checked)
           body.updateNotes = $("f-update-notes").value.trim();
+        // 0 / absent tells the server this ship isn't for a Trial (clears any link).
+        if ($("s-trial")) body.sidequestId = Number($("s-trial").value) || 0;
         $("s-ship").disabled = true;
         Pixl.toast("Checking your repo and demo…");
         const r = await Pixl.send("POST", `/api/projects/${p.id}/ship`, body);
         $("s-ship").disabled = false;
-        if (!r.ok) return Pixl.toast(err(r.error), true);
+        if (!r.ok) {
+          if (r.error === "trial_hours_below_minimum" && r.need != null)
+            return Pixl.toast(
+              `This Trial needs at least ${r.need}h tracked — you're at ${r.have}h.`,
+              true,
+            );
+          return Pixl.toast(err(r.error), true);
+        }
         Pixl.toast("SHIPPED! It's in the review queue.");
         await loadProjects();
         renderProject(p.id);
       }
 
+      // [dot colour class, title]. The dot is a small node on the rail — the
+      // event title already names the verdict, so no status word in the marker.
       const VERDICTS = {
-        approved: ["APPROVED", "Approved"],
-        first_pass_approved: ["REVIEWED", "Passed first review"],
-        needs_changes: ["CHANGES", "Sent back for changes"],
-        rejected: ["REJECTED", "Rejected"],
+        approved: ["ok", "Approved"],
+        first_pass_approved: ["rev", "Passed first review"],
+        needs_changes: ["warn", "Sent back for changes"],
+        rejected: ["bad", "Rejected"],
       };
 
-      function tlItem(icon, title, at, extra, note) {
+      function tlItem(dotClass, title, at, extra, note) {
         return `<div class="tl-item">
-    <span class="tl-dot">${icon}</span>
+    <span class="tl-dot ${dotClass}"></span>
     <div class="tl-content">
       <div class="tl-head"><span class="tl-title">${title}</span><span class="tl-time">${Pixl.timeAgo(at)}</span></div>
       ${extra || ""}${note || ""}
@@ -1376,7 +1469,7 @@
           return tlItem("", "Project created", e.at, "", "");
         if (e.kind === "shipped")
           return tlItem("", "Shipped for review", e.at, "", "");
-        const [icon, title] = VERDICTS[e.verdict] || ["REVIEWED", "Reviewed"];
+        const [icon, title] = VERDICTS[e.verdict] || ["rev", "Reviewed"];
         let hours = "";
         if (e.approvedHours != null) {
           const claimed = Number(e.claimedHours || 0);
@@ -1538,7 +1631,7 @@
                 .join("");
         list.querySelectorAll(".jdel").forEach((b) =>
           b.addEventListener("click", async () => {
-            if (!confirm("Delete this journal entry?")) return;
+            if (!(await Pixl.confirm({ title: "Delete this journal entry?", confirmText: "Delete", danger: true }))) return;
             const r = await Pixl.send(
               "DELETE",
               `/api/projects/${id}/journal/${b.dataset.id}`,
@@ -1577,12 +1670,23 @@
 
       async function deleteProject(p) {
         if (
-          !confirm(
-            `Delete "${p.name}" and all its journal entries? This can't be undone.`,
-          )
+          !(await Pixl.confirm({
+            title: "Delete this project?",
+            body: `Delete "${p.name}" and all its journal entries? This can't be undone.`,
+            confirmText: "Delete",
+            danger: true,
+          }))
         )
           return;
-        if (!confirm("Really sure? Gone means gone.")) return;
+        if (
+          !(await Pixl.confirm({
+            title: "Really sure?",
+            body: "Gone means gone.",
+            confirmText: "Delete forever",
+            danger: true,
+          }))
+        )
+          return;
         const r = await Pixl.send("DELETE", `/api/projects/${p.id}`);
         if (!r.ok) return Pixl.toast(err(r.error), true);
         Pixl.toast("Project deleted.");
@@ -1622,7 +1726,7 @@
         if (h === "new") {
           $("new-btn").style.display = "none";
           $("view").innerHTML =
-            `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${formHtml({})}</div>`;
+            `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${trialBriefHtml(activeTrial)}${formHtml({})}</div>`;
           bindForm({});
           return;
         }
@@ -1635,12 +1739,53 @@
         projects = (d.projects || []).map((p) => ({ ...p, id: Number(p.id) }));
       }
 
+      async function loadTrials() {
+        try {
+          const d = await Pixl.api("/api/sidequests");
+          // Only Trials the player has taken on and not yet finished can be a
+          // ship target.
+          trials = (d.quests || []).filter((q) => q.unlocked && !q.completed);
+        } catch (e) {
+          trials = [];
+        }
+        // The Trial the player arrived to build for: ?trial=<id> from the NPC, or
+        // the single accepted Trial if there's exactly one. Drives the brief panel.
+        const tid = Number(new URLSearchParams(location.search).get("trial"));
+        activeTrial =
+          (tid && trials.find((t) => Number(t.id) === tid)) ||
+          (trials.length === 1 ? trials[0] : null);
+      }
+
+      // "Building for this Trial" brief — shown atop the new-project form and the
+      // editor so the player builds to the Trial's spec.
+      function trialBriefHtml(t) {
+        if (!t) return "";
+        return `
+      <div class="trial-brief">
+        <div class="trial-brief-h">BUILDING FOR TRIAL — ${Pixl.esc(t.name)}${t.region ? ` · ${Pixl.esc(t.region)}` : ""}</div>
+        ${t.description ? `<p class="trial-brief-desc">${Pixl.esc(t.description)}</p>` : ""}
+        ${t.reward ? `<div class="trial-brief-reward">Reward on completion: <b>${Pixl.esc(t.reward)}</b></div>` : ""}
+        <div class="trial-brief-note">Build to this spec. When you ship, it's flagged for this Trial in the picker below (change it if you're building something else).</div>
+      </div>`;
+      }
+
+      // The Trial to brief for a given project: its own linked Trial if set, else
+      // the Trial the player arrived to work on.
+      function trialForProject(p) {
+        if (p && p.sidequest_id) {
+          const linked = trials.find((t) => Number(t.id) === Number(p.sidequest_id));
+          if (linked) return linked;
+        }
+        return activeTrial;
+      }
+
       async function boot() {
         if (!Pixl.hasToken) return;
         try {
           const [s] = await Promise.all([
             Pixl.api("/api/hackatime/stats"),
             loadProjects(),
+            loadTrials(),
           ]);
           stats = s.stats || null;
         } catch (e) {
@@ -1650,7 +1795,6 @@
         $("loading").remove();
         renderHt();
         route();
-        Pixl.maybeOnboard();
       }
       window.addEventListener("hashchange", route);
       boot();

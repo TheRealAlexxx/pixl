@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { addNotification } from "./notifications.js";
@@ -55,11 +57,29 @@ router.get("/api/projects", async (req, res) => {
         (earned.get(t.project_id as number) ?? 0) + Number(t.amount),
       );
   }
+  // Resolve the linked Trial name for any project shipped for one, so the client
+  // can show it without a second round-trip.
+  const trialName = new Map<number, string>();
+  const trialIds = [
+    ...new Set(
+      projects.map((p) => p.sidequest_id as number | null).filter((x): x is number => !!x),
+    ),
+  ];
+  if (trialIds.length > 0) {
+    const { data: sqs } = await supabase
+      .from("sidequests")
+      .select("id, name")
+      .in("id", trialIds);
+    for (const s of sqs ?? []) trialName.set(s.id as number, s.name as string);
+  }
   res.json({
     ok: true,
     projects: projects.map((p) => ({
       ...p,
       pixels_earned: earned.get(p.id as number) ?? 0,
+      sidequest_name: p.sidequest_id
+        ? (trialName.get(p.sidequest_id as number) ?? null)
+        : null,
     })),
   });
 });
@@ -103,23 +123,84 @@ function normalizeDemoUrl(raw: string): { error: string } | { url: string } {
   return { url: u.toString() };
 }
 
-async function urlAlive(url: string): Promise<boolean> {
+// SSRF guard for the ship-time liveness checks. A player fully controls demo_url
+// (any host is accepted by normalizeDemoUrl) and a repo link can redirect
+// anywhere, so before we ever fetch() a player-supplied URL we make sure the
+// host doesn't resolve to a loopback / private / link-local address — otherwise
+// urlAlive becomes a probe for internal services and the cloud metadata IP.
+function isBlockedIp(ip: string): boolean {
+  const v = isIP(ip);
+  if (v === 4) {
+    const [a, b] = ip.split(".").map(Number);
+    if (a === 0 || a === 10 || a === 127) return true; // this-network, private, loopback
+    if (a === 169 && b === 254) return true; // link-local + cloud metadata (169.254.169.254)
+    if (a === 172 && b >= 16 && b <= 31) return true; // private
+    if (a === 192 && b === 168) return true; // private
+    if (a === 100 && b >= 64 && b <= 127) return true; // carrier-grade NAT
+    return false;
+  }
+  if (v === 6) {
+    const s = ip.toLowerCase();
+    if (s === "::1" || s === "::") return true; // loopback / unspecified
+    if (s.startsWith("::ffff:")) return isBlockedIp(s.slice(7)); // IPv4-mapped
+    if (s.startsWith("fc") || s.startsWith("fd")) return true; // unique local
+    if (s.startsWith("fe80")) return true; // link-local
+    return false;
+  }
+  return true; // not a parseable IP — refuse rather than guess
+}
+
+async function hostIsPublic(hostname: string): Promise<boolean> {
+  if (isIP(hostname)) return !isBlockedIp(hostname);
   try {
-    let r = await fetch(url, {
-      method: "HEAD",
-      redirect: "follow",
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.status === 405 || r.status === 501)
-      r = await fetch(url, {
-        method: "GET",
-        redirect: "follow",
-        signal: AbortSignal.timeout(8000),
-      });
-    return r.ok || r.status === 401 || r.status === 403;
+    const addrs = await lookup(hostname, { all: true });
+    // Reject if it doesn't resolve, or if ANY resolved address is internal.
+    return addrs.length > 0 && addrs.every((a) => !isBlockedIp(a.address));
   } catch {
     return false;
   }
+}
+
+async function urlAlive(url: string): Promise<boolean> {
+  // Follow redirects by hand so we can re-validate the host at every hop — a
+  // public URL that 302s to http://169.254.169.254 must not slip through.
+  // (Note: this does not close DNS-rebinding between the check and fetch's own
+  // resolution; blocking literal internal targets and redirect chains is the
+  // proportionate guard here.)
+  let current = url;
+  for (let hop = 0; hop < 5; hop++) {
+    let u: URL;
+    try {
+      u = new URL(current);
+    } catch {
+      return false;
+    }
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    if (!(await hostIsPublic(u.hostname))) return false;
+    try {
+      let r = await fetch(current, {
+        method: "HEAD",
+        redirect: "manual",
+        signal: AbortSignal.timeout(8000),
+      });
+      if (r.status === 405 || r.status === 501)
+        r = await fetch(current, {
+          method: "GET",
+          redirect: "manual",
+          signal: AbortSignal.timeout(8000),
+        });
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get("location");
+        if (!loc) return false;
+        current = new URL(loc, current).toString();
+        continue;
+      }
+      return r.ok || r.status === 401 || r.status === 403;
+    } catch {
+      return false;
+    }
+  }
+  return false; // too many redirects
 }
 
 interface ProjectFields {
@@ -142,10 +223,10 @@ function parseProjectBody(
 ): { error: string; fields?: never } | { error?: never; fields: ProjectFields } {
   const name = String(body?.name ?? "").trim().slice(0, 120);
   if (!name) return { error: "name_required" };
+  // Save accepts any URL , repo/demo are only validated at ship time, so people
+  // can jot down a link and fix it up before shipping.
   const repoUrl = ensureProtocol(body?.repoUrl).slice(0, 500);
-  if (repoUrl && !isGithubRepoUrl(repoUrl)) return { error: "repo_not_github" };
-  const demo = normalizeDemoUrl(body?.demoUrl);
-  if ("error" in demo) return { error: demo.error };
+  const demoUrl = ensureProtocol(body?.demoUrl).slice(0, 500);
   const usedAi = body?.usedAi === true;
   const aiNotes = String(body?.aiNotes ?? "").trim().slice(0, 500);
   if (usedAi && aiNotes.length < 10) return { error: "ai_notes_required" };
@@ -158,7 +239,7 @@ function parseProjectBody(
       name,
       description: String(body?.description ?? "").trim().slice(0, 2000),
       repo_url: repoUrl,
-      demo_url: demo.url,
+      demo_url: demoUrl,
       image_url: String(body?.imageUrl ?? "").trim().slice(0, 500),
       level: Number.isInteger(level) && level >= 1 && level <= 4 ? level : 1,
       project_type: projectType,
@@ -253,6 +334,12 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "demo_required" });
   if (!String(project.image_url ?? "").trim())
     return res.status(400).json({ ok: false, error: "image_required" });
+  // URLs are only validated here, at ship time (save accepts anything).
+  if (!isGithubRepoUrl(project.repo_url as string))
+    return res.status(400).json({ ok: false, error: "repo_not_github" });
+  const demoCheck = normalizeDemoUrl(project.demo_url as string);
+  if ("error" in demoCheck)
+    return res.status(400).json({ ok: false, error: demoCheck.error });
 
   const [repoAlive, demoAlive] = await Promise.all([
     urlAlive(project.repo_url as string),
@@ -287,6 +374,39 @@ router.post("/api/projects/:id/ship", async (req, res) => {
   if (isUpdate && updateNotes.length < 100)
     return res.status(400).json({ ok: false, error: "update_notes_too_short" });
   const otherYsws = req.body?.otherYsws === true;
+
+  // Optional: the player flags this ship as a submission for a Trial. Only an
+  // active Trial they've actually accepted (unlocked) can be linked; anything
+  // else clears the link (they're shipping their own idea).
+  const wantSidequest = Number(req.body?.sidequestId);
+  let sidequestId: number | null = null;
+  if (Number.isFinite(wantSidequest) && wantSidequest > 0) {
+    const { data: unlock } = await supabase
+      .from("sidequest_unlocks")
+      .select("sidequest_id, sidequests!inner(active, name, min_hours)")
+      .eq("user_id", session.userId)
+      .eq("sidequest_id", wantSidequest)
+      .eq("sidequests.active", true)
+      .maybeSingle();
+    if (!unlock)
+      return res.status(400).json({ ok: false, error: "trial_not_available" });
+    sidequestId = wantSidequest;
+
+    // A Trial can carry a minimum tracked-hours requirement (nullable = no
+    // gate, e.g. Trials seeded before this existed). Checked against the same
+    // trackedSeconds the normal 1h ship floor uses below.
+    const trial = (unlock as { sidequests?: { name?: string; min_hours?: number | null } })
+      .sidequests;
+    const minHours = trial?.min_hours != null ? Number(trial.min_hours) : null;
+    if (minHours != null && trackedSeconds < minHours * 3600) {
+      return res.status(400).json({
+        ok: false,
+        error: "trial_hours_below_minimum",
+        need: minHours,
+        have: Math.round((trackedSeconds / 3600) * 10) / 10,
+      });
+    }
+  }
 
   let systemNote = "";
   const matched = await findInYswsArchive(
@@ -328,6 +448,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
       update_notes: isUpdate ? updateNotes : "",
       other_ysws: otherYsws,
       system_note: systemNote,
+      sidequest_id: sidequestId,
     })
     .eq("id", id)
     .eq("user_id", session.userId)

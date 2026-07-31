@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
-import { listShopItems } from "@/lib/db";
+import { listShopItems, SHOP_REGIONS, SHOP_REGION_LABELS, type ShopRegion } from "@/lib/db";
 import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Disclosure } from "@/app/_components/Disclosure";
@@ -28,12 +29,20 @@ const FILE_INPUT =
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; region?: string }>;
 }) {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
-  const allItems = await listShopItems();
-  const { page } = await searchParams;
+  const { page, region: rawRegion } = await searchParams;
+  const region: ShopRegion = (SHOP_REGIONS as readonly string[]).includes(rawRegion ?? "")
+    ? (rawRegion as ShopRegion)
+    : "US";
+  // Trophies (unlock_xp > 0, e.g. the 3D Printed Blahaj) are earned by
+  // leveling up, not bought with pixels or tied to a region — pull them out
+  // into their own section regardless of which region tab is selected.
+  const [regionItems, everyItem] = await Promise.all([listShopItems(region), listShopItems()]);
+  const trophies = everyItem.filter((i) => i.unlock_xp > 0);
+  const allItems = regionItems.filter((i) => i.unlock_xp === 0);
   const pages = Math.max(1, Math.ceil(allItems.length / PER));
   const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
   const start = (cur - 1) * PER;
@@ -49,14 +58,82 @@ export default async function ShopPage({
         </p>
       </div>
 
+      {trophies.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-muted-foreground mb-3">
+            🏆 Trophies · earned by leveling up, not bought or region-scoped
+          </div>
+          <div className="grid gap-4">
+            {trophies.map((item) => (
+              <Card key={item.id} className={`p-4 gap-4 flex-row ${item.active ? "" : "opacity-60"}`}>
+                {item.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.image_url}
+                    alt=""
+                    className="w-20 h-20 rounded-lg object-cover border border-border shrink-0 [image-rendering:pixelated]"
+                  />
+                ) : (
+                  <span className="grid place-items-center w-20 h-20 rounded-lg bg-muted border border-border shrink-0 text-2xl">
+                    🏆
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold">{item.name}</span>
+                    <Badge variant="secondary" className="tabular-nums">
+                      Unlocks at {item.unlock_xp} XP
+                    </Badge>
+                    {!item.active && <Badge variant="secondary">hidden</Badge>}
+                  </div>
+                  {item.description && (
+                    <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
+                  )}
+                  <div className="flex items-center gap-2 mt-3">
+                    <form action={toggleShopItem}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <input type="hidden" name="active" value={item.active ? "0" : "1"} />
+                      <PendingButton
+                        variant="outline"
+                        size="sm"
+                        pendingText={item.active ? "Hiding…" : "Showing…"}
+                      >
+                        {item.active ? "Hide" : "Show"}
+                      </PendingButton>
+                    </form>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {SHOP_REGIONS.map((r) => (
+          <Link
+            key={r}
+            href={`/shop?region=${r}`}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
+              r === region
+                ? "bg-brand text-white border-transparent"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {SHOP_REGION_LABELS[r]}
+          </Link>
+        ))}
+      </div>
+
       <Card className="p-5 md:p-6 gap-0">
-        <div className="text-base font-semibold mb-4">Add an item</div>
-        <AddShopItemForm action={addShopItem} />
+        <div className="text-base font-semibold mb-4">Add an item to {SHOP_REGION_LABELS[region]}</div>
+        <AddShopItemForm action={addShopItem} region={region} />
       </Card>
 
       <div>
         <div className="text-sm font-medium text-muted-foreground mb-3">
-          {allItems.length} item{allItems.length === 1 ? "" : "s"} · only active ones show in game
+          {allItems.length} item{allItems.length === 1 ? "" : "s"} in {SHOP_REGION_LABELS[region]} ·
+          only active ones show in game
         </div>
         {allItems.length === 0 ? (
           <Card className="p-8 text-center text-muted-foreground text-sm">
@@ -157,6 +234,20 @@ export default async function ShopPage({
                         </Label>
                       </div>
                       <Label className="block font-normal">
+                        <span className="block text-xs font-medium text-muted-foreground mb-1">Region</span>
+                        <select
+                          name="region"
+                          defaultValue={item.region}
+                          className="w-full text-sm h-9 rounded-md border border-border bg-background px-3"
+                        >
+                          {SHOP_REGIONS.map((r) => (
+                            <option key={r} value={r}>
+                              {SHOP_REGION_LABELS[r]}
+                            </option>
+                          ))}
+                        </select>
+                      </Label>
+                      <Label className="block font-normal">
                         <span className="block text-xs font-medium text-muted-foreground mb-1">Description</span>
                         <Input
                           name="description"
@@ -203,7 +294,7 @@ export default async function ShopPage({
               <PaginationContent>
                 <PaginationItem>
                   <PaginationLink
-                    href={`/shop?page=${cur - 1}`}
+                    href={`/shop?region=${region}&page=${cur - 1}`}
                     aria-label="Previous page"
                     className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
                   >
@@ -217,7 +308,7 @@ export default async function ShopPage({
                 </PaginationItem>
                 <PaginationItem>
                   <PaginationLink
-                    href={`/shop?page=${cur + 1}`}
+                    href={`/shop?region=${region}&page=${cur + 1}`}
                     aria-label="Next page"
                     className={cur >= pages ? "pointer-events-none opacity-40" : ""}
                   >

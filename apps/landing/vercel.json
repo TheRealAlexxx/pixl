@@ -6,6 +6,15 @@
 
     { "source": "/shop", "destination": "https://play.pixl.rsvp/shop/" },
     { "source": "/shop/", "destination": "https://play.pixl.rsvp/shop/" },
+    { "source": "/shop/:path*", "destination": "https://play.pixl.rsvp/shop/:path*" },
+
+    { "source": "/orders", "destination": "https://play.pixl.rsvp/orders/" },
+    { "source": "/orders/", "destination": "https://play.pixl.rsvp/orders/" },
+    { "source": "/orders/:path*", "destination": "https://play.pixl.rsvp/orders/:path*" },
+
+    { "source": "/collectibles", "destination": "https://play.pixl.rsvp/collectibles/" },
+    { "source": "/collectibles/", "destination": "https://play.pixl.rsvp/collectibles/" },
+    { "source": "/collectibles/:path*", "destination": "https://play.pixl.rsvp/collectibles/:path*" },
 
     { "source": "/vault", "destination": "https://play.pixl.rsvp/vault/" },
     { "source": "/vault/:path*", "destination": "https://play.pixl.rsvp/vault/:path*" },
@@ -19,6 +28,8 @@
     { "source": "/projects/:path*", "destination": "https://play.pixl.rsvp/projects/:path*" },
     { "source": "/report", "destination": "https://play.pixl.rsvp/report/" },
     { "source": "/report/:path*", "destination": "https://play.pixl.rsvp/report/:path*" },
+    { "source": "/docs", "destination": "https://play.pixl.rsvp/docs/" },
+    { "source": "/docs/:path*", "destination": "https://play.pixl.rsvp/docs/:path*" },
     { "source": "/hackatime", "destination": "https://play.pixl.rsvp/hackatime/" },
     { "source": "/hackatime/:path*", "destination": "https://play.pixl.rsvp/hackatime/:path*" },
 
