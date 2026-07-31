@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import sharp from "sharp";
 import {
   db,
   getAdmin,
@@ -1674,6 +1673,7 @@ async function uploadShopImage(file: File): Promise<string> {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { default: sharp } = await import("sharp");
   const body = await sharp(Buffer.from(await file.arrayBuffer()))
     .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
