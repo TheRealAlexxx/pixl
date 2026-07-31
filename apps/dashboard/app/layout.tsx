@@ -24,7 +24,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Pixl HQ",
   description: "The Pixl team's home for reviews, players, and pixels",
-  icons: { icon: "/favicon.png" },
 };
 
 export const viewport = {
