@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
-import { getPlayerBySlackId, playerLabel } from "@/lib/db";
+import { getPlayerBySlackId, playerLabel, searchPlayerHandles } from "@/lib/db";
 import { getSlackUserProfile } from "@/lib/slack";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -24,14 +24,18 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 export default async function SlackLookupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; name?: string }>;
 }) {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
-  const { q } = await searchParams;
+  const { q, name } = await searchParams;
   const query = q?.trim() ?? "";
+  const nameQuery = name?.trim() ?? "";
 
-  const profile = query ? await getSlackUserProfile(query) : null;
+  const [profile, matches] = await Promise.all([
+    query ? getSlackUserProfile(query) : null,
+    nameQuery ? searchPlayerHandles(nameQuery) : Promise.resolve([]),
+  ]);
   const player = profile && !profile.deleted ? await getPlayerBySlackId(profile.id) : null;
 
   return (
@@ -62,6 +66,45 @@ export default async function SlackLookupPage({
               needs the exact <code>U0…</code> id, not a display name.
             </AlertDescription>
           </Alert>
+        )}
+      </Card>
+
+      <Card className="p-5 md:p-6 gap-3">
+        <div className="text-sm font-semibold">Or find a player by name</div>
+        <form className="flex gap-2 flex-wrap">
+          <Input
+            name="name"
+            defaultValue={nameQuery}
+            placeholder="Search Pixl display or real name…"
+            className="flex-1 min-w-64 text-sm"
+          />
+          <Button type="submit" variant="outline">
+            Search
+          </Button>
+        </form>
+
+        {nameQuery && matches.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No Pixl players with a linked Slack account match &quot;{nameQuery}&quot;.
+          </p>
+        )}
+
+        {matches.length > 0 && (
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border overflow-hidden">
+            {matches.map((m) => (
+              <li key={m.id}>
+                <Link
+                  href={`/slack-lookup?q=${encodeURIComponent(m.slack_id ?? "")}`}
+                  className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-muted/50 transition-colors"
+                >
+                  <span className="truncate">{playerLabel(m)}</span>
+                  <span className="font-mono text-xs text-muted-foreground shrink-0">
+                    {m.slack_id}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
 

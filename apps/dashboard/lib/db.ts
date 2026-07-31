@@ -156,6 +156,30 @@ export async function getPlayerBySlackId(
   return data;
 }
 
+// Name -> Slack id suggestions for the Slack Lookup tool, so admins don't
+// have to go dig a U0… id out of another tab first. Deliberately lighter
+// than listPlayers() , no project/violation/ban joins, just enough to pick
+// the right person off a short list.
+export async function searchPlayerHandles(
+  query: string,
+  limit = 8,
+): Promise<Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id">[]> {
+  const like = query.replace(/[,()%*\\]/g, " ").trim();
+  if (!like) return [];
+  const { data, error } = await db
+    .from("users")
+    .select("id, display_name, real_name, slack_id")
+    .not("slack_id", "is", null)
+    .or(`display_name.ilike.%${like}%,real_name.ilike.%${like}%`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("searchPlayerHandles", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
 export async function getAdmin(slackId: string): Promise<AdminRow | null> {
   const { data, error } = await db
     .from("admins")
