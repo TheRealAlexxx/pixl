@@ -15,6 +15,20 @@ export interface Ticket {
   permalink: string | null;
 }
 
+interface FullTicketRow {
+  msg_ts: string;
+  description: string | null;
+  title: string | null;
+  status: string;
+  opened_by_slack_id: string;
+  claimed_by_slack_id: string | null;
+  closed_by_slack_id: string | null;
+  permalink: string | null;
+  ticket_msg_ts: string | null;
+  ticket_number: number | null;
+  title_prompt_ts: string | null;
+}
+
 export interface ThreadMessage {
   ts: string;
   text: string;
@@ -218,9 +232,80 @@ export interface ResolveResult {
   alreadyClosed?: boolean;
 }
 
-// Resolve a ticket straight from the dashboard: close it in the DB, swap the
-// help-channel reactions and drop a note in the thread. Mirrors the Pixorpheus
-// bot's "Mark resolved" button so both stay in sync (shared `tickets` table).
+// Mirrors Pixorpheus's own `ticketBlocks(ticket)` so the ticket-channel card
+// looks and behaves identically no matter which side resolved it.
+function ticketBlocks(ticket: FullTicketRow) {
+  const { description, title, opened_by_slack_id, status, claimed_by_slack_id, closed_by_slack_id, ticket_number, permalink } = ticket;
+  const msg_ts = ticket.msg_ts == null ? "" : String(ticket.msg_ts);
+  const safeDescription = description || "";
+  const displayTitle =
+    title || (safeDescription.length > 80 ? safeDescription.substring(0, 80) + "..." : safeDescription) || "(no description)";
+
+  let statusText: string;
+  if (status === "closed") statusText = closed_by_slack_id ? `✅ Resolved by <@${closed_by_slack_id}>` : "✅ Resolved";
+  else if (claimed_by_slack_id) statusText = `🟡 Claimed by <@${claimed_by_slack_id}>`;
+  else statusText = "🔴 Open — not claimed";
+
+  const actionElements =
+    status === "closed"
+      ? [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Reopen" },
+            action_id: "reopen_ticket",
+            value: msg_ts,
+          },
+        ]
+      : [
+          {
+            type: "button",
+            text: { type: "plain_text", text: claimed_by_slack_id ? "↩️ Unclaim" : "🙋 Claim" },
+            action_id: "claim_ticket",
+            value: msg_ts,
+          },
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Mark Resolved" },
+            style: "primary",
+            action_id: "resolve_from_ticket_channel",
+            value: msg_ts,
+          },
+        ];
+
+  const blocks: Record<string, unknown>[] = [
+    { type: "section", text: { type: "mrkdwn", text: statusText } },
+    { type: "actions", elements: actionElements },
+    { type: "divider" },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `*${displayTitle}*\nby <@${opened_by_slack_id}>` },
+    },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `>${(description || "").slice(0, 2900).replace(/\n/g, "\n>")}` },
+    },
+  ];
+
+  if (permalink) {
+    blocks.push({
+      type: "actions",
+      elements: [{ type: "button", text: { type: "plain_text", text: "View in Slack" }, action_id: "view_thread", url: permalink }],
+    });
+  }
+
+  const numericTicket = Number(ticket_number);
+  if (Number.isInteger(numericTicket) && numericTicket > 0) {
+    blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: `Ticket ${numericTicket}` }] });
+  }
+
+  return blocks;
+}
+
+// Resolve a ticket straight from the dashboard: close it in the DB and run
+// the exact same Slack side-effects as Pixorpheus's "Mark resolved" button
+// (help-channel reactions + resolved message with a Reopen button, the
+// ticket-channel card update, and cleaning up any pending title prompt), so
+// resolving from either side looks and behaves identically.
 export async function resolveTicketFromDash(
   ts: string,
   actor: { slackId: string; username: string },
@@ -234,19 +319,56 @@ export async function resolveTicketFromDash(
   if (!ticket) return { ok: false, error: "No ticket found for this message." };
   if (ticket.status === "closed") return { ok: true, alreadyClosed: true };
 
-  const { error } = await db
+  const { data: updated, error } = await db
     .from("tickets")
     .update({
       status: "closed",
       closed_at: new Date().toISOString(),
       closed_by_slack_id: actor.slackId,
     })
-    .eq("msg_ts", ts);
+    .eq("msg_ts", ts)
+    .select()
+    .single();
   if (error) return { ok: false, error: error.message };
+
+  const ticketRow = updated as FullTicketRow;
 
   // Slack side-effects are best-effort , the DB row is the source of truth.
   const channel = process.env.SLACK_HELP_CHANNEL;
   if (channel) {
+    try {
+      await slackCall("chat.postMessage", {
+        channel,
+        thread_ts: ts,
+        text: `Ticket resolved by <@${actor.slackId}>!`,
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: `Resolved by <@${actor.slackId}>! If you have more questions, feel free to open a new thread.` },
+          },
+          {
+            type: "actions",
+            elements: [{ type: "button", action_id: "reopen_ticket", text: { type: "plain_text", text: "Reopen" }, value: ts }],
+          },
+        ],
+      });
+    } catch {
+      /* thread note is a nicety, not required */
+    }
+
+    if (ticketRow.ticket_msg_ts) {
+      try {
+        await slackCall("chat.update", {
+          channel: process.env.SLACK_TICKET_CHANNEL,
+          ts: ticketRow.ticket_msg_ts,
+          text: `Ticket resolved by <@${actor.slackId}>`,
+          blocks: ticketBlocks(ticketRow),
+        });
+      } catch {
+        /* ticket-channel card update is a nicety, not required */
+      }
+    }
+
     try {
       await slackCall("reactions.add", { channel, timestamp: ts, name: "white_check_mark" });
     } catch {
@@ -257,10 +379,17 @@ export async function resolveTicketFromDash(
     } catch {
       /* reaction may not be present */
     }
-    try {
-      await ticketReply(ts, `✅ Resolved by ${actor.username} from the dashboard.`, actor);
-    } catch {
-      /* thread note is a nicety, not required */
+
+    if (ticketRow.title_prompt_ts) {
+      try {
+        await slackCall("chat.delete", { channel, ts: ticketRow.title_prompt_ts });
+      } catch {
+        /* prompt may already be gone */
+      }
+      db.from("tickets").update({ title_prompt_ts: null }).eq("msg_ts", ts).then(
+        () => {},
+        () => {},
+      );
     }
   }
   return { ok: true };
