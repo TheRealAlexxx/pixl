@@ -31,6 +31,7 @@ export interface NavFlags {
   notify: boolean;
   admins: boolean;
   reviewers: boolean;
+  slackLookup: boolean;
   online: boolean;
   shop: boolean;
   fulfillment: boolean;
@@ -53,6 +54,7 @@ const GLYPHS = {
   notify: "bell",
   admins: "person-badge",
   reviewers: "checkmark",
+  slackLookup: "slack",
   online: "welcome",
   shop: "bag-fill",
   fulfillment: "package",
@@ -212,6 +214,12 @@ export function Shell({
           label: "Sub-admins",
           icon: "admins",
           show: nav.admins,
+        },
+        {
+          href: "/slack-lookup",
+          label: "Slack Lookup",
+          icon: "slackLookup",
+          show: nav.slackLookup,
         },
       ],
     },

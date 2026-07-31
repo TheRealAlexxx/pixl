@@ -53,6 +53,7 @@ export default async function RootLayout({
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
         reviewers: access.isSuper,
+        slackLookup: access.isSuper,
         online: canView(access, ["warn", "ban"]),
         shop: access.isSuper,
         events: access.isSuper,

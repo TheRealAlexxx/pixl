@@ -140,6 +140,22 @@ export interface AdminRow {
   created_at: string;
 }
 
+// Cross-link for the Slack Lookup tool: does this Slack ID have a Pixl account?
+export async function getPlayerBySlackId(
+  slackId: string,
+): Promise<Pick<UserRow, "id" | "display_name" | "real_name"> | null> {
+  const { data, error } = await db
+    .from("users")
+    .select("id, display_name, real_name")
+    .eq("slack_id", slackId)
+    .maybeSingle();
+  if (error) {
+    console.error("getPlayerBySlackId", error.message);
+    return null;
+  }
+  return data;
+}
+
 export async function getAdmin(slackId: string): Promise<AdminRow | null> {
   const { data, error } = await db
     .from("admins")
