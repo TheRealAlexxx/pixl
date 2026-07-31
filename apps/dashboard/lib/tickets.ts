@@ -117,6 +117,19 @@ export async function ticketActivity(): Promise<ActivityPoint[]> {
   }
 }
 
+// Form-encoded, not JSON , users.info in particular silently fails to read
+// its `user` param from a JSON body. Complex values (arrays/objects, e.g.
+// chat.postMessage's `blocks`) get JSON-stringified into their form field,
+// which Slack expects.
+function toFormBody(body: Record<string, unknown>): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null) continue;
+    params.set(key, typeof value === "string" ? value : JSON.stringify(value));
+  }
+  return params;
+}
+
 async function slackFetch(
   method: string,
   body: Record<string, unknown>,
@@ -127,9 +140,9 @@ async function slackFetch(
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify(body),
+    body: toFormBody(body),
   });
   return (await res.json()) as Record<string, unknown> & { ok: boolean; error?: string };
 }
