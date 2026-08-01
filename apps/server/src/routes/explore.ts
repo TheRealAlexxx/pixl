@@ -148,6 +148,91 @@ router.get("/api/explore/leaderboard", async (req, res) => {
   res.json({ ok: true, players, yourRank, yourPixels, sprint });
 });
 
+// Top referrers by pixels earned from referrals (see [[referral-system]] in
+// project memory). Mirrors apps/dashboard/lib/db.ts's referrerLeaderboard
+// metric — duplicated here rather than imported since that's a "use server"
+// module the game server can't pull in.
+const REFERRAL_MILESTONE_EVERY = 10;
+const REFERRAL_MILESTONE_PX = 357;
+router.get("/api/explore/leaderboard/referrals", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("referrals")
+    .select("referrer_id, rewarded_at, reward_pixels")
+    .not("rewarded_at", "is", null);
+  if (error) {
+    console.error("[explore] referral leaderboard failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  const byReferrer = new Map<string, { rewarded: number; pixels: number }>();
+  for (const r of data ?? []) {
+    const row = byReferrer.get(r.referrer_id as string) ?? { rewarded: 0, pixels: 0 };
+    row.rewarded++;
+    row.pixels += Number(r.reward_pixels) || 0;
+    byReferrer.set(r.referrer_id as string, row);
+  }
+  for (const row of byReferrer.values())
+    row.pixels += Math.floor(row.rewarded / REFERRAL_MILESTONE_EVERY) * REFERRAL_MILESTONE_PX;
+
+  const ranked = [...byReferrer.entries()].sort((a, b) => b[1].pixels - a[1].pixels).slice(0, 25);
+  const ids = ranked.map(([id]) => id);
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: users } = await supabase.from("users").select("id, display_name").in("id", ids);
+    for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
+  }
+  const players = ranked.map(([id, row], i) => ({
+    rank: i + 1,
+    display_name: names.get(id) ?? "?",
+    value: row.pixels,
+    referred: row.rewarded,
+    you: id === session.userId,
+  }));
+  const yourRank = players.find((p) => p.you)?.rank ?? 0;
+  res.json({ ok: true, players, yourRank, yourValue: byReferrer.get(session.userId)?.pixels ?? 0 });
+});
+
+// Top creators by total upvotes received across all their projects (see
+// [[project-upvotes-collectibles]] in project memory).
+router.get("/api/explore/leaderboard/upvotes", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const [{ data: projects, error: pErr }, { data: upvotes, error: uErr }] = await Promise.all([
+    supabase.from("projects").select("id, user_id"),
+    supabase.from("project_upvotes").select("project_id"),
+  ]);
+  if (pErr || uErr) {
+    console.error("[explore] upvote leaderboard failed", pErr || uErr);
+    return res.status(500).json({ ok: false });
+  }
+  const ownerOf = new Map((projects ?? []).map((p) => [p.id as number, p.user_id as string]));
+  const byOwner = new Map<string, number>();
+  for (const u of upvotes ?? []) {
+    const owner = ownerOf.get(u.project_id as number);
+    if (owner) byOwner.set(owner, (byOwner.get(owner) ?? 0) + 1);
+  }
+  const ranked = [...byOwner.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25);
+  const ids = ranked.map(([id]) => id);
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const { data: users } = await supabase.from("users").select("id, display_name").in("id", ids);
+    for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
+  }
+  const players = ranked.map(([id, count], i) => ({
+    rank: i + 1,
+    display_name: names.get(id) ?? "?",
+    value: count,
+    you: id === session.userId,
+  }));
+  const yourRank = players.find((p) => p.you)?.rank ?? 0;
+  res.json({ ok: true, players, yourRank, yourValue: byOwner.get(session.userId) ?? 0 });
+});
+
 // Proxy to Pixo's avatar pixelator so the API key never reaches the client.
 // Returns the player's Slack avatar as an already-pixelated PNG.
 const EXTERNAL_PIXIFY_URL =

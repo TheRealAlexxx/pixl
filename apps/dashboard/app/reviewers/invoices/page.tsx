@@ -67,8 +67,8 @@ export default async function InvoicesPage({
         <div>
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Payout invoices</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            What each reviewer earned from the $1-per-review payouts, month by month. 10 pixels
-            = $1 , settle the dollar column however you pay people.
+            What each reviewer earned reviewing, month by month. 1 pixel = $0.07 , settle the
+            dollar column however you pay people.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export default async function InvoicesPage({
                   )}
                 </TableCell>
                 <TableCell className="p-3 tabular-nums font-semibold">
-                  ${(r.paidPixels / 10).toFixed(2)}
+                  ${(r.paidPixels * 0.07).toFixed(2)}
                 </TableCell>
                 <TableCell
                   className={`p-3 tabular-nums ${
@@ -151,7 +151,7 @@ export default async function InvoicesPage({
                 <TableCell className="p-3">Total</TableCell>
                 <TableCell className="p-3 tabular-nums">{totals.payouts}</TableCell>
                 <TableCell className="p-3 tabular-nums">{totals.paidPixels}</TableCell>
-                <TableCell className="p-3 tabular-nums">${(totals.paidPixels / 10).toFixed(2)}</TableCell>
+                <TableCell className="p-3 tabular-nums">${(totals.paidPixels * 0.07).toFixed(2)}</TableCell>
                 <TableCell className="p-3 tabular-nums">{totals.cuts}</TableCell>
                 <TableCell className="p-3" />
               </TableRow>

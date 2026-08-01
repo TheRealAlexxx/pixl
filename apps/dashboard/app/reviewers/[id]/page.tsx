@@ -245,7 +245,7 @@ export default async function ReviewerPage({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat
           label="pixels earned reviewing"
-          value={`${pay.earnedPixels} ($${(pay.earnedPixels / 10).toFixed(2)})`}
+          value={`${pay.earnedPixels} ($${(pay.earnedPixels * 0.07).toFixed(2)})`}
         />
         <Stat label="payouts settled" value={String(pay.paid)} />
         <Stat label="payouts pending" value={String(pay.pending)} />

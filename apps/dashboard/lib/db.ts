@@ -140,6 +140,46 @@ export interface AdminRow {
   created_at: string;
 }
 
+// Cross-link for the Slack Lookup tool: does this Slack ID have a Pixl account?
+export async function getPlayerBySlackId(
+  slackId: string,
+): Promise<Pick<UserRow, "id" | "display_name" | "real_name"> | null> {
+  const { data, error } = await db
+    .from("users")
+    .select("id, display_name, real_name")
+    .eq("slack_id", slackId)
+    .maybeSingle();
+  if (error) {
+    console.error("getPlayerBySlackId", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Name -> Slack id suggestions for the Slack Lookup tool, so admins don't
+// have to go dig a U0… id out of another tab first. Deliberately lighter
+// than listPlayers() , no project/violation/ban joins, just enough to pick
+// the right person off a short list.
+export async function searchPlayerHandles(
+  query: string,
+  limit = 8,
+): Promise<Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id">[]> {
+  const like = query.replace(/[,()%*\\]/g, " ").trim();
+  if (!like) return [];
+  const { data, error } = await db
+    .from("users")
+    .select("id, display_name, real_name, slack_id")
+    .not("slack_id", "is", null)
+    .or(`display_name.ilike.%${like}%,real_name.ilike.%${like}%`)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("searchPlayerHandles", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
 export async function getAdmin(slackId: string): Promise<AdminRow | null> {
   const { data, error } = await db
     .from("admins")
@@ -1127,7 +1167,7 @@ export interface InvoiceRow {
 
 // Per-reviewer payout totals for one calendar month , the numbers whoever
 // settles real money needs. Only settled ('paid') payouts count; dollars are
-// paidPixels / 10.
+// paidPixels * 0.07 (1px = $0.07).
 export async function payoutInvoice(monthStart: Date, monthEnd: Date): Promise<InvoiceRow[]> {
   const rows: {
     reviewer: string;
@@ -1664,6 +1704,107 @@ export async function listBanLog(limit = 100): Promise<BanLogRow[]> {
   const rows = (data ?? []) as BanLogRow[];
   await attachPlayerNames(rows);
   return rows;
+}
+
+// Referral system (see [[referral-system]] in project memory). 1px = $0.07
+// (50px/hr = $3.50/hr base, matching apps/server/src/xp.ts), NOT 10px = $1 ,
+// that was a drifted assumption this file used to make; fixed 2026-08-01.
+// Pixel amounts below are the nearest whole pixel to the real dollar targets
+// (they were originally specified in dollars): 2h->$2, 5h->$4, 10h->$7,
+// milestone->$25, boost->$1/hr.
+// - Referred player: +14px/hr (~$1/hr) on top of their normal rate, for
+//   their first newly-approved ship only.
+// - Referrer: a one-time pixel reward once the referred player's first
+//   qualifying ship clears an hour tier, then the contract closes.
+// - Every 10th referral a referrer gets rewarded on also pays a milestone.
+export const REFERRAL_BOOST_PX_PER_HOUR = 14; // $0.98
+export const REFERRAL_BOOST_SHIP_CAP = 1;
+export const REFERRAL_MILESTONE_EVERY = 10;
+export const REFERRAL_MILESTONE_PX = 357; // $24.99
+export const REFERRAL_TIERS: { minHours: number; key: string; px: number }[] = [
+  { minHours: 10, key: "10h", px: 100 }, // $7.00
+  { minHours: 5, key: "5h", px: 57 }, // $3.99
+  { minHours: 2, key: "2h", px: 29 }, // $2.03
+];
+
+export function referralTierFor(hours: number): { key: string; px: number } | null {
+  return REFERRAL_TIERS.find((t) => hours >= t.minHours) ?? null;
+}
+
+export interface ReferralRow {
+  id: number;
+  referrer_id: string;
+  referred_id: string;
+  created_at: string;
+  rewarded_at: string | null;
+  reward_tier: string | null;
+  reward_pixels: number | null;
+  boosted_ships: number;
+  referrer_name: string;
+  referred_name: string;
+}
+
+// Every referral, newest first, with both sides' names resolved , the
+// "referrals" admin page's raw feed.
+export async function listReferrals(limit = 500): Promise<ReferralRow[]> {
+  const { data, error } = await db
+    .from("referrals")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listReferrals", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ReferralRow[];
+  const ids = [...new Set(rows.flatMap((r) => [r.referrer_id, r.referred_id]))];
+  const names = ids.length
+    ? await db.from("users").select("id, display_name, real_name").in("id", ids)
+    : { data: [] };
+  const nameMap = new Map(
+    (names.data ?? []).map((u) => [u.id as string, playerLabel(u as { display_name?: string; real_name?: string }, u.id as string)]),
+  );
+  for (const r of rows) {
+    r.referrer_name = nameMap.get(r.referrer_id) ?? r.referrer_id;
+    r.referred_name = nameMap.get(r.referred_id) ?? r.referred_id;
+  }
+  return rows;
+}
+
+export interface ReferrerLeaderboardRow {
+  referrerId: string;
+  name: string;
+  total: number;
+  rewarded: number;
+  pixelsEarned: number;
+  milestones: number;
+}
+
+// One row per referrer, ranked by pixels earned from referrals , for the
+// top-of-page leaderboard on the referrals admin page.
+export async function referrerLeaderboard(rows: ReferralRow[]): Promise<ReferrerLeaderboardRow[]> {
+  const out = new Map<string, ReferrerLeaderboardRow>();
+  for (const r of rows) {
+    const row = out.get(r.referrer_id) ?? {
+      referrerId: r.referrer_id,
+      name: r.referrer_name,
+      total: 0,
+      rewarded: 0,
+      pixelsEarned: 0,
+      milestones: 0,
+    };
+    row.total++;
+    if (r.rewarded_at) {
+      row.rewarded++;
+      row.pixelsEarned += Number(r.reward_pixels) || 0;
+    }
+    out.set(r.referrer_id, row);
+  }
+  for (const row of out.values()) {
+    row.milestones = Math.floor(row.rewarded / REFERRAL_MILESTONE_EVERY);
+    row.pixelsEarned += row.milestones * REFERRAL_MILESTONE_PX;
+  }
+  return [...out.values()].sort((a, b) => b.pixelsEarned - a.pixelsEarned);
 }
 
 export interface JournalRow {

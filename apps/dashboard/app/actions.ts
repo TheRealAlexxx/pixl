@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import sharp from "sharp";
 import {
   db,
   getAdmin,
@@ -19,6 +18,11 @@ import {
   removeHelper,
   nextReviewId,
   EVENT_TYPES,
+  REFERRAL_BOOST_PX_PER_HOUR,
+  REFERRAL_BOOST_SHIP_CAP,
+  REFERRAL_MILESTONE_EVERY,
+  REFERRAL_MILESTONE_PX,
+  referralTierFor,
   type DashEventRow,
 } from "@/lib/db";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
@@ -74,11 +78,13 @@ async function nextReviewPath(
 }
 
 // XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
-// Payout is a flat $4.00/hr base plus an XP bonus ramping linearly to $6.00/hr
-// at level 100 (40 px base -> 60 px at max). A player's rate for a ship comes
-// from their XP before that ship. Keep in sync with server src/xp.ts.
-const BASE_PX_PER_HOUR = 40;
-const MAX_PX_PER_HOUR = 60;
+// Payout is a flat $3.50/hr base plus an XP bonus ramping linearly to $5.50/hr
+// at level 100 (50 px base -> 79 px at max, 1px = $0.07). A player's rate for
+// a ship comes from their XP before that ship. Keep in sync with server
+// src/xp.ts (this used to drift from it — 40/60 vs the real 50/79 — fixed
+// 2026-08-01).
+const BASE_PX_PER_HOUR = 50;
+const MAX_PX_PER_HOUR = 79;
 const MAX_LEVEL = 100;
 
 function pxPerHourFor(xp: number): number {
@@ -224,7 +230,7 @@ async function dmPayout(
   reason: string,
   credited: boolean,
 ): Promise<void> {
-  const dollars = `$${(full / 10).toFixed(2)}`;
+  const dollars = `$${(full * 0.07).toFixed(2)}`;
   let text =
     pct === 0
       ? `You earned ${paid} pixels (${dollars}) for reviewing "${projectName}". Thanks for keeping the queue moving!`
@@ -619,11 +625,74 @@ export async function reviewProject(formData: FormData): Promise<void> {
     }
   }
   const xpBefore = await lifetimeApprovedHours(project.user_id, projectId);
-  const pxRate = pxPerHourFor(xpBefore);
-  const totalPx = Math.round(creditHours * pxRate * goalMult);
+  let pxRate = pxPerHourFor(xpBefore);
   const alreadyPx = await projectPixelTotal(project.id);
+  // A project only counts as a "new ship" for referral purposes the first
+  // time it earns any pixels , re-approvals of an already-credited project
+  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
+  const isNewShip = alreadyPx === 0;
+  const { data: referral } = isNewShip
+    ? await db
+        .from("referrals")
+        .select("id, referrer_id, rewarded_at, boosted_ships")
+        .eq("referred_id", project.user_id)
+        .maybeSingle()
+    : { data: null };
+
+  let referralNote = "";
+  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
+    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
+    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
+    await db
+      .from("referrals")
+      .update({ boosted_ships: referral.boosted_ships + 1 })
+      .eq("id", referral.id);
+  }
+
+  const totalPx = Math.round(creditHours * pxRate * goalMult);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
+
+  // Referrer payout: pays once per referral, on the first qualifying ship.
+  if (referral && !referral.rewarded_at) {
+    const tier = referralTierFor(creditHours);
+    if (tier) {
+      await db
+        .from("referrals")
+        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
+        .eq("id", referral.id);
+      await db.rpc("adjust_user_pixels", {
+        p_user_id: referral.referrer_id,
+        p_amount: tier.px,
+        p_reason: "referral_reward",
+        p_created_by: by,
+      });
+      await db.from("notifications").insert({
+        user_id: referral.referrer_id,
+        title: "Referral reward!",
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
+      });
+
+      const { count: rewardedCount } = await db
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_id", referral.referrer_id)
+        .not("rewarded_at", "is", null);
+      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
+        await db.rpc("adjust_user_pixels", {
+          p_user_id: referral.referrer_id,
+          p_amount: REFERRAL_MILESTONE_PX,
+          p_reason: "referral_milestone",
+          p_created_by: by,
+        });
+        await db.from("notifications").insert({
+          user_id: referral.referrer_id,
+          title: "Referral milestone!",
+          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
+        });
+      }
+    }
+  }
 
   let credited: string;
   if (alreadyPx > 0 && deltaPx > 0) {
@@ -637,8 +706,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (deltaPx > 0)
-    credited += ` Your rate: ${pxRate} px/h ($${(pxRate / 10).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
+    credited += ` Your rate: ${pxRate} px/h ($${(pxRate * 0.07).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
+  if (referralNote && deltaPx > 0) credited += referralNote;
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
   // only for projects shipped inside the bounty window.
@@ -1674,6 +1744,7 @@ async function uploadShopImage(file: File): Promise<string> {
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const { default: sharp } = await import("sharp");
   const body = await sharp(Buffer.from(await file.arrayBuffer()))
     .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })

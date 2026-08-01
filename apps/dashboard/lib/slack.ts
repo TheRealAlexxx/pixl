@@ -6,6 +6,20 @@ function botToken(): string {
   return t;
 }
 
+// Some Web API methods (users.info in particular) silently fail to read
+// their params from a JSON body , form-encoding is what actually works for
+// every method, so that's what we send. Complex values (arrays/objects, e.g.
+// chat.postMessage's `blocks`) get JSON-stringified into their form field,
+// which Slack expects.
+function toFormBody(body: Record<string, unknown>): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null) continue;
+    params.set(key, typeof value === "string" ? value : JSON.stringify(value));
+  }
+  return params;
+}
+
 async function slackCall(
   method: string,
   body: Record<string, unknown>,
@@ -14,9 +28,9 @@ async function slackCall(
     method: "POST",
     headers: {
       Authorization: `Bearer ${botToken()}`,
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify(body),
+    body: toFormBody(body),
   });
   const json = (await res.json()) as Record<string, unknown> & {
     ok: boolean;
@@ -89,6 +103,104 @@ export async function slackHandles(
     }),
   );
   return out;
+}
+
+export interface SlackUserProfile {
+  id: string;
+  teamId?: string;
+  name?: string;
+  realName?: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+  skype?: string;
+  timezone?: string;
+  timezoneLabel?: string;
+  timezoneOffset?: number;
+  statusText?: string;
+  statusEmoji?: string;
+  image192?: string;
+  image512?: string;
+  isAdmin: boolean;
+  isOwner: boolean;
+  isPrimaryOwner: boolean;
+  isBot: boolean;
+  isRestricted: boolean;
+  isUltraRestricted: boolean;
+  deleted: boolean;
+  updated?: number;
+}
+
+// Full profile for the Slack Lookup admin tool , everything users.info hands
+// back, normalized into one flat shape. Returns null on any failure (bad id,
+// user_not_found, etc.) so the page can show a plain "not found" instead of
+// crashing.
+export async function getSlackUserProfile(id: string): Promise<SlackUserProfile | null> {
+  try {
+    const res = (await slackCall("users.info", { user: id })) as {
+      user?: {
+        id: string;
+        team_id?: string;
+        name?: string;
+        real_name?: string;
+        deleted?: boolean;
+        is_admin?: boolean;
+        is_owner?: boolean;
+        is_primary_owner?: boolean;
+        is_bot?: boolean;
+        is_restricted?: boolean;
+        is_ultra_restricted?: boolean;
+        updated?: number;
+        tz?: string;
+        tz_label?: string;
+        tz_offset?: number;
+        profile?: {
+          display_name?: string;
+          real_name?: string;
+          email?: string;
+          phone?: string;
+          title?: string;
+          skype?: string;
+          status_text?: string;
+          status_emoji?: string;
+          image_192?: string;
+          image_512?: string;
+        };
+      };
+    };
+    const u = res.user;
+    if (!u) return null;
+    return {
+      id: u.id,
+      teamId: u.team_id,
+      name: u.name,
+      realName: u.profile?.real_name || u.real_name,
+      displayName: u.profile?.display_name,
+      email: u.profile?.email,
+      phone: u.profile?.phone,
+      title: u.profile?.title,
+      skype: u.profile?.skype,
+      timezone: u.tz,
+      timezoneLabel: u.tz_label,
+      timezoneOffset: u.tz_offset,
+      statusText: u.profile?.status_text,
+      statusEmoji: u.profile?.status_emoji,
+      image192: u.profile?.image_192,
+      image512: u.profile?.image_512,
+      isAdmin: !!u.is_admin,
+      isOwner: !!u.is_owner,
+      isPrimaryOwner: !!u.is_primary_owner,
+      isBot: !!u.is_bot,
+      isRestricted: !!u.is_restricted,
+      isUltraRestricted: !!u.is_ultra_restricted,
+      deleted: !!u.deleted,
+      updated: u.updated,
+    };
+  } catch (e) {
+    console.error("getSlackUserProfile failed", (e as Error).message);
+    return null;
+  }
 }
 
 // Post to a channel as the dashboard bot (bot must be invited to the channel).
