@@ -138,7 +138,7 @@ body.has-sidebar{padding-left:var(--sidebar);padding-top:var(--toprail)}
   padding:6px 8px 16px;margin-bottom:4px;
   font-family:var(--pixel);font-weight:700;font-size:20px;letter-spacing:2px;color:var(--ink);
 }
-.sb-logo span{color:var(--gold)}
+.sb-logo span span{color:var(--gold)}
 .sb-logo img{width:26px;height:26px;image-rendering:pixelated}
 
 .nav{display:flex;flex-direction:column;gap:3px;flex:1}
