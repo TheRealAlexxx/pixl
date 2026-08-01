@@ -4,7 +4,7 @@
 -- GET /api/referral/me). A new player applies someone's code once via
 -- POST /api/referral/apply, creating a `referrals` row (one per referred_id ,
 -- a player can only ever be referred once, and only by someone else). The
--- applying account must also be within its first 7 days on Pixl (enforced in
+-- applying account must also be within its first 2 days on Pixl (enforced in
 -- referral.ts, not the schema) , otherwise two existing players could just
 -- "refer" each other after the fact for free money with zero real user
 -- acquisition behind it.
@@ -16,7 +16,7 @@
 --     close the referral, it just waits for a bigger one; the first project
 --     that DOES clear a tier pays out and sets rewarded_at, closing the
 --     contract for good, no matter how big future ships get.
---   - The REFERRED player gets a flat +10px/hr (+$1/hr) boost on top of their
+--   - The REFERRED player gets a flat +14px/hr (~$1/hr) boost on top of their
 --     normal level-based rate, for their first newly-approved ship only,
 --     tracked by boosted_ships (capped at 1 in application code).
 --

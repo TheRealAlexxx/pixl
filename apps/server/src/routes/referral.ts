@@ -18,7 +18,7 @@ const BOOST_SHIP_CAP = 1;
 // each other after the fact and collect the payout with zero real user
 // acquisition , worse, veteran players are a safer bet for hitting a big
 // reward tier than an actual newcomer, which inverts the whole incentive.
-const REFERRAL_WINDOW_DAYS = 7;
+const REFERRAL_WINDOW_DAYS = 2;
 
 function randomCode(): string {
   const bytes = randomBytes(CODE_LENGTH);

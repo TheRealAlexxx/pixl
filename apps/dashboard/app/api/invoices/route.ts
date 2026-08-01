@@ -28,7 +28,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         r.payouts,
         r.paidPixels,
         r.fullPixels,
-        (r.paidPixels / 10).toFixed(2),
+        (r.paidPixels * 0.07).toFixed(2),
         r.cuts,
         r.uncredited,
       ].join(","),

@@ -78,11 +78,13 @@ async function nextReviewPath(
 }
 
 // XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
-// Payout is a flat $4.00/hr base plus an XP bonus ramping linearly to $6.00/hr
-// at level 100 (40 px base -> 60 px at max). A player's rate for a ship comes
-// from their XP before that ship. Keep in sync with server src/xp.ts.
-const BASE_PX_PER_HOUR = 40;
-const MAX_PX_PER_HOUR = 60;
+// Payout is a flat $3.50/hr base plus an XP bonus ramping linearly to $5.50/hr
+// at level 100 (50 px base -> 79 px at max, 1px = $0.07). A player's rate for
+// a ship comes from their XP before that ship. Keep in sync with server
+// src/xp.ts (this used to drift from it — 40/60 vs the real 50/79 — fixed
+// 2026-08-01).
+const BASE_PX_PER_HOUR = 50;
+const MAX_PX_PER_HOUR = 79;
 const MAX_LEVEL = 100;
 
 function pxPerHourFor(xp: number): number {
@@ -228,7 +230,7 @@ async function dmPayout(
   reason: string,
   credited: boolean,
 ): Promise<void> {
-  const dollars = `$${(full / 10).toFixed(2)}`;
+  const dollars = `$${(full * 0.07).toFixed(2)}`;
   let text =
     pct === 0
       ? `You earned ${paid} pixels (${dollars}) for reviewing "${projectName}". Thanks for keeping the queue moving!`
@@ -668,7 +670,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       await db.from("notifications").insert({
         user_id: referral.referrer_id,
         title: "Referral reward!",
-        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px / 10).toFixed(2)})!`,
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
       });
 
       const { count: rewardedCount } = await db
@@ -686,7 +688,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
         await db.from("notifications").insert({
           user_id: referral.referrer_id,
           title: "Referral milestone!",
-          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX / 10).toFixed(2)})!`,
+          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
         });
       }
     }
@@ -704,7 +706,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (deltaPx > 0)
-    credited += ` Your rate: ${pxRate} px/h ($${(pxRate / 10).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
+    credited += ` Your rate: ${pxRate} px/h ($${(pxRate * 0.07).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
   if (referralNote && deltaPx > 0) credited += referralNote;
 
