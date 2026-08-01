@@ -12,6 +12,8 @@
   }
   .hero .page-sub { margin-bottom: 4px; color: var(--teal); }
   .tabs { display: flex; gap: 6px; margin: 22px 0 18px; flex-wrap: wrap; }
+  .lb-subtabs { margin: 0 0 18px; }
+  .lb-subtabs .tab { font-size: 13px; padding: 8px 14px 6px; }
   .tab {
     border: 1px solid var(--stroke); border-radius: var(--radius-sm);
     background: var(--panel);
@@ -235,37 +237,72 @@ async function showProjects(q = "") {
     : `<div class="grid">${projects.map(projCard).join("")}</div>`);
 }
 
-async function showLeaderboard() {
-  view.innerHTML = `<div class="spin"></div>`;
-  const data = await Pixl.api("/api/explore/leaderboard");
-  const rows = (data.players || []).map((p) => `
+const LB_TABS = [
+  { key: "pixels", label: "PIXELS" },
+  { key: "referrals", label: "REFERRALS" },
+  { key: "upvotes", label: "UPVOTES" },
+];
+
+function boardRow(p, unit) {
+  return `
     <div class="board-row ${p.rank <= 3 ? "top" + p.rank : ""} ${p.you ? "you" : ""}">
       <span class="rank">${p.rank <= 3 ? ["#1", "#2", "#3"][p.rank - 1] : "#" + p.rank}</span>
       <span class="bname">${Pixl.esc(p.display_name)}${p.you ? ' <span class="gold">← YOU</span>' : ""}</span>
-      <span class="bpx"><img src="/img/pixel.png" alt="">${p.pixels.toLocaleString()} PX</span>
-    </div>`).join("");
-  const sprint = data.sprint ? `
-    <div class="sprint-panel panel-deep">
-      <h3>${Pixl.esc(data.sprint.name)}</h3>
-      <div class="faint" style="font-size:12px;margin-bottom:12px">Pixels earned during the event only · ${Pixl.countdown(data.sprint.ends_at)}</div>
-      <div class="board">${(data.sprint.players || []).map((p) => `
-        <div class="board-row ${p.you ? "you" : ""}">
-          <span class="rank">#${p.rank}</span>
-          <span class="bname">${Pixl.esc(p.display_name)}${p.you ? ' <span class="gold">← YOU</span>' : ""}</span>
-          <span class="bpx">${p.pixels.toLocaleString()} PX</span>
-        </div>`).join("") || '<div class="faint">No sprint pixels yet — be first!</div>'}
-      </div>
-      <div class="muted" style="font-size:13px;margin-top:10px">Your sprint total: ${Number(data.sprint.your_pixels || 0).toLocaleString()} PX</div>
-    </div>` : "";
+      <span class="bpx">${unit === "PX" ? `<img src="/img/pixel.png" alt="">` : ""}${p.value.toLocaleString()} ${unit}</span>
+    </div>`;
+}
+
+async function showLeaderboard(sub) {
+  if (!LB_TABS.some((t) => t.key === sub)) sub = "pixels";
   view.innerHTML = `
-    <div class="board">${rows || '<div class="empty-note">NO PIXELS ANYWHERE YET.</div>'}</div>
+    <div class="tabs lb-subtabs" id="lbTabs">${LB_TABS.map((t) => `<button class="tab${t.key === sub ? " active" : ""}" data-lb="${t.key}">${t.label}</button>`).join("")}</div>
+    <div id="lbBody"><div class="spin"></div></div>`;
+  document.querySelectorAll("#lbTabs [data-lb]").forEach((b) =>
+    b.addEventListener("click", () => { location.hash = "#leaderboard=" + b.dataset.lb; }));
+  const body = document.getElementById("lbBody");
+
+  if (sub === "pixels") {
+    const data = await Pixl.api("/api/explore/leaderboard");
+    const rows = (data.players || []).map((p) => boardRow({ ...p, value: p.pixels }, "PX")).join("");
+    const sprint = data.sprint ? `
+      <div class="sprint-panel panel-deep">
+        <h3>${Pixl.esc(data.sprint.name)}</h3>
+        <div class="faint" style="font-size:12px;margin-bottom:12px">Pixels earned during the event only · ${Pixl.countdown(data.sprint.ends_at)}</div>
+        <div class="board">${(data.sprint.players || []).map((p) => `
+          <div class="board-row ${p.you ? "you" : ""}">
+            <span class="rank">#${p.rank}</span>
+            <span class="bname">${Pixl.esc(p.display_name)}${p.you ? ' <span class="gold">← YOU</span>' : ""}</span>
+            <span class="bpx">${p.pixels.toLocaleString()} PX</span>
+          </div>`).join("") || '<div class="faint">No sprint pixels yet — be first!</div>'}
+        </div>
+        <div class="muted" style="font-size:13px;margin-top:10px">Your sprint total: ${Number(data.sprint.your_pixels || 0).toLocaleString()} PX</div>
+      </div>` : "";
+    body.innerHTML = `
+      <div class="board">${rows || '<div class="empty-note">NO PIXELS ANYWHERE YET.</div>'}</div>
+      <div class="you-card panel">
+        <span class="gold">YOUR STANDING</span>
+        <span>${data.yourRank ? "#" + data.yourRank : "UNRANKED"}</span>
+        <span class="teal">${Number(data.yourPixels > 0 ? data.yourPixels : 0).toLocaleString()} PX</span>
+        <span class="faint" style="font-size:12px">ship projects to climb</span>
+      </div>
+      ${sprint}`;
+    return;
+  }
+
+  const endpoint = sub === "referrals" ? "/api/explore/leaderboard/referrals" : "/api/explore/leaderboard/upvotes";
+  const unit = sub === "referrals" ? "PX" : "▲";
+  const emptyMsg = sub === "referrals" ? "NO REFERRAL REWARDS PAID OUT YET." : "NO UPVOTES ANYWHERE YET.";
+  const climbMsg = sub === "referrals" ? "refer friends to climb" : "ship great work to climb";
+  const data = await Pixl.api(endpoint);
+  const rows = (data.players || []).map((p) => boardRow(p, unit)).join("");
+  body.innerHTML = `
+    <div class="board">${rows || `<div class="empty-note">${emptyMsg}</div>`}</div>
     <div class="you-card panel">
       <span class="gold">YOUR STANDING</span>
       <span>${data.yourRank ? "#" + data.yourRank : "UNRANKED"}</span>
-      <span class="teal">${Number(data.yourPixels > 0 ? data.yourPixels : 0).toLocaleString()} PX</span>
-      <span class="faint" style="font-size:12px">ship projects to climb</span>
-    </div>
-    ${sprint}`;
+      <span class="teal">${Number(data.yourValue > 0 ? data.yourValue : 0).toLocaleString()} ${unit}</span>
+      <span class="faint" style="font-size:12px">${climbMsg}</span>
+    </div>`;
 }
 
 async function showPlayer(id) {
@@ -351,7 +388,7 @@ function route() {
   if (key === "player" && val) return showPlayer(decodeURIComponent(val));
   if (key === "project" && val) return showProject(decodeURIComponent(val));
   if (key === "projects") return showProjects();
-  if (key === "leaderboard") return showLeaderboard();
+  if (key === "leaderboard") return showLeaderboard(val);
   return showPlayers();
 }
 
