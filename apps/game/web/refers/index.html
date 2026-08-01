@@ -103,6 +103,11 @@
       </div>
     </div>
 
+    <div class="card" id="expired-card" hidden>
+      <div class="card-h">GOT A CODE?</div>
+      <div class="card-note" style="margin-top:0" id="expired-note"></div>
+    </div>
+
     <div class="card">
       <div class="card-h">YOUR REFERRALS</div>
       <div class="stat-row" id="stats"></div>
@@ -154,7 +159,7 @@
            <div class="boost-bar"><div class="boost-fill" style="width:0%"></div></div>`
         : `<div class="used-note">You've used your referral boost , back to your normal rate now.</div>
            <div class="boost-bar"><div class="boost-fill" style="width:100%"></div></div>`;
-    } else {
+    } else if (data.canApply) {
       $("apply-card").hidden = false;
       $("apply-btn").onclick = async () => {
         const code = $("apply-code").value.trim().toUpperCase();
@@ -174,6 +179,10 @@
           $("apply-btn").disabled = false;
         }
       };
+    } else {
+      $("expired-card").hidden = false;
+      $("expired-note").textContent =
+        `Referral codes can only be applied within your first ${data.referralWindowDays} days on Pixl , that window's closed for your account.`;
     }
 
     const r = data.referrals;

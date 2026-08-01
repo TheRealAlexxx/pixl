@@ -3,7 +3,11 @@
 -- A player gets a short referral_code (generated lazily on first request via
 -- GET /api/referral/me). A new player applies someone's code once via
 -- POST /api/referral/apply, creating a `referrals` row (one per referred_id ,
--- a player can only ever be referred once, and only by someone else).
+-- a player can only ever be referred once, and only by someone else). The
+-- applying account must also be within its first 7 days on Pixl (enforced in
+-- referral.ts, not the schema) , otherwise two existing players could just
+-- "refer" each other after the fact for free money with zero real user
+-- acquisition behind it.
 --
 -- Two payouts hang off that row:
 --   - The REFERRER gets a one-time reward when the referred player's first

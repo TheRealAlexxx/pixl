@@ -9,6 +9,17 @@ const router = Router();
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I, easy to read aloud
 const CODE_LENGTH = 6;
 
+// Keep in sync with REFERRAL_BOOST_SHIP_CAP in apps/dashboard/lib/db.ts , the
+// boost only ever applies to this many of the referred player's ships.
+const BOOST_SHIP_CAP = 1;
+
+// A code can only be applied while the *referred* account is still new. Without
+// this, two existing players who've been shipping for months could "refer"
+// each other after the fact and collect the payout with zero real user
+// acquisition , worse, veteran players are a safer bet for hitting a big
+// reward tier than an actual newcomer, which inverts the whole incentive.
+const REFERRAL_WINDOW_DAYS = 7;
+
 function randomCode(): string {
   const bytes = randomBytes(CODE_LENGTH);
   let out = "";
@@ -53,7 +64,7 @@ router.get("/api/referral/me", async (req, res) => {
 
   const code = await ensureReferralCode(session.userId);
 
-  const [{ data: asReferred }, { data: referredByMe }] = await Promise.all([
+  const [{ data: asReferred }, { data: referredByMe }, { data: me }] = await Promise.all([
     supabase
       .from("referrals")
       .select("boosted_ships, rewarded_at")
@@ -63,16 +74,24 @@ router.get("/api/referral/me", async (req, res) => {
       .from("referrals")
       .select("rewarded_at, reward_tier, reward_pixels")
       .eq("referrer_id", session.userId),
+    supabase.from("users").select("created_at").eq("id", session.userId).single(),
   ]);
 
   const referrals = referredByMe ?? [];
   const rewarded = referrals.filter((r) => r.rewarded_at);
+  const accountAgeMs = me?.created_at ? Date.now() - new Date(me.created_at as string).getTime() : Infinity;
+  const canApply = !asReferred && accountAgeMs <= REFERRAL_WINDOW_DAYS * 86400_000;
 
   res.json({
     ok: true,
     code,
+    canApply,
+    referralWindowDays: REFERRAL_WINDOW_DAYS,
     boost: asReferred
-      ? { shipsUsed: asReferred.boosted_ships, shipsRemaining: Math.max(0, 5 - asReferred.boosted_ships) }
+      ? {
+          shipsUsed: asReferred.boosted_ships,
+          shipsRemaining: Math.max(0, BOOST_SHIP_CAP - asReferred.boosted_ships),
+        }
       : null,
     referrals: {
       total: referrals.length,
@@ -97,6 +116,18 @@ router.post("/api/referral/apply", async (req, res) => {
     .maybeSingle();
   if (alreadyReferred)
     return res.status(400).json({ ok: false, reason: "You've already used a referral code." });
+
+  const { data: me } = await supabase
+    .from("users")
+    .select("created_at")
+    .eq("id", session.userId)
+    .single();
+  const accountAgeMs = me?.created_at ? Date.now() - new Date(me.created_at as string).getTime() : Infinity;
+  if (accountAgeMs > REFERRAL_WINDOW_DAYS * 86400_000)
+    return res.status(400).json({
+      ok: false,
+      reason: `Referral codes can only be applied within your first ${REFERRAL_WINDOW_DAYS} days on Pixl.`,
+    });
 
   const { data: referrer } = await supabase
     .from("users")
