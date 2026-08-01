@@ -129,23 +129,6 @@
         border-color: transparent;
       }
 
-      .limited-banner {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        padding: 11px 16px;
-        margin-bottom: 18px;
-        background: color-mix(in srgb, var(--gold) 12%, var(--panel));
-        border: 1px solid var(--gold);
-        border-radius: var(--radius);
-        color: var(--ink);
-        font-family: var(--pixel);
-        font-size: 13px;
-        letter-spacing: 1px;
-      }
-      .limited-banner .tick { color: var(--gold); font-family: var(--sans); font-weight: 700; font-variant-numeric: tabular-nums; }
-
       /* ── section headers (two-currency split) ── */
       .shop-section-h {
         display: flex;
@@ -356,7 +339,7 @@
           <div class="bubble" id="bubble">HEY! WELCOME IN.</div>
           <div class="shop-title-box">
             <h1 class="page-title">THE PIXL SHOP</h1>
-            <div class="page-sub">Stickers · Licenses · Plushies · Hardware — all real</div>
+            <div class="page-sub">Stickers · Licenses · Plushies · Hardware, all real</div>
             <div class="open-sign"><span class="dot teal"></span>OPEN · PIXELS ACCEPTED</div>
           </div>
         </div>
@@ -394,12 +377,6 @@
         <button class="tier" data-tier="over">500+</button>
       </div>
 
-      <div class="limited-banner" id="limited-banner" hidden>
-        <span>MYSTERY MERCHANT IS IN TOWN —</span>
-        <span class="tick" id="limited-tick"></span>
-        <span>GRAB THE LIMITED GOODS BEFORE THEY VANISH!</span>
-      </div>
-
       <div class="spin" id="loading"></div>
       <div id="trophies"></div>
       <div id="shop-list-h" hidden>
@@ -410,7 +387,7 @@
       </div>
       <div class="grid" id="items"></div>
       <div class="empty-note" id="empty" hidden>
-        NOTHING ON THE SHELVES YET.<br />SHIP A PROJECT AND CHECK BACK — NEW STOCK DROPS AS THE RESTORATION GOES ON.
+        NOTHING ON THE SHELVES YET.<br />SHIP A PROJECT AND CHECK BACK, NEW STOCK DROPS AS THE RESTORATION GOES ON.
       </div>
 
       <div class="marquee"><div id="marquee-inner"></div></div>
@@ -548,7 +525,7 @@
             ? ""
             : `<div class="shop-section-h rest">
          <span class="t">✦ RESTORATION REWARDS</span>
-         <span class="s">Earned by leveling up — not for sale</span>
+         <span class="s">Earned by leveling up, not for sale</span>
        </div>
      <div class="grid">${trophies.map(trophyCard).join("")}</div>
      <div class="divider"></div>`;
@@ -602,7 +579,7 @@
           render();
         } else if (r.error === "not_eligible") {
           Pixl.toast(
-            `Not yet — you're at ${Math.floor(r.xp)} / ${r.need} XP.`,
+            `Not yet, you're at ${Math.floor(r.xp)} / ${r.need} XP.`,
             true,
           );
         } else {
@@ -622,17 +599,6 @@
         render();
       });
 
-      function tickLimited() {
-        const lim = items.filter((i) => i.limited && i.limited_until);
-        if (lim.length === 0) {
-          $("limited-banner").hidden = true;
-          return;
-        }
-        $("limited-banner").hidden = false;
-        $("limited-tick").textContent = Pixl.countdown(lim[0].limited_until);
-      }
-      setInterval(tickLimited, 1000);
-
       async function loadItems() {
         try {
           const data = await Pixl.api("/api/shop/items");
@@ -650,7 +616,6 @@
             Pixl.toast("Couldn't reach the shop server.", true);
         }
         render();
-        tickLimited();
         const names =
           items
             .filter((i) => !isTrophy(i))

@@ -20,7 +20,7 @@
       }
       .back-link:hover { color: var(--teal); }
 
-      /* keeper strip (compact — mirrors the shop hero) */
+      /* keeper strip (compact, mirrors the shop hero) */
       .keeper-strip {
         display: flex;
         gap: 16px;
@@ -389,7 +389,7 @@
             ? "var(--good)"
             : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
         $("afford-label").textContent =
-          `YOU HAVE ${Math.round(have)} / ${price.toLocaleString()} PX` + (pct >= 100 ? "  —  EASY." : "");
+          `YOU HAVE ${Math.round(have)} / ${price.toLocaleString()} PX` + (pct >= 100 ? ", EASY." : "");
       }
 
       function optionGroups(item) {
@@ -526,13 +526,13 @@
           const need = Number(selected.unlock_xp);
           const pct = Math.max(0, Math.min(100, (xp / Math.max(1, need)) * 100));
           $("detail-limited").innerHTML =
-            `<span class="chip ${state === "locked" ? "" : "teal"}">LEVEL ${need} TROPHY — EARNED, NOT BOUGHT</span>`;
+            `<span class="chip ${state === "locked" ? "" : "teal"}">LEVEL ${need} TROPHY, EARNED, NOT BOUGHT</span>`;
           $("detail-price").innerHTML =
             state === "claimed"
               ? "CLAIMED"
               : state === "claimable"
                 ? "READY TO CLAIM!"
-                : `LOCKED — REACH ${need} XP`;
+                : `LOCKED, REACH ${need} XP`;
           $("detail-price").classList.toggle("cant", state === "locked");
           $("afford-fill").style.width = pct + "%";
           $("afford-fill").style.background =
@@ -541,7 +541,7 @@
               : "repeating-linear-gradient(90deg,var(--teal) 0 7px,var(--teal-hover) 7px 14px)";
           $("afford-label").textContent =
             `YOU'RE AT ${Math.floor(xp)} / ${need} XP` +
-            (pct >= 100 ? "  —  EARNED!" : `  ·  ${need - Math.floor(xp)} to go`);
+            (pct >= 100 ? ", EARNED!" : `  ·  ${need - Math.floor(xp)} to go`);
           $("buy-btn").textContent =
             state === "claimed" ? "CLAIMED" : state === "claimable" ? "CLAIM" : "LOCKED";
           $("buy-btn").disabled = state !== "claimable";
@@ -563,7 +563,7 @@
           configPick = {};
           renderConfigurator();
           $("detail-limited").innerHTML =
-            `<span class="chip gold">FULLY CUSTOM — PRICE UPDATES AS YOU PICK</span>`;
+            `<span class="chip gold">FULLY CUSTOM, PRICE UPDATES AS YOU PICK</span>`;
           updateConfigPriceUI();
           say("LET'S BUILD YOUR DREAM MACHINE.", 5000);
           return;
@@ -572,7 +572,7 @@
         optionPick = {};
         renderOptions();
         $("detail-limited").innerHTML = selected.limited
-          ? `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`
+          ? `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`
           : "";
         $("qty-row").hidden = false;
         $("qty-input").value = quantity;
@@ -595,7 +595,7 @@
             : "repeating-linear-gradient(90deg,var(--gold) 0 7px,var(--gold-soft) 7px 14px)";
         $("afford-label").textContent =
           `YOU HAVE ${Math.round(have)} / ${total.toLocaleString()} PX` +
-          (pct >= 100 ? "  —  EASY." : "");
+          (pct >= 100 ? ", EASY." : "");
         say(afford ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
       }
 
@@ -607,7 +607,7 @@
           say("A LEGEND CLAIMS THEIR PRIZE!", 5000);
           renderDetail();
         } else if (r.error === "not_eligible") {
-          Pixl.toast(`Not yet — you're at ${Math.floor(r.xp)} / ${r.need} XP.`, true);
+          Pixl.toast(`Not yet, you're at ${Math.floor(r.xp)} / ${r.need} XP.`, true);
         } else {
           Pixl.toast("Couldn't claim that right now.", true);
         }
@@ -673,7 +673,7 @@
       setInterval(() => {
         if (selected && selected.limited && selected.limited_until && !isTrophy(selected))
           $("detail-limited").innerHTML =
-            `<span class="chip red">LIMITED — ${Pixl.countdown(selected.limited_until)}</span>`;
+            `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`;
       }, 1000);
 
       async function boot() {
