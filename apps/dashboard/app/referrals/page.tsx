@@ -47,10 +47,10 @@ export default async function ReferralsPage() {
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Referrals</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           A referrer is paid once their referred player ships a project clearing an hour tier
-          (2h &rarr; 30px, 5h &rarr; 50px, 10h &rarr; 80px, each including a flat +10px referrer
-          bonus), then the referral closes. Every {REFERRAL_MILESTONE_EVERY} rewarded referrals
-          also pays a {REFERRAL_MILESTONE_PX}px milestone bonus. Referred players get a flat
-          +10px/hr boost on their first {REFERRAL_BOOST_SHIP_CAP} approved ships.
+          (2h &rarr; 20px, 5h &rarr; 40px, 10h &rarr; 70px), then the referral closes. Every{" "}
+          {REFERRAL_MILESTONE_EVERY} rewarded referrals also pays a {REFERRAL_MILESTONE_PX}px
+          milestone bonus. Referred players get a flat +10px/hr boost on their first{" "}
+          {REFERRAL_BOOST_SHIP_CAP} approved ships.
         </p>
       </div>
 

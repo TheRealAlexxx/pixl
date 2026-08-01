@@ -75,15 +75,14 @@
         <button class="copy-btn" id="copy-btn" type="button">Copy code</button>
       </div>
       <div class="tiers">
-        <div class="tier"><div class="hrs">2H SHIPPED</div><div class="amt">+30px</div></div>
-        <div class="tier"><div class="hrs">5H SHIPPED</div><div class="amt">+50px</div></div>
-        <div class="tier"><div class="hrs">10H SHIPPED</div><div class="amt">+80px</div></div>
+        <div class="tier"><div class="hrs">2H SHIPPED</div><div class="amt">+20px</div></div>
+        <div class="tier"><div class="hrs">5H SHIPPED</div><div class="amt">+40px</div></div>
+        <div class="tier"><div class="hrs">10H SHIPPED</div><div class="amt">+70px</div></div>
       </div>
       <div class="card-note">
         You're paid once per referral, on the first project they ship that clears one of these hour
-        tiers (includes a +10px referrer bonus each time) , a smaller ship first just waits for a
-        bigger one. Refer 10 people who all ship and you get a <b>+250px</b> milestone bonus, again
-        every 10 after that.
+        tiers , a smaller ship first just waits for a bigger one. Refer 10 people who all ship and
+        you get a <b>+250px</b> milestone bonus, again every 10 after that.
       </div>
     </div>
 
@@ -95,8 +94,8 @@
     <div class="card" id="apply-card" hidden>
       <div class="card-h">GOT A CODE?</div>
       <div class="card-note" style="margin-top:0">
-        Enter the code whoever referred you shared. You'll get +10px/hr on your first 5 shipped
-        projects.
+        Enter the code whoever referred you shared. You'll get +10px/hr on your first shipped
+        project.
       </div>
       <div class="row apply-row">
         <input class="field" id="apply-code" maxlength="6" placeholder="CODE" autocomplete="off">
@@ -149,14 +148,11 @@
 
     if (data.boost) {
       $("boost-card").hidden = false;
-      const used = data.boost.shipsUsed;
       const remaining = data.boost.shipsRemaining;
-      const cap = used + remaining;
-      const pct = cap > 0 ? Math.round((used / cap) * 100) : 100;
       $("boost-body").innerHTML = remaining > 0
-        ? `<div class="used-note"><span class="chip">+10px/hr ACTIVE</span> ${remaining} of ${cap} boosted ships left</div>
-           <div class="boost-bar"><div class="boost-fill" style="width:${pct}%"></div></div>`
-        : `<div class="used-note">You used all ${cap} of your boosted ships , back to your normal rate now.</div>
+        ? `<div class="used-note"><span class="chip">+10px/hr ACTIVE</span> applies to your next shipped project</div>
+           <div class="boost-bar"><div class="boost-fill" style="width:0%"></div></div>`
+        : `<div class="used-note">You've used your referral boost , back to your normal rate now.</div>
            <div class="boost-bar"><div class="boost-fill" style="width:100%"></div></div>`;
     } else {
       $("apply-card").hidden = false;

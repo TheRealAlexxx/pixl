@@ -7,15 +7,14 @@
 --
 -- Two payouts hang off that row:
 --   - The REFERRER gets a one-time reward when the referred player's first
---     *qualifying* newly-approved project clears an hour tier (2h/5h/10h,
---     each including a flat +10px/$1 referrer bonus , see
+--     *qualifying* newly-approved project clears an hour tier (2h/5h/10h , see
 --     apps/dashboard/app/actions.ts reviewProject). A project under 2h doesn't
 --     close the referral, it just waits for a bigger one; the first project
 --     that DOES clear a tier pays out and sets rewarded_at, closing the
 --     contract for good, no matter how big future ships get.
 --   - The REFERRED player gets a flat +10px/hr (+$1/hr) boost on top of their
---     normal level-based rate, for their first 5 newly-approved ships,
---     tracked by boosted_ships (capped at 5 in application code).
+--     normal level-based rate, for their first newly-approved ship only,
+--     tracked by boosted_ships (capped at 1 in application code).
 --
 -- Every 10th referral a referrer gets rewarded on (10, 20, 30…) also pays a
 -- milestone bonus, checked in the same code path.

@@ -22,7 +22,6 @@ import {
   REFERRAL_BOOST_SHIP_CAP,
   REFERRAL_MILESTONE_EVERY,
   REFERRAL_MILESTONE_PX,
-  REFERRAL_REFERRER_BONUS_PX,
   referralTierFor,
   type DashEventRow,
 } from "@/lib/db";
@@ -669,7 +668,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       await db.from("notifications").insert({
         user_id: referral.referrer_id,
         title: "Referral reward!",
-        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px / 10).toFixed(2)}, including a +${REFERRAL_REFERRER_BONUS_PX}px referrer bonus)!`,
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px / 10).toFixed(2)})!`,
       });
 
       const { count: rewardedCount } = await db
