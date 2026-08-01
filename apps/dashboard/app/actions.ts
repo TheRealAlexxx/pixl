@@ -18,6 +18,12 @@ import {
   removeHelper,
   nextReviewId,
   EVENT_TYPES,
+  REFERRAL_BOOST_PX_PER_HOUR,
+  REFERRAL_BOOST_SHIP_CAP,
+  REFERRAL_MILESTONE_EVERY,
+  REFERRAL_MILESTONE_PX,
+  REFERRAL_REFERRER_BONUS_PX,
+  referralTierFor,
   type DashEventRow,
 } from "@/lib/db";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
@@ -618,11 +624,74 @@ export async function reviewProject(formData: FormData): Promise<void> {
     }
   }
   const xpBefore = await lifetimeApprovedHours(project.user_id, projectId);
-  const pxRate = pxPerHourFor(xpBefore);
-  const totalPx = Math.round(creditHours * pxRate * goalMult);
+  let pxRate = pxPerHourFor(xpBefore);
   const alreadyPx = await projectPixelTotal(project.id);
+  // A project only counts as a "new ship" for referral purposes the first
+  // time it earns any pixels , re-approvals of an already-credited project
+  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
+  const isNewShip = alreadyPx === 0;
+  const { data: referral } = isNewShip
+    ? await db
+        .from("referrals")
+        .select("id, referrer_id, rewarded_at, boosted_ships")
+        .eq("referred_id", project.user_id)
+        .maybeSingle()
+    : { data: null };
+
+  let referralNote = "";
+  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
+    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
+    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
+    await db
+      .from("referrals")
+      .update({ boosted_ships: referral.boosted_ships + 1 })
+      .eq("id", referral.id);
+  }
+
+  const totalPx = Math.round(creditHours * pxRate * goalMult);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
+
+  // Referrer payout: pays once per referral, on the first qualifying ship.
+  if (referral && !referral.rewarded_at) {
+    const tier = referralTierFor(creditHours);
+    if (tier) {
+      await db
+        .from("referrals")
+        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
+        .eq("id", referral.id);
+      await db.rpc("adjust_user_pixels", {
+        p_user_id: referral.referrer_id,
+        p_amount: tier.px,
+        p_reason: "referral_reward",
+        p_created_by: by,
+      });
+      await db.from("notifications").insert({
+        user_id: referral.referrer_id,
+        title: "Referral reward!",
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px / 10).toFixed(2)}, including a +${REFERRAL_REFERRER_BONUS_PX}px referrer bonus)!`,
+      });
+
+      const { count: rewardedCount } = await db
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_id", referral.referrer_id)
+        .not("rewarded_at", "is", null);
+      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
+        await db.rpc("adjust_user_pixels", {
+          p_user_id: referral.referrer_id,
+          p_amount: REFERRAL_MILESTONE_PX,
+          p_reason: "referral_milestone",
+          p_created_by: by,
+        });
+        await db.from("notifications").insert({
+          user_id: referral.referrer_id,
+          title: "Referral milestone!",
+          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX / 10).toFixed(2)})!`,
+        });
+      }
+    }
+  }
 
   let credited: string;
   if (alreadyPx > 0 && deltaPx > 0) {
@@ -638,6 +707,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (deltaPx > 0)
     credited += ` Your rate: ${pxRate} px/h ($${(pxRate / 10).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
+  if (referralNote && deltaPx > 0) credited += referralNote;
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
   // only for projects shipped inside the bounty window.

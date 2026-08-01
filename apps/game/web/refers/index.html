@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixl · Referrals</title>
+<link rel="icon" href="/index.icon.png">
+<link rel="stylesheet" href="/pixl.css">
+<style>
+  .wrap { max-width: 720px; }
+  .hero { padding: 24px 26px; margin-top: 8px; border: 1px solid var(--stroke); border-radius: var(--radius);
+    background: var(--panel); box-shadow: var(--drop); }
+  .card { border: 1px solid var(--stroke); border-radius: var(--radius); background: var(--panel); padding: 20px; margin-top: 22px; }
+  .card-h { font-size: 16px; color: var(--gold); letter-spacing: 1px; margin-bottom: 14px; }
+  .card-note { font-size: 13px; color: var(--faint); line-height: 1.6; margin-top: 10px; }
+  .field { width: 100%; font: inherit; padding: 10px 12px; border: 1px solid var(--stroke); border-radius: var(--radius-sm); background: var(--panel-deep); color: var(--ink); }
+  .row { margin-top: 14px; }
+  .lbl { font-size: 13px; color: var(--faint); margin-bottom: 6px; }
+
+  .code-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .code {
+    font-family: var(--pixel);
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--gold);
+    background: var(--panel-deep);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+  }
+  .copy-btn {
+    background: none; border: 1px solid var(--stroke); color: var(--dim);
+    border-radius: var(--radius-sm); padding: 9px 14px; cursor: pointer; font: inherit; font-size: 13px;
+  }
+  .copy-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .copy-btn.copied { border-color: var(--teal); color: var(--teal); }
+
+  .tiers { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .tier { flex: 1; min-width: 110px; text-align: center; border: 1px solid var(--stroke); border-radius: var(--radius-sm);
+    background: var(--panel-deep); padding: 12px 8px; }
+  .tier .hrs { font-family: var(--pixel); font-size: 13px; color: var(--dim); }
+  .tier .amt { font-size: 18px; font-weight: 700; color: var(--gold); margin-top: 4px; }
+
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat { flex: 1; min-width: 120px; border: 1px solid var(--stroke); border-radius: var(--radius-sm);
+    background: var(--panel-deep); padding: 14px; }
+  .stat .n { font-size: 22px; font-weight: 700; color: var(--ink); }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  .boost-bar { height: 10px; border-radius: 5px; background: var(--panel-deep); border: 1px solid var(--stroke); overflow: hidden; margin-top: 10px; }
+  .boost-fill { height: 100%; background: var(--teal); }
+
+  .apply-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .apply-row .field { flex: 1; min-width: 160px; text-transform: uppercase; letter-spacing: 2px; }
+  .used-note { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--faint); }
+  .used-note .chip { background: rgba(94,214,196,.12); color: var(--teal); border: 1px solid var(--stroke); border-radius: var(--radius-sm); padding: 3px 9px; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <h1 class="page-title">REFERRALS</h1>
+    <div class="page-sub" style="color:var(--dim)">
+      SHARE YOUR CODE. WHEN SOMEONE YOU REFER SHIPS THEIR FIRST QUALIFYING PROJECT, YOU BOTH GET PAID.
+    </div>
+  </section>
+
+  <div class="spin" id="loading"></div>
+
+  <div id="content" hidden>
+    <div class="card">
+      <div class="card-h">YOUR CODE</div>
+      <div class="code-row">
+        <span class="code" id="code">------</span>
+        <button class="copy-btn" id="copy-btn" type="button">Copy code</button>
+      </div>
+      <div class="tiers">
+        <div class="tier"><div class="hrs">2H SHIPPED</div><div class="amt">+30px</div></div>
+        <div class="tier"><div class="hrs">5H SHIPPED</div><div class="amt">+50px</div></div>
+        <div class="tier"><div class="hrs">10H SHIPPED</div><div class="amt">+80px</div></div>
+      </div>
+      <div class="card-note">
+        You're paid once per referral, on the first project they ship that clears one of these hour
+        tiers (includes a +10px referrer bonus each time) , a smaller ship first just waits for a
+        bigger one. Refer 10 people who all ship and you get a <b>+250px</b> milestone bonus, again
+        every 10 after that.
+      </div>
+    </div>
+
+    <div class="card" id="boost-card" hidden>
+      <div class="card-h">YOUR REFERRAL BOOST</div>
+      <div id="boost-body"></div>
+    </div>
+
+    <div class="card" id="apply-card" hidden>
+      <div class="card-h">GOT A CODE?</div>
+      <div class="card-note" style="margin-top:0">
+        Enter the code whoever referred you shared. You'll get +10px/hr on your first 5 shipped
+        projects.
+      </div>
+      <div class="row apply-row">
+        <input class="field" id="apply-code" maxlength="6" placeholder="CODE" autocomplete="off">
+        <button class="btn" id="apply-btn" type="button">Apply</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">YOUR REFERRALS</div>
+      <div class="stat-row" id="stats"></div>
+      <div class="empty-note" id="no-referrals" hidden style="padding:24px 0">
+        NOBODY'S USED YOUR CODE YET.<br>SHARE IT AROUND.
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="/pixl.js"></script>
+<script>
+  Pixl.mountTopbar("refers");
+  const $ = (id) => document.getElementById(id);
+
+  function statTile(n, label) {
+    return `<div class="stat"><div class="n">${n}</div><div class="l">${label}</div></div>`;
+  }
+
+  async function boot() {
+    if (!Pixl.hasToken) return;
+    let data;
+    try {
+      data = await Pixl.api("/api/referral/me");
+    } catch (e) {
+      if (e.message !== "unauthorized") Pixl.toast("Couldn't load your referral info right now.", true);
+      return;
+    }
+    $("loading").remove();
+    $("content").hidden = false;
+
+    $("code").textContent = data.code;
+    $("copy-btn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(data.code);
+        $("copy-btn").textContent = "Copied!";
+        $("copy-btn").classList.add("copied");
+      } catch (e) {
+        $("copy-btn").textContent = "Couldn't copy";
+      }
+      setTimeout(() => { $("copy-btn").textContent = "Copy code"; $("copy-btn").classList.remove("copied"); }, 1600);
+    };
+
+    if (data.boost) {
+      $("boost-card").hidden = false;
+      const used = data.boost.shipsUsed;
+      const remaining = data.boost.shipsRemaining;
+      const cap = used + remaining;
+      const pct = cap > 0 ? Math.round((used / cap) * 100) : 100;
+      $("boost-body").innerHTML = remaining > 0
+        ? `<div class="used-note"><span class="chip">+10px/hr ACTIVE</span> ${remaining} of ${cap} boosted ships left</div>
+           <div class="boost-bar"><div class="boost-fill" style="width:${pct}%"></div></div>`
+        : `<div class="used-note">You used all ${cap} of your boosted ships , back to your normal rate now.</div>
+           <div class="boost-bar"><div class="boost-fill" style="width:100%"></div></div>`;
+    } else {
+      $("apply-card").hidden = false;
+      $("apply-btn").onclick = async () => {
+        const code = $("apply-code").value.trim().toUpperCase();
+        if (!code) return;
+        $("apply-btn").disabled = true;
+        try {
+          const res = await Pixl.send("POST", "/api/referral/apply", { code });
+          if (res.ok) {
+            Pixl.toast(`Referral applied${res.referrerName ? " , thanks, " + res.referrerName + "!" : "!"}`);
+            setTimeout(() => location.reload(), 900);
+          } else {
+            Pixl.toast(res.reason || "Couldn't apply that code.", true);
+            $("apply-btn").disabled = false;
+          }
+        } catch (e) {
+          Pixl.toast("Couldn't apply that code right now.", true);
+          $("apply-btn").disabled = false;
+        }
+      };
+    }
+
+    const r = data.referrals;
+    if (r.total === 0) {
+      $("no-referrals").hidden = false;
+    } else {
+      $("stats").innerHTML =
+        statTile(r.total, "REFERRED") +
+        statTile(r.rewarded, "REWARDED") +
+        statTile(`${r.pixelsEarned}px`, "EARNED");
+    }
+  }
+  boot();
+</script>
+</body>
+</html>

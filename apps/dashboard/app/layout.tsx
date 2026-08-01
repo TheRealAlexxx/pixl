@@ -54,6 +54,7 @@ export default async function RootLayout({
         admins: access.isSuper,
         reviewers: access.isSuper,
         slackLookup: access.isSuper,
+        referrals: access.isSuper,
         online: canView(access, ["warn", "ban"]),
         shop: access.isSuper,
         events: access.isSuper,

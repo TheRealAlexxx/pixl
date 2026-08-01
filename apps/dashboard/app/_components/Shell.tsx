@@ -32,6 +32,7 @@ export interface NavFlags {
   admins: boolean;
   reviewers: boolean;
   slackLookup: boolean;
+  referrals: boolean;
   online: boolean;
   shop: boolean;
   fulfillment: boolean;
@@ -55,6 +56,7 @@ const GLYPHS = {
   admins: "person-badge",
   reviewers: "checkmark",
   slackLookup: "slack",
+  referrals: "member-add",
   online: "welcome",
   shop: "bag-fill",
   fulfillment: "package",
@@ -136,6 +138,12 @@ export function Shell({
           label: "Players",
           icon: "players",
           show: nav.players,
+        },
+        {
+          href: "/referrals",
+          label: "Referrals",
+          icon: "referrals",
+          show: nav.referrals,
         },
         { href: "/online", label: "Online", icon: "online", show: nav.online },
       ],
