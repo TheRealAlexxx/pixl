@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { decryptPII } from "./crypto";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -82,7 +83,7 @@ export function turnedNineteenSinceShipping(
   shippedAt: string | null | undefined,
 ): boolean {
   if (!birthday || !shippedAt) return false;
-  const bday = new Date(birthday);
+  const bday = new Date(decryptPII(birthday));
   const shipped = new Date(shippedAt);
   if (Number.isNaN(bday.getTime()) || Number.isNaN(shipped.getTime())) return false;
   return ageOn(bday, shipped) < 19 && ageOn(bday, new Date()) >= 19;
