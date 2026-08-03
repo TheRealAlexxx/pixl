@@ -77,7 +77,7 @@ export async function GET(): Promise<NextResponse> {
     const u = userById.get(p.user_id);
     // real_name is "First Last" from HCA , fall back to splitting it on the
     // first space for players who signed up before first_name/last_name were
-    // captured separately (see 0075_ysws_submission_fields.sql).
+    // captured separately (see 0076_ysws_submission_fields.sql).
     const [fallbackFirst, ...fallbackRest] = (u?.real_name ?? "").split(" ");
     const firstName = u?.first_name || fallbackFirst || "";
     const lastName = u?.last_name || fallbackRest.join(" ") || "";
