@@ -343,6 +343,7 @@ func _build_pages() -> void:
 		_row("B", "Shop"),
 		_row("J", "Trial log"),
 		_row("E", "Explore"),
+		_row("M", "Map"),
 		_row("F1", "This guide"),
 		_row("Esc", "Pause / settings"),
 		_spacer(),
