@@ -303,9 +303,10 @@ router.put("/api/projects/:id", async (req, res) => {
 });
 
 // Ship a project for review: draft/needs_changes -> shipped, or approved ->
-// shipped again as an update (requires update notes). Requires repo, demo and
-// thumbnail. Undisclosed matches against the Hack Club YSWS archive get a
-// system note for the reviewer plus a mod_actions entry.
+// shipped again as an update (requires update notes). Requires repo, demo,
+// thumbnail, and an eligibility attestation (not a school assignment or paid
+// Hack Club work). Undisclosed matches against the Hack Club YSWS archive get
+// a system note for the reviewer plus a mod_actions entry.
 router.post("/api/projects/:id/ship", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;
@@ -334,6 +335,10 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "demo_required" });
   if (!String(project.image_url ?? "").trim())
     return res.status(400).json({ ok: false, error: "image_required" });
+  // Hard exclusion under Hack Club's YSWS "Project Exceptions" — school
+  // assignments and paid Hack Club work can't go into the Unified Database.
+  if (req.body?.eligibilityAttested !== true)
+    return res.status(400).json({ ok: false, error: "eligibility_attestation_required" });
   // URLs are only validated here, at ship time (save accepts anything).
   if (!isGithubRepoUrl(project.repo_url as string))
     return res.status(400).json({ ok: false, error: "repo_not_github" });
@@ -449,6 +454,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
       other_ysws: otherYsws,
       system_note: systemNote,
       sidequest_id: sidequestId,
+      eligibility_attested: true,
     })
     .eq("id", id)
     .eq("user_id", session.userId)

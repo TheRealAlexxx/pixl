@@ -23,8 +23,10 @@ import {
   REFERRAL_MILESTONE_EVERY,
   REFERRAL_MILESTONE_PX,
   referralTierFor,
+  turnedNineteenSinceShipping,
   type DashEventRow,
 } from "@/lib/db";
+import { buildAuditNote, TECHNICAL_FEATURES_MIN } from "@/lib/auditNote";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
 import { serializeGroups } from "@/lib/shopOptions";
 import { SHOP_REGIONS, type ShopRegion } from "@/lib/shopRegions";
@@ -396,6 +398,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
     .eq("id", projectId)
     .single();
   if (!current) return;
+  const { data: submitter } = await db
+    .from("users")
+    .select("birthday")
+    .eq("id", current.user_id)
+    .maybeSingle();
+  const ageFlag = turnedNineteenSinceShipping(submitter?.birthday ?? null, current.shipped_at);
   const stage = String(current.status);
   const back = `/review/${projectId}`;
 
@@ -424,9 +432,6 @@ export async function reviewProject(formData: FormData): Promise<void> {
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)
     redirect(`${back}?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
-  const auditNote = String(formData.get("auditNote") ?? "").trim();
-  if (auditNote.length < 150)
-    redirect(`${back}?error=${encodeURIComponent("The internal audit note needs at least 150 characters.")}`);
 
   const claimedHours = await claimedHoursFor(projectId);
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
@@ -437,6 +442,36 @@ export async function reviewProject(formData: FormData): Promise<void> {
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
   }
+
+  // Structured internal audit note (Hack Club's YSWS "override hours spent
+  // justification" guidance) , the form submits each section separately so we
+  // can validate the parts that matter, then store them as one string under
+  // the existing auditNote field.
+  const technicalFeatures = String(formData.get("technicalFeatures") ?? "").trim();
+  if (technicalFeatures.length < TECHNICAL_FEATURES_MIN)
+    redirect(
+      `${back}?error=${encodeURIComponent(`Describe concrete technical features you checked (min ${TECHNICAL_FEATURES_MIN} characters).`)}`,
+    );
+  const deflated = approvedHours != null && approvedHours < claimedHours;
+  const deflationReason = String(formData.get("deflationReason") ?? "").trim();
+  if (deflated && !deflationReason)
+    redirect(`${back}?error=${encodeURIComponent("Explain why the credited hours were lowered.")}`);
+  const ageJustification = String(formData.get("ageJustification") ?? "").trim();
+  if (ageFlag && !ageJustification)
+    redirect(
+      `${back}?error=${encodeURIComponent("This submitter turns 19 between shipping and review , document that before deciding.")}`,
+    );
+  formData.set(
+    "auditNote",
+    buildAuditNote({
+      "TECHNICAL FEATURES": technicalFeatures,
+      "HACKATIME EVIDENCE": String(formData.get("hackatimeEvidence") ?? "").trim(),
+      "DEFLATION REASON": deflationReason,
+      "AGE JUSTIFICATION": ageJustification,
+      NOTES: String(formData.get("notes") ?? "").trim(),
+    }),
+  );
+
   const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   // First pass on a freshly-shipped project: approve and ban are only PROPOSALS,

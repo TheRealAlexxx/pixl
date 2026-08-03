@@ -35,11 +35,24 @@ export interface UserRow {
   // in-game display_name can drift from it. Empty for players who haven't logged
   // in since real_name was added; call playerLabel() to fall back gracefully.
   real_name: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
   avatar_url: string | null;
   skin: string;
   slack_id: string | null;
   pixels: number;
   created_at: string;
+  // YSWS Unified Database fields , filled in by the player via /account in
+  // apps/game/web, not backfillable. birthday drives the "turns 19 mid-review"
+  // age-eligibility flag on the review page.
+  birthday: string | null;
+  address_line1: string;
+  address_line2: string;
+  address_city: string;
+  address_state: string;
+  address_country: string;
+  address_postal: string;
 }
 
 // The name to show for a player in the dashboard: their real (OAuth) name, or
@@ -51,6 +64,28 @@ export function playerLabel(
   fallback = "",
 ): string {
   return (u?.real_name || u?.display_name || fallback).trim();
+}
+
+function ageOn(birthday: Date, at: Date): number {
+  let age = at.getFullYear() - birthday.getFullYear();
+  const m = at.getMonth() - birthday.getMonth();
+  if (m < 0 || (m === 0 && at.getDate() < birthday.getDate())) age--;
+  return age;
+}
+
+// Hack Club's YSWS guidelines need an "Override Age Justification" when the
+// submitter turns 19 between shipping a project and it being reviewed , flags
+// that window so the reviewer can document it. null birthday/shippedAt (most
+// players, until they fill in /account) means we can't tell, so no flag.
+export function turnedNineteenSinceShipping(
+  birthday: string | null | undefined,
+  shippedAt: string | null | undefined,
+): boolean {
+  if (!birthday || !shippedAt) return false;
+  const bday = new Date(birthday);
+  const shipped = new Date(shippedAt);
+  if (Number.isNaN(bday.getTime()) || Number.isNaN(shipped.getTime())) return false;
+  return ageOn(bday, shipped) < 19 && ageOn(bday, new Date()) >= 19;
 }
 
 export interface ViolationRow {
@@ -112,6 +147,7 @@ export interface ProjectRow {
   created_at: string;
   sidequest_id: number | null;
   trial_prize_order_id: number | null;
+  eligibility_attested: boolean;
 }
 
 export interface PlayerStateRow {
@@ -374,7 +410,7 @@ export async function getGrowthSeries(days = 30) {
 }
 
 export interface ProjectWithUser extends ProjectRow {
-  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id"> | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id" | "birthday"> | null;
 }
 
 export interface ShippedProject extends ProjectWithUser {
@@ -1820,7 +1856,7 @@ export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
     .select(
-      "*, users(id, display_name, real_name, slack_id), sidequests(id, name, region, reward, min_hours)",
+      "*, users(id, display_name, real_name, slack_id, birthday), sidequests(id, name, region, reward, min_hours)",
     )
     .eq("id", id)
     .maybeSingle();

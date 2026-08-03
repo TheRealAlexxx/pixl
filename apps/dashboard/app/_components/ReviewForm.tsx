@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
+import { TECHNICAL_FEATURES_MIN } from "@/lib/auditNote";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,6 +75,9 @@ export function ReviewForm({
   secondPass = false,
   bounties = [],
   trial,
+  hackatimeProjects = [],
+  hackatimeSeconds = 0,
+  ageFlag = false,
 }: {
   projectId: number;
   repoUrl: string | null;
@@ -83,6 +87,9 @@ export function ReviewForm({
   secondPass?: boolean;
   bounties?: BountyOption[];
   trial?: TrialInfo | null;
+  hackatimeProjects?: string[];
+  hackatimeSeconds?: number;
+  ageFlag?: boolean;
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -91,11 +98,19 @@ export function ReviewForm({
   const totalSeconds = useRef<HTMLInputElement>(null);
   const away = useRef<{ kind: "repo" | "demo"; at: number } | null>(null);
   const openedAt = useRef(Date.now());
-  const [auditLen, setAuditLen] = useState(0);
-  const AUDIT_MIN = 150;
 
   const baseHours = defaultHours ?? claimedHours;
   const [hours, setHours] = useState(baseHours);
+  const deflated = hours < claimedHours;
+
+  const hackatimeDefault = useMemo(() => {
+    if (hackatimeSeconds <= 0) return "";
+    const h = Math.round((hackatimeSeconds / 3600) * 10) / 10;
+    const names = hackatimeProjects.length ? hackatimeProjects.join(", ") : "(unnamed)";
+    return `${names} , ${h}h tracked (see the Hackatime tab for the date range).`;
+  }, [hackatimeProjects, hackatimeSeconds]);
+
+  const [featuresLen, setFeaturesLen] = useState(0);
 
   useEffect(() => {
     openedAt.current = Date.now();
@@ -207,23 +222,86 @@ export function ReviewForm({
           ))}
         </div>
       )}
-      <div className="relative">
-        <Textarea
-          name="auditNote"
-          required
-          minLength={AUDIT_MIN}
-          onChange={(e) => setAuditLen(e.target.value.trim().length)}
-          placeholder="Internal audit note , never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 150 characters."
-          className="w-full text-sm"
-          rows={3}
-        />
-        <span
-          className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
-            auditLen >= AUDIT_MIN ? "text-emerald-500" : "text-muted-foreground"
-          }`}
-        >
-          {auditLen}/{AUDIT_MIN}
-        </span>
+      <div className="rounded-lg border p-3 flex flex-col gap-2.5">
+        <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Internal audit note , never shown to the player. Should let someone who
+          wasn&apos;t involved reach the same conclusion you did.
+        </div>
+        <div className="relative">
+          <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+            Technical features , concrete accomplishments, not generic (&quot;OAuth
+            auth, REST API, self-hosted Postgres&quot;, not &quot;React&quot;)
+          </Label>
+          <Textarea
+            name="technicalFeatures"
+            required
+            minLength={TECHNICAL_FEATURES_MIN}
+            onChange={(e) => setFeaturesLen(e.target.value.trim().length)}
+            placeholder="What did you actually check in the repo/demo?"
+            className="w-full text-sm"
+            rows={2}
+          />
+          <span
+            className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
+              featuresLen >= TECHNICAL_FEATURES_MIN ? "text-emerald-500" : "text-muted-foreground"
+            }`}
+          >
+            {featuresLen}/{TECHNICAL_FEATURES_MIN}
+          </span>
+        </div>
+        {hackatimeSeconds > 0 && (
+          <div>
+            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+              Hackatime evidence
+            </Label>
+            <Textarea
+              name="hackatimeEvidence"
+              defaultValue={hackatimeDefault}
+              className="w-full text-sm"
+              rows={2}
+            />
+          </div>
+        )}
+        {deflated && (
+          <div>
+            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+              Why lower the hours? ({claimedHours}h claimed → {hours}h credited)
+            </Label>
+            <Textarea
+              name="deflationReason"
+              required
+              placeholder="Mismatched experience/features, missing commits, etc."
+              className="w-full text-sm"
+              rows={2}
+            />
+          </div>
+        )}
+        {ageFlag && (
+          <div>
+            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+              Age justification , this submitter turns 19 between shipping and this
+              review
+            </Label>
+            <Textarea
+              name="ageJustification"
+              required
+              placeholder="Document the submitter's age at shipping vs. now."
+              className="w-full text-sm"
+              rows={2}
+            />
+          </div>
+        )}
+        <div>
+          <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+            Additional notes (optional)
+          </Label>
+          <Textarea
+            name="notes"
+            placeholder="Anything else , suspicious commits, AI usage, experience mismatch…"
+            className="w-full text-sm"
+            rows={2}
+          />
+        </div>
       </div>
       <div className="flex flex-wrap gap-2 items-start">
         <Textarea

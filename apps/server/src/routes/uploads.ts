@@ -4,7 +4,9 @@ import { checkImageSafe } from "../imageModeration.js";
 
 const router = Router();
 
-const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+// No image/gif: YSWS submission guidelines require screenshots to be static,
+// not animated or video.
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 // Proxy image uploads to the Hack Club CDN so the key stays server-side.
 router.post(

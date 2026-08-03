@@ -165,6 +165,7 @@ const Pixl = (() => {
     // ["timeline", "STORY"],
     ["projects", "PROJECTS"],
     ["report", "REPORT"],
+    ["account", "ACCOUNT"],
   ];
 
   // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
@@ -177,6 +178,7 @@ const Pixl = (() => {
     explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
     projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
     report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,
+    account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5v.5H2z"/></svg>`,
   };
   // Teal energy shard — the Restoration Energy motif, reused in the top rail.
   const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;

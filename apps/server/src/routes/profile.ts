@@ -279,4 +279,110 @@ router.post("/api/profile/card-pixelate", async (req, res) => {
   res.json({ ok: true });
 });
 
+// Birthday + mailing address, collected once for Hack Club's YSWS Unified
+// Database submission requirements (not entered per-ship — see /account in
+// apps/game/web and the address-confirm step before shop checkout).
+const ADDRESS_FIELDS = [
+  "address_line1",
+  "address_line2",
+  "address_city",
+  "address_state",
+  "address_country",
+  "address_postal",
+] as const;
+
+function hasAddress(row: Record<string, unknown>): boolean {
+  return (
+    String(row.address_line1 ?? "").trim() !== "" &&
+    String(row.address_city ?? "").trim() !== "" &&
+    String(row.address_country ?? "").trim() !== "" &&
+    String(row.address_postal ?? "").trim() !== ""
+  );
+}
+
+router.get("/api/profile/eligibility", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("users")
+    .select(["birthday", ...ADDRESS_FIELDS].join(", "))
+    .eq("id", session.userId)
+    .maybeSingle();
+  if (error) {
+    console.error("[profile] eligibility fetch failed", error.message);
+    return res.status(500).json({ ok: false });
+  }
+  const row = (data ?? {}) as Record<string, unknown>;
+  res.json({
+    ok: true,
+    birthday: row.birthday ?? null,
+    addressLine1: row.address_line1 ?? "",
+    addressLine2: row.address_line2 ?? "",
+    addressCity: row.address_city ?? "",
+    addressState: row.address_state ?? "",
+    addressCountry: row.address_country ?? "",
+    addressPostal: row.address_postal ?? "",
+    hasAddress: hasAddress(row),
+  });
+});
+
+router.post("/api/profile/eligibility", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const patch: Record<string, string | null> = {};
+
+  if (req.body?.birthday !== undefined) {
+    const raw = String(req.body.birthday ?? "").trim();
+    if (raw) {
+      const date = new Date(raw);
+      const now = new Date();
+      if (Number.isNaN(date.getTime()) || date > now || date.getFullYear() < 1900) {
+        return res.json({ ok: false, reason: "That birthday doesn't look right." });
+      }
+      patch.birthday = raw.slice(0, 10);
+    } else {
+      patch.birthday = null;
+    }
+  }
+
+  const wantsAddress = ADDRESS_FIELDS.some((f) => req.body?.[toCamel(f)] !== undefined);
+  if (wantsAddress) {
+    const line1 = String(req.body?.addressLine1 ?? "").trim().slice(0, 200);
+    const line2 = String(req.body?.addressLine2 ?? "").trim().slice(0, 200);
+    const city = String(req.body?.addressCity ?? "").trim().slice(0, 100);
+    const state = String(req.body?.addressState ?? "").trim().slice(0, 100);
+    const country = String(req.body?.addressCountry ?? "").trim().slice(0, 100);
+    const postal = String(req.body?.addressPostal ?? "").trim().slice(0, 20);
+    if (!line1 || !city || !country || !postal) {
+      return res.json({
+        ok: false,
+        reason: "Address line 1, city, country and postal code are required.",
+      });
+    }
+    patch.address_line1 = line1;
+    patch.address_line2 = line2;
+    patch.address_city = city;
+    patch.address_state = state;
+    patch.address_country = country;
+    patch.address_postal = postal;
+  }
+
+  if (Object.keys(patch).length === 0) return res.json({ ok: true });
+
+  const { error } = await supabase.from("users").update(patch).eq("id", session.userId);
+  if (error) {
+    console.error("[profile] eligibility update failed", error.message);
+    return res.status(500).json({ ok: false, reason: "Database error." });
+  }
+  res.json({ ok: true });
+});
+
+function toCamel(snake: string): string {
+  return snake.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 export default router;
