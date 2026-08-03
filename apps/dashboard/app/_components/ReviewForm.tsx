@@ -147,7 +147,7 @@ export function ReviewForm({
             Math.round((Date.now() - openedAt.current) / 1000),
           );
       }}
-      className="mt-4 flex flex-col gap-2"
+      className="mt-4 flex flex-col gap-4"
     >
       <input type="hidden" name="projectId" value={projectId} />
       <input type="hidden" name="repoOpened" defaultValue="0" ref={repoOpened} />
@@ -180,20 +180,20 @@ export function ReviewForm({
             </a>
           </Button>
         )}
-        <Label className="flex items-center gap-2 ml-auto font-normal text-muted-foreground">
-          Hours to credit (decrease only)
-          <Input
-            name="approvedHours"
-            type="number"
-            step="0.1"
-            min="0"
-            max={claimedHours}
-            value={hours}
-            onChange={(e) => setHours(Math.min(claimedHours, Math.max(0, Number(e.target.value) || 0)))}
-            className="w-24 text-sm"
-          />
-        </Label>
       </div>
+      <Label className="flex items-center justify-between gap-2 font-normal text-muted-foreground">
+        Hours to credit (decrease only)
+        <Input
+          name="approvedHours"
+          type="number"
+          step="0.1"
+          min="0"
+          max={claimedHours}
+          value={hours}
+          onChange={(e) => setHours(Math.min(claimedHours, Math.max(0, Number(e.target.value) || 0)))}
+          className="w-28 text-sm"
+        />
+      </Label>
       {trial?.minHours != null && (
         <div
           className={`text-xs font-medium ${
@@ -222,49 +222,51 @@ export function ReviewForm({
           ))}
         </div>
       )}
-      <div className="rounded-lg border p-3 flex flex-col gap-2.5">
-        <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+      <div className="rounded-lg border p-4 flex flex-col gap-4">
+        <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground leading-relaxed">
           Internal audit note , never shown to the player. Should let someone who
           wasn&apos;t involved reach the same conclusion you did.
         </div>
-        <div className="relative">
-          <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+        <div>
+          <Label className="text-xs font-normal text-muted-foreground mb-1.5 block leading-relaxed">
             Technical features , concrete accomplishments, not generic (&quot;OAuth
             auth, REST API, self-hosted Postgres&quot;, not &quot;React&quot;)
           </Label>
-          <Textarea
-            name="technicalFeatures"
-            required
-            minLength={TECHNICAL_FEATURES_MIN}
-            onChange={(e) => setFeaturesLen(e.target.value.trim().length)}
-            placeholder="What did you actually check in the repo/demo?"
-            className="w-full text-sm"
-            rows={2}
-          />
-          <span
-            className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
-              featuresLen >= TECHNICAL_FEATURES_MIN ? "text-emerald-500" : "text-muted-foreground"
-            }`}
-          >
-            {featuresLen}/{TECHNICAL_FEATURES_MIN}
-          </span>
+          <div className="relative">
+            <Textarea
+              name="technicalFeatures"
+              required
+              minLength={TECHNICAL_FEATURES_MIN}
+              onChange={(e) => setFeaturesLen(e.target.value.trim().length)}
+              placeholder="What did you actually check in the repo/demo?"
+              className="w-full text-sm pb-5"
+              rows={3}
+            />
+            <span
+              className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
+                featuresLen >= TECHNICAL_FEATURES_MIN ? "text-emerald-500" : "text-muted-foreground"
+              }`}
+            >
+              {featuresLen}/{TECHNICAL_FEATURES_MIN}
+            </span>
+          </div>
         </div>
         {hackatimeSeconds > 0 && (
           <div>
-            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+            <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
               Hackatime evidence
             </Label>
             <Textarea
               name="hackatimeEvidence"
               defaultValue={hackatimeDefault}
               className="w-full text-sm"
-              rows={2}
+              rows={3}
             />
           </div>
         )}
         {deflated && (
           <div>
-            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+            <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
               Why lower the hours? ({claimedHours}h claimed → {hours}h credited)
             </Label>
             <Textarea
@@ -272,13 +274,13 @@ export function ReviewForm({
               required
               placeholder="Mismatched experience/features, missing commits, etc."
               className="w-full text-sm"
-              rows={2}
+              rows={3}
             />
           </div>
         )}
         {ageFlag && (
           <div>
-            <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+            <Label className="text-xs font-normal text-muted-foreground mb-1.5 block leading-relaxed">
               Age justification , this submitter turns 19 between shipping and this
               review
             </Label>
@@ -287,31 +289,33 @@ export function ReviewForm({
               required
               placeholder="Document the submitter's age at shipping vs. now."
               className="w-full text-sm"
-              rows={2}
+              rows={3}
             />
           </div>
         )}
         <div>
-          <Label className="text-xs font-normal text-muted-foreground mb-1 block">
+          <Label className="text-xs font-normal text-muted-foreground mb-1.5 block">
             Additional notes (optional)
           </Label>
           <Textarea
             name="notes"
             placeholder="Anything else , suspicious commits, AI usage, experience mismatch…"
             className="w-full text-sm"
-            rows={2}
+            rows={3}
           />
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 items-start">
+      <div className="flex flex-col gap-2">
         <Textarea
           name="note"
           required
           placeholder="Feedback for the player (required)"
-          className="flex-1 min-w-64 text-sm"
-          rows={2}
+          className="w-full text-sm"
+          rows={3}
         />
-        <VerdictButtons secondPass={secondPass} />
+        <div className="flex flex-wrap gap-2">
+          <VerdictButtons secondPass={secondPass} />
+        </div>
       </div>
     </form>
   );

@@ -349,7 +349,7 @@ export default async function ReviewDetail({
         </div>
 
         {/* sidebar */}
-        <aside className="lg:w-80 shrink-0">
+        <aside className="lg:w-[30rem] shrink-0">
           <div className="lg:sticky lg:top-24 space-y-4">
             <Card className="p-5 gap-0">
               <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
