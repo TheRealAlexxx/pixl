@@ -1,12 +1,3 @@
-// pixo-dm , a tiny standalone DM relay for Pixl.
-//
-// The internal dashboard POSTs player-facing DMs here (warns, bans, project
-// verdicts, shipping tracking) and we deliver them as the Pixl Slack bot, so
-// they arrive from Pixo. It's kept deliberately separate from the pixorpheus bot
-// process: same bot token, its own service, nothing shared but Slack.
-//
-// Auth: an x-api-key header that must equal EXTERNAL_API_KEY (the same secret the
-// dashboard sends). Env: SLACK_BOT_TOKEN (the Pixo bot), EXTERNAL_API_KEY, PORT.
 const express = require("express");
 
 const app = express();
@@ -16,7 +7,6 @@ const PORT = process.env.PORT || 4100;
 const API_KEY = process.env.EXTERNAL_API_KEY;
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 
-// Health check , Railway pings this and it's handy to confirm the service is up.
 app.get("/", (_req, res) => res.json({ ok: true, service: "pixo-dm" }));
 
 app.post("/api/external/dm", async (req, res) => {
@@ -29,7 +19,6 @@ app.post("/api/external/dm", async (req, res) => {
     return res.status(400).json({ error: "Missing userId or message" });
 
   try {
-    // channel = a Slack user id opens (or reuses) the IM with that user.
     const r = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
