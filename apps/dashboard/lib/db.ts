@@ -1165,13 +1165,16 @@ export async function activeDashEvents(types?: string[]): Promise<DashEventRow[]
 }
 
 export async function communityGoalShipCount(ev: DashEventRow): Promise<number> {
-  const { count, error } = await db
+  let q = db
     .from("projects")
     .select("id", { count: "exact", head: true })
     .gte("shipped_at", ev.starts_at)
     .lt("shipped_at", ev.ends_at)
     .is("archived_at", null)
     .is("banned_at", null);
+  const projectType = String(ev.config.projectType ?? "");
+  if (projectType) q = q.eq("project_type", projectType);
+  const { count, error } = await q;
   if (error) {
     console.error("communityGoalShipCount", error.message);
     return 0;

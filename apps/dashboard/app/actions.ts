@@ -79,21 +79,26 @@ async function nextReviewPath(
   }
 }
 
-// XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
-// Payout is a flat $3.50/hr base plus an XP bonus ramping linearly to $5.50/hr
-// at level 100 (50 px base -> 79 px at max, 1px = $0.07). A player's rate for
+// XP = 1 per lifetime approved hour. Payout steps up at named hour milestones
+// (flat between tiers, not a smooth ramp) - 1px = $0.07. A player's rate for
 // a ship comes from their XP before that ship. Keep in sync with server
-// src/xp.ts (this used to drift from it — 40/60 vs the real 50/79 — fixed
-// 2026-08-01).
-const BASE_PX_PER_HOUR = 50;
-const MAX_PX_PER_HOUR = 79;
-const MAX_LEVEL = 100;
+// src/xp.ts's RATE_TIERS (this used to drift from it — 40/60 vs the real
+// 50/79 — fixed 2026-08-01; extended into tiers 2026-08-03).
+const RATE_TIERS: { hours: number; pxPerHour: number }[] = [
+  { hours: 0, pxPerHour: 50 }, // $3.50/hr - base
+  { hours: 25, pxPerHour: 57 }, // $4.00/hr
+  { hours: 75, pxPerHour: 64 }, // $4.50/hr
+  { hours: 175, pxPerHour: 71 }, // $5.00/hr
+  { hours: 350, pxPerHour: 79 }, // $5.50/hr - old ceiling, now mid-tier
+  { hours: 500, pxPerHour: 86 }, // $6.00/hr - rare top tier, pairs with the Blahaj trophy
+];
 
 function pxPerHourFor(xp: number): number {
-  const level = Math.min(MAX_LEVEL, Math.floor(Math.max(xp, 0)));
-  return Math.round(
-    BASE_PX_PER_HOUR + ((MAX_PX_PER_HOUR - BASE_PX_PER_HOUR) * level) / MAX_LEVEL,
-  );
+  let rate = RATE_TIERS[0].pxPerHour;
+  for (const tier of RATE_TIERS) {
+    if (xp >= tier.hours) rate = tier.pxPerHour;
+  }
+  return rate;
 }
 
 async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
@@ -621,7 +626,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     })
     .eq("id", projectId)
     .in("status", ["shipped", "second_review"])
-    .select("id, name, user_id")
+    .select("id, name, user_id, project_type")
     .single();
   if (error || !project) {
     console.error("reviewProject (approve) failed", error?.message);
@@ -653,6 +658,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
     for (const g of (goals ?? []) as DashEventRow[]) {
       const target = Number(g.config.target) || 0;
       const bonusPct = Number(g.config.bonusPct) || 0;
+      const wantType = String(g.config.projectType ?? "");
+      if (wantType && wantType !== project.project_type) continue;
       if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
         goalMult *= 1 + bonusPct / 100;
         goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
@@ -2225,6 +2232,8 @@ export async function createEvent(formData: FormData): Promise<void> {
     if (target <= 0 || bonusPct <= 0) fail("A community goal needs a ship target and a bonus %.");
     config.target = target;
     config.bonusPct = Math.min(bonusPct, 50);
+    const projectType = String(formData.get("projectType") ?? "").trim();
+    if (projectType) config.projectType = projectType;
   } else if (type === "review_blitz") {
     const mult = Number(formData.get("mult") ?? 1.5);
     if (!(mult > 1)) fail("The blitz multiplier must be above 1.");
