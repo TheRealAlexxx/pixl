@@ -64,12 +64,15 @@ func _ready() -> void:
 
 	# Desktop pastes via the OS clipboard fine; the web export can't reach the
 	# system clipboard directly, so bridge it in from the browser. Two paths,
-	# since either can fail silently in some browsers:
-	#  1) the native DOM "paste" event (fires on real Ctrl+V, no permission
-	#     prompt needed) - primary path.
-	#  2) navigator.clipboard.readText() triggered from our own Ctrl+V catch
-	#     in Godot - fallback for cases where the native event doesn't reach
-	#     the page (e.g. it's permission-gated in some browsers instead).
+	# both registered directly in JS (not triggered from Godot's own gui_input)
+	# because routing the trigger through Godot's WASM event queue first loses
+	# the browser's transient-activation window, which navigator.clipboard
+	# needs - by the time GDScript calls back out to JS, Chrome no longer
+	# considers it part of the trusted user gesture and silently rejects it.
+	#  1) the native DOM "paste" event (real Ctrl+V, no permission prompt).
+	#  2) a document-level keydown listener (capture phase, so it runs even if
+	#     Godot's own canvas handler stops the event) calling
+	#     navigator.clipboard.readText() synchronously inside that real event.
 	# Both funnel into _on_js_paste; _last_paste_text/_last_paste_ms dedupe so
 	# a browser where both paths fire doesn't insert the text twice.
 	if OS.has_feature("web"):
@@ -81,10 +84,15 @@ func _ready() -> void:
 			"document.addEventListener('paste', function(e){ " +
 			"var t = (e.clipboardData || window.clipboardData).getData('text'); " +
 			"if (t && window.pixlPaste) window.pixlPaste(t); " +
-			"});",
+			"});" +
+			"document.addEventListener('keydown', function(e){ " +
+			"if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) { " +
+			"navigator.clipboard.readText().then(function(t){ if (t && window.pixlPaste) window.pixlPaste(t); })" +
+			".catch(function(){ if (window.pixlPasteFail) window.pixlPasteFail(); }); " +
+			"} " +
+			"}, true);",
 			true,
 		)
-		_input.gui_input.connect(_on_input_gui)
 
 	var input_bg := StyleBoxFlat.new()
 	input_bg.bg_color = Color(0, 0, 0, 0.72)
@@ -273,16 +281,6 @@ func _pick_command(cmd: String) -> void:
 func _on_focus_exited() -> void:
 	if _input.visible:
 		_close_input()
-
-func _on_input_gui(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_V \
-			and (event.ctrl_pressed or event.meta_pressed):
-		_input.accept_event()
-		JavaScriptBridge.eval(
-			"navigator.clipboard.readText().then(function(t){ if(window.pixlPaste) window.pixlPaste(t); })" +
-			".catch(function(){ if(window.pixlPasteFail) window.pixlPasteFail(); });",
-			true,
-		)
 
 func _on_js_paste(args: Array) -> void:
 	if args.is_empty() or not _input.visible:
