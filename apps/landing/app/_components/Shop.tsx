@@ -89,7 +89,7 @@ function fmtHours(h: number) {
 function hoursRange(price: number) {
   const lo = price / 50;
   const hi = (lo * 3.5) / 6;
-  return `${fmtHours(lo)}h @ $3.5/h → ${fmtHours(hi)}h @ $6/h`;
+  return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
 }
 
 function ShopCard({
