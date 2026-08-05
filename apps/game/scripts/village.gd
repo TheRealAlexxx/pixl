@@ -4,10 +4,14 @@ extends "res://scripts/multiplayer_world.gd"
 # first Trial). Launched here on first arrival; the F1 manual (GuideHud) is
 # separate.
 const ONBOARDING := preload("res://scripts/onboarding.gd")
+const NPC_SCENE := preload("res://scenes/npc.tscn")
+const DYNAMIC_NPC_BASE := Vector2(250, -60)
+const DYNAMIC_NPC_STEP := Vector2(44, 0)
 
 var can_transition: bool = false
 var _npcs: Array = []
 var _npcs_by_id: Dictionary = {}
+var _dynamic_npcs: Array = []
 var _save_accum: float = 0.0
 
 func _ready() -> void:
@@ -22,29 +26,81 @@ func _ready() -> void:
 
 # A Trial-giver's check-in copy (e.g. Ridit) is hidden until the player has
 # accepted that Trial and not yet finished it. Reveal on load by matching each
-# check-in NPC's trial_name against the player's active Trials.
+# check-in NPC's trial_name against the player's active Trials, then spawn a
+# generic check-in NPC for any other active Trial that has no hand-authored
+# copy in this scene.
 func _reveal_trial_npcs() -> void:
-	var checkins: Array = _npcs.filter(func(n): return is_instance_valid(n) and n.get("trial_checkin") == true)
-	if checkins.is_empty() or NetworkManager.session_token == "":
+	if NetworkManager.session_token == "":
 		return
 	var req := HTTPRequest.new()
 	add_child(req)
 	var url := NetworkManager.SERVER_HTTP_URL + "/api/sidequests?token=" + NetworkManager.session_token.uri_encode()
 	req.request_completed.connect(func(_result, code, _headers, data):
 		req.queue_free()
+		if code != 200 or data.size() == 0:
+			return
+		var json = JSON.parse_string(data.get_string_from_utf8())
+		if typeof(json) != TYPE_DICTIONARY or not json.get("ok", false):
+			return
+		var quests = json.get("quests", [])
+		if typeof(quests) != TYPE_ARRAY:
+			return
 		var active := {}  # trial name -> true when unlocked and not completed
-		if code == 200 and data.size() > 0:
-			var json = JSON.parse_string(data.get_string_from_utf8())
-			if typeof(json) == TYPE_DICTIONARY and json.get("ok", false):
-				for q in json.get("quests", []):
-					if typeof(q) == TYPE_DICTIONARY and bool(q.get("unlocked", false)) and not bool(q.get("completed", false)):
-						active[String(q.get("name", ""))] = true
+		for q in quests:
+			if typeof(q) == TYPE_DICTIONARY and bool(q.get("unlocked", false)) and not bool(q.get("completed", false)):
+				active[String(q.get("name", ""))] = true
+		var checkins: Array = _npcs.filter(func(n): return is_instance_valid(n) and n.get("trial_checkin") == true)
+		var hand_authored := {}
 		for n in checkins:
 			if is_instance_valid(n):
-				n.set_present(active.has(String(n.get("trial_name"))))
+				var tn := String(n.get("trial_name"))
+				hand_authored[tn] = true
+				n.set_present(active.has(tn))
+		_spawn_dynamic_trial_npcs(quests, hand_authored)
 	)
 	if req.request(url) != OK:
 		req.queue_free()
+
+# Generic version of the hand-authored check-in pattern above: any Trial the
+# player has accepted but not finished gets its giver NPC spawned into their
+# own view of the village, without needing a scene-authored copy per Trial.
+# Client-local only - never added to _npcs/_npcs_by_id, so _save_npcs() and the
+# lobby's shared NPC position sync never see it. That's deliberate: a village
+# is a shared lobby, so two players in it can have different accepted Trials
+# at once, and each should only see their own Trial-givers show up.
+func _spawn_dynamic_trial_npcs(quests: Array, skip_names: Dictionary) -> void:
+	for n in _dynamic_npcs:
+		if is_instance_valid(n):
+			n.queue_free()
+	_dynamic_npcs.clear()
+	var i := 0
+	for q in quests:
+		if typeof(q) != TYPE_DICTIONARY:
+			continue
+		if not bool(q.get("unlocked", false)) or bool(q.get("completed", false)):
+			continue
+		var quest_name := String(q.get("name", ""))
+		if quest_name == "" or skip_names.has(quest_name):
+			continue
+		var npc_display := String(q.get("npc", "")).strip_edges()
+		if npc_display == "":
+			continue
+		var inst = NPC_SCENE.instantiate()
+		inst.npc_name = npc_display
+		inst.dialogue = "Come find me if you need a hand with \"%s\"." % quest_name
+		inst.quest_trial = true
+		inst.trial_checkin = true
+		inst.trial_name = quest_name
+		inst.wanders = false
+		var reminder := "Still working on \"%s\"? %s" % [quest_name, String(q.get("description", ""))]
+		var reward := String(q.get("reward", ""))
+		if reward != "":
+			reminder += " Reward on completion: %s." % reward
+		inst.quest_offer = reminder
+		inst.position = DYNAMIC_NPC_BASE + DYNAMIC_NPC_STEP * i
+		add_child(inst)
+		_dynamic_npcs.append(inst)
+		i += 1
 
 # Decide whether to run the first-run arrival flow. Signed-in players are gated
 # on the server's shared onboarding counter (step 0 = never onboarded), so a
@@ -104,6 +160,12 @@ func _process(delta: float) -> void:
 	if global.player_in_range and can_transition and not Dialogue.is_open and not global.ui_blocked() and Input.is_action_just_pressed("interact"):
 		if global.active_door_target == "shop":
 			WebPages.open("shop")
+			return
+		if global.active_door_target == "open_world":
+			can_transition = false
+			_save_npcs()
+			global.request_transition("open_world", "PlayerSpawn")
+			Loader.change_scene("res://scenes/open_world.tscn", "Entering the Open World")
 			return
 		can_transition = false
 		_save_npcs()

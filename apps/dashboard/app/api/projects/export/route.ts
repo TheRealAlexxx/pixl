@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAccess } from "@/lib/guard";
 import { db } from "@/lib/db";
 import { parseAuditNote } from "@/lib/auditNote";
+import { decryptPII } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -90,13 +91,13 @@ export async function GET(): Promise<NextResponse> {
         esc(firstName),
         esc(lastName),
         esc(u?.email ?? ""),
-        esc(u?.birthday ?? ""),
-        esc(u?.address_line1 ?? ""),
-        esc(u?.address_line2 ?? ""),
-        esc(u?.address_city ?? ""),
-        esc(u?.address_state ?? ""),
-        esc(u?.address_country ?? ""),
-        esc(u?.address_postal ?? ""),
+        esc(decryptPII(u?.birthday)),
+        esc(decryptPII(u?.address_line1)),
+        esc(decryptPII(u?.address_line2)),
+        esc(decryptPII(u?.address_city)),
+        esc(decryptPII(u?.address_state)),
+        esc(decryptPII(u?.address_country)),
+        esc(decryptPII(u?.address_postal)),
         esc(p.image_url ?? ""),
         esc(p.description ?? ""),
         p.approved_hours ?? "",

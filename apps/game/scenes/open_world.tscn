@@ -2965,6 +2965,8 @@ z_index = 13
 position = Vector2(65, -188)
 collision_mask = 2
 script = ExtResource("43_bj576")
+target = "village"
+sign_name = "VILLAGE"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger" unique_id=302858080]
 position = Vector2(2, 6)
@@ -2980,7 +2982,7 @@ theme_override_colors/font_color = Color(0.77315557, 0.55160576, 0.26933688, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 11
-text = "Press E to enter"
+text = "Press E to cross the bridge"
 
 [node name="Curator" parent="." unique_id=1490213236 instance=ExtResource("44_npcs")]
 position = Vector2(110, -140)

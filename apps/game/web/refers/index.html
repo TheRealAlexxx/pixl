@@ -35,6 +35,18 @@
   .copy-btn:hover { border-color: var(--gold); color: var(--gold); }
   .copy-btn.copied { border-color: var(--teal); color: var(--teal); }
 
+  .link-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .link {
+    flex: 1; min-width: 200px;
+    font-size: 13px; color: var(--dim);
+    background: var(--panel-deep);
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
   .tiers { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .tier { flex: 1; min-width: 110px; text-align: center; border: 1px solid var(--stroke); border-radius: var(--radius-sm);
     background: var(--panel-deep); padding: 12px 8px; }
@@ -74,6 +86,10 @@
       <div class="code-row">
         <span class="code" id="code">------</span>
         <button class="copy-btn" id="copy-btn" type="button">Copy code</button>
+      </div>
+      <div class="link-row">
+        <span class="link" id="link"></span>
+        <button class="copy-btn" id="copy-link-btn" type="button">Copy link</button>
       </div>
       <div class="card-note" style="margin-top:0">
         The first time a project shipped by the person you referred hits one of these hour marks,
@@ -159,6 +175,19 @@
       setTimeout(() => { $("copy-btn").textContent = "Copy code"; $("copy-btn").classList.remove("copied"); }, 1600);
     };
 
+    const link = location.origin + "/refers/?code=" + encodeURIComponent(data.code);
+    $("link").textContent = link;
+    $("copy-link-btn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(link);
+        $("copy-link-btn").textContent = "Copied!";
+        $("copy-link-btn").classList.add("copied");
+      } catch (e) {
+        $("copy-link-btn").textContent = "Couldn't copy";
+      }
+      setTimeout(() => { $("copy-link-btn").textContent = "Copy link"; $("copy-link-btn").classList.remove("copied"); }, 1600);
+    };
+
     if (data.boost) {
       $("boost-card").hidden = false;
       const remaining = data.boost.shipsRemaining;
@@ -169,6 +198,8 @@
            <div class="boost-bar"><div class="boost-fill" style="width:100%"></div></div>`;
     } else if (data.canApply) {
       $("apply-card").hidden = false;
+      const prefill = new URLSearchParams(location.search).get("code");
+      if (prefill) $("apply-code").value = prefill.trim().toUpperCase();
       $("apply-btn").onclick = async () => {
         const code = $("apply-code").value.trim().toUpperCase();
         if (!code) return;

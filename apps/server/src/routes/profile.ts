@@ -3,6 +3,7 @@ import { issueSessionToken, verifySessionToken } from "../auth/session.js";
 import { containsBlocked, logViolation } from "../moderation.js";
 import { supabase } from "../db/client.js";
 import { approvedHoursFor, levelFor, pxPerHourFor } from "../xp.js";
+import { decryptPII, encryptPII } from "../crypto.js";
 
 const router = Router();
 
@@ -315,15 +316,16 @@ router.get("/api/profile/eligibility", async (req, res) => {
     return res.status(500).json({ ok: false });
   }
   const row = (data ?? {}) as Record<string, unknown>;
+  const birthday = decryptPII(row.birthday as string | null);
   res.json({
     ok: true,
-    birthday: row.birthday ?? null,
-    addressLine1: row.address_line1 ?? "",
-    addressLine2: row.address_line2 ?? "",
-    addressCity: row.address_city ?? "",
-    addressState: row.address_state ?? "",
-    addressCountry: row.address_country ?? "",
-    addressPostal: row.address_postal ?? "",
+    birthday: birthday || null,
+    addressLine1: decryptPII(row.address_line1 as string | null),
+    addressLine2: decryptPII(row.address_line2 as string | null),
+    addressCity: decryptPII(row.address_city as string | null),
+    addressState: decryptPII(row.address_state as string | null),
+    addressCountry: decryptPII(row.address_country as string | null),
+    addressPostal: decryptPII(row.address_postal as string | null),
     hasAddress: hasAddress(row),
   });
 });
@@ -343,7 +345,7 @@ router.post("/api/profile/eligibility", async (req, res) => {
       if (Number.isNaN(date.getTime()) || date > now || date.getFullYear() < 1900) {
         return res.json({ ok: false, reason: "That birthday doesn't look right." });
       }
-      patch.birthday = raw.slice(0, 10);
+      patch.birthday = encryptPII(raw.slice(0, 10));
     } else {
       patch.birthday = null;
     }
@@ -363,12 +365,12 @@ router.post("/api/profile/eligibility", async (req, res) => {
         reason: "Address line 1, city, country and postal code are required.",
       });
     }
-    patch.address_line1 = line1;
-    patch.address_line2 = line2;
-    patch.address_city = city;
-    patch.address_state = state;
-    patch.address_country = country;
-    patch.address_postal = postal;
+    patch.address_line1 = encryptPII(line1);
+    patch.address_line2 = encryptPII(line2);
+    patch.address_city = encryptPII(city);
+    patch.address_state = encryptPII(state);
+    patch.address_country = encryptPII(country);
+    patch.address_postal = encryptPII(postal);
   }
 
   if (Object.keys(patch).length === 0) return res.json({ ok: true });

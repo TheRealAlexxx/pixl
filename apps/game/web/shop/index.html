@@ -223,7 +223,9 @@
         font-family: var(--sans);
         font-size: 10.5px;
         font-weight: 500;
+        line-height: 1.4;
         color: var(--faint);
+        max-width: 170px;
       }
       .limited-tag {
         position: absolute;
@@ -417,10 +419,14 @@
         const r = Math.round(h * 10) / 10;
         return Number.isInteger(r) ? String(r) : r.toFixed(1);
       }
+      // Spells out both rates every time (not just two bare numbers) so it's
+      // clear why there are two: hours needed at the shop's $3.5/h floor
+      // rate, then hours needed at its $6/h rate (reachable with a
+      // Restoration Energy multiplier).
       function hoursOf(px) {
         const lo = px / 50;
         const hi = (lo * 3.5) / 6;
-        return `${fmtHours(lo)}-${fmtHours(hi)}h`;
+        return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
       }
 
       function isTrophy(item) {
