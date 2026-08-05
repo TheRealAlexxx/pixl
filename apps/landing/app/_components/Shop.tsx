@@ -82,14 +82,14 @@ function fmtHours(h: number) {
   return Number.isInteger(r) ? String(r) : r.toFixed(1);
 }
 
-// Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows a
-// range: hours needed at that lowest rate, then hours needed at the shop's
-// highest rate ($6/h) - the Restoration Energy multiplier puts you
-// somewhere between the two.
+// Spells out both rates every time (not just two bare numbers) so it's
+// clear why there are two: hours needed at the shop's $3.5/h floor rate,
+// then hours needed at its $6/h rate (reachable with a Restoration Energy
+// multiplier).
 function hoursRange(price: number) {
   const lo = price / 50;
   const hi = (lo * 3.5) / 6;
-  return `${fmtHours(lo)}-${fmtHours(hi)}h`;
+  return `${fmtHours(lo)}h @ $3.5/h → ${fmtHours(hi)}h @ $6/h`;
 }
 
 function ShopCard({
@@ -126,14 +126,14 @@ function ShopCard({
       <div className="px-3 py-2.5 flex flex-col gap-1 flex-1">
         <p className="font-pixel text-xs leading-snug">{item.name}</p>
         <p className="text-black/60 text-[11px] leading-snug font-sans flex-1">{item.description}</p>
-        <div className="flex items-baseline gap-1.5 mt-1">
+        <div className="flex flex-col gap-1 mt-1">
           <span
             className="self-start font-pixel text-[11px] text-white px-2 py-0.5 border-2 border-black"
             style={{ background: accent, boxShadow: "2px 2px 0px #000" }}
           >
             {price} px
           </span>
-          <span className="text-black/40 text-[9px] font-sans">{hoursRange(price)}</span>
+          <span className="text-black/40 text-[9px] leading-snug font-sans">{hoursRange(price)}</span>
         </div>
       </div>
     </div>
