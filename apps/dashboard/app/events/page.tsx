@@ -48,7 +48,7 @@ function configSummary(ev: DashEventRow): string {
     case "bounty":
       return `+${Number(c.reward) || 0} px per project${c.description ? ` , ${c.description}` : ""}`;
     case "community_goal":
-      return `${Number(c.target) || 0} ships → +${Number(c.bonusPct) || 0}% for every shipper`;
+      return `${Number(c.target) || 0} ships → +${Number(c.bonusPct) || 0}% for every shipper${c.projectType ? ` (${c.projectType} only)` : ""}`;
     case "mystery_merchant":
       return `items ${(Array.isArray(c.itemIds) ? c.itemIds : []).join(", ")}`;
     case "review_blitz":

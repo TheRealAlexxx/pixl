@@ -8,6 +8,21 @@ import { Label } from "@/components/ui/label";
 const selectCls =
   "w-full h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs";
 
+// Kept in sync with PROJECT_TYPES in apps/server/src/routes/projects.ts.
+const PROJECT_TYPES = [
+  "web",
+  "windows",
+  "mac",
+  "linux",
+  "cross_platform",
+  "python",
+  "android",
+  "ios",
+  "hardware",
+  "cad",
+  "other",
+];
+
 interface ShopItemLite {
   id: number;
   name: string;
@@ -77,6 +92,14 @@ export function CreateEventForm({
           </Field>
           <Field label="Bonus % for every shipper">
             <Input name="bonusPct" type="number" min={0} max={50} placeholder="10" className="text-sm" />
+          </Field>
+          <Field label="Only for project type (themed mini-events, e.g. a hardware weekend)">
+            <select name="projectType" defaultValue="" className={selectCls}>
+              <option value="">Any project type</option>
+              {PROJECT_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </Field>
         </div>
       )}

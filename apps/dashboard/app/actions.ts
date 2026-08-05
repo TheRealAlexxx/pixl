@@ -23,8 +23,10 @@ import {
   REFERRAL_MILESTONE_EVERY,
   REFERRAL_MILESTONE_PX,
   referralTierFor,
+  turnedNineteenSinceShipping,
   type DashEventRow,
 } from "@/lib/db";
+import { buildAuditNote, TECHNICAL_FEATURES_MIN } from "@/lib/auditNote";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
 import { serializeGroups } from "@/lib/shopOptions";
 import { SHOP_REGIONS, type ShopRegion } from "@/lib/shopRegions";
@@ -77,21 +79,26 @@ async function nextReviewPath(
   }
 }
 
-// XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
-// Payout is a flat $3.50/hr base plus an XP bonus ramping linearly to $5.50/hr
-// at level 100 (50 px base -> 79 px at max, 1px = $0.07). A player's rate for
+// XP = 1 per lifetime approved hour. Payout steps up at named hour milestones
+// (flat between tiers, not a smooth ramp) - 1px = $0.07. A player's rate for
 // a ship comes from their XP before that ship. Keep in sync with server
-// src/xp.ts (this used to drift from it — 40/60 vs the real 50/79 — fixed
-// 2026-08-01).
-const BASE_PX_PER_HOUR = 50;
-const MAX_PX_PER_HOUR = 79;
-const MAX_LEVEL = 100;
+// src/xp.ts's RATE_TIERS (this used to drift from it — 40/60 vs the real
+// 50/79 — fixed 2026-08-01; extended into tiers 2026-08-03).
+const RATE_TIERS: { hours: number; pxPerHour: number }[] = [
+  { hours: 0, pxPerHour: 50 }, // $3.50/hr - base
+  { hours: 25, pxPerHour: 57 }, // $4.00/hr
+  { hours: 75, pxPerHour: 64 }, // $4.50/hr
+  { hours: 175, pxPerHour: 71 }, // $5.00/hr
+  { hours: 350, pxPerHour: 79 }, // $5.50/hr - old ceiling, now mid-tier
+  { hours: 500, pxPerHour: 86 }, // $6.00/hr - rare top tier, pairs with the Blahaj trophy
+];
 
 function pxPerHourFor(xp: number): number {
-  const level = Math.min(MAX_LEVEL, Math.floor(Math.max(xp, 0)));
-  return Math.round(
-    BASE_PX_PER_HOUR + ((MAX_PX_PER_HOUR - BASE_PX_PER_HOUR) * level) / MAX_LEVEL,
-  );
+  let rate = RATE_TIERS[0].pxPerHour;
+  for (const tier of RATE_TIERS) {
+    if (xp >= tier.hours) rate = tier.pxPerHour;
+  }
+  return rate;
 }
 
 async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
@@ -396,6 +403,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
     .eq("id", projectId)
     .single();
   if (!current) return;
+  const { data: submitter } = await db
+    .from("users")
+    .select("birthday")
+    .eq("id", current.user_id)
+    .maybeSingle();
+  const ageFlag = turnedNineteenSinceShipping(submitter?.birthday ?? null, current.shipped_at);
   const stage = String(current.status);
   const back = `/review/${projectId}`;
 
@@ -424,9 +437,6 @@ export async function reviewProject(formData: FormData): Promise<void> {
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)
     redirect(`${back}?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
-  const auditNote = String(formData.get("auditNote") ?? "").trim();
-  if (auditNote.length < 150)
-    redirect(`${back}?error=${encodeURIComponent("The internal audit note needs at least 150 characters.")}`);
 
   const claimedHours = await claimedHoursFor(projectId);
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
@@ -437,6 +447,36 @@ export async function reviewProject(formData: FormData): Promise<void> {
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
   }
+
+  // Structured internal audit note (Hack Club's YSWS "override hours spent
+  // justification" guidance) , the form submits each section separately so we
+  // can validate the parts that matter, then store them as one string under
+  // the existing auditNote field.
+  const technicalFeatures = String(formData.get("technicalFeatures") ?? "").trim();
+  if (technicalFeatures.length < TECHNICAL_FEATURES_MIN)
+    redirect(
+      `${back}?error=${encodeURIComponent(`Describe concrete technical features you checked (min ${TECHNICAL_FEATURES_MIN} characters).`)}`,
+    );
+  const deflated = approvedHours != null && approvedHours < claimedHours;
+  const deflationReason = String(formData.get("deflationReason") ?? "").trim();
+  if (deflated && !deflationReason)
+    redirect(`${back}?error=${encodeURIComponent("Explain why the credited hours were lowered.")}`);
+  const ageJustification = String(formData.get("ageJustification") ?? "").trim();
+  if (ageFlag && !ageJustification)
+    redirect(
+      `${back}?error=${encodeURIComponent("This submitter turns 19 between shipping and review , document that before deciding.")}`,
+    );
+  formData.set(
+    "auditNote",
+    buildAuditNote({
+      "TECHNICAL FEATURES": technicalFeatures,
+      "HACKATIME EVIDENCE": String(formData.get("hackatimeEvidence") ?? "").trim(),
+      "DEFLATION REASON": deflationReason,
+      "AGE JUSTIFICATION": ageJustification,
+      NOTES: String(formData.get("notes") ?? "").trim(),
+    }),
+  );
+
   const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
 
   // First pass on a freshly-shipped project: approve and ban are only PROPOSALS,
@@ -586,7 +626,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     })
     .eq("id", projectId)
     .in("status", ["shipped", "second_review"])
-    .select("id, name, user_id")
+    .select("id, name, user_id, project_type")
     .single();
   if (error || !project) {
     console.error("reviewProject (approve) failed", error?.message);
@@ -618,6 +658,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
     for (const g of (goals ?? []) as DashEventRow[]) {
       const target = Number(g.config.target) || 0;
       const bonusPct = Number(g.config.bonusPct) || 0;
+      const wantType = String(g.config.projectType ?? "");
+      if (wantType && wantType !== project.project_type) continue;
       if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
         goalMult *= 1 + bonusPct / 100;
         goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
@@ -2190,6 +2232,8 @@ export async function createEvent(formData: FormData): Promise<void> {
     if (target <= 0 || bonusPct <= 0) fail("A community goal needs a ship target and a bonus %.");
     config.target = target;
     config.bonusPct = Math.min(bonusPct, 50);
+    const projectType = String(formData.get("projectType") ?? "").trim();
+    if (projectType) config.projectType = projectType;
   } else if (type === "review_blitz") {
     const mult = Number(formData.get("mult") ?? 1.5);
     if (!(mult > 1)) fail("The blitz multiplier must be above 1.");

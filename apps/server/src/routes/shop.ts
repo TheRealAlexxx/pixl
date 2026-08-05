@@ -194,6 +194,22 @@ router.post("/api/shop/buy/:id", async (req, res) => {
   const session = token ? verifySessionToken(token) : null;
   if (!session) return res.status(401).json({ ok: false });
 
+  // We physically ship every order, so an address has to be on file before we
+  // let the purchase through — see /account in apps/game/web.
+  const { data: buyer } = await supabase
+    .from("users")
+    .select("address_line1, address_city, address_country, address_postal")
+    .eq("id", session.userId)
+    .maybeSingle();
+  const addressOnFile =
+    !!buyer &&
+    String(buyer.address_line1 ?? "").trim() !== "" &&
+    String(buyer.address_city ?? "").trim() !== "" &&
+    String(buyer.address_country ?? "").trim() !== "" &&
+    String(buyer.address_postal ?? "").trim() !== "";
+  if (!addressOnFile)
+    return res.status(400).json({ ok: false, error: "address_required" });
+
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
   const option = typeof req.body?.option === "string" ? req.body.option.slice(0, 80) : "";

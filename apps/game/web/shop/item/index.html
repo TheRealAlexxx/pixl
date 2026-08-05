@@ -617,6 +617,34 @@
         }
       }
 
+      // Every order ships physically, so confirm the on-file address before
+      // spending pixels — same pattern as a checkout confirm step.
+      async function confirmAddressThenBuy(id) {
+        let elig = null;
+        try { elig = await Pixl.api("/api/profile/eligibility"); } catch {}
+        if (!elig || !elig.ok || !elig.hasAddress) {
+          location.href = "/account?return=shop";
+          return;
+        }
+        const summary = [
+          elig.addressLine1,
+          elig.addressLine2,
+          [elig.addressCity, elig.addressState].filter(Boolean).join(", "),
+          [elig.addressCountry, elig.addressPostal].filter(Boolean).join(" "),
+        ].filter(Boolean).join(" · ");
+        const ok = await Pixl.confirm({
+          title: "Confirm shipping address",
+          body: "We'll ship to: " + summary,
+          confirmText: "Yes, ship here",
+          cancelText: "Change address",
+        });
+        if (!ok) {
+          location.href = "/account?return=shop";
+          return;
+        }
+        buyItem(id);
+      }
+
       async function buyItem(id) {
         if (buying) return;
         buying = true;
@@ -666,7 +694,7 @@
           nudgeKeeper();
           return;
         }
-        buyItem(selected.id);
+        confirmAddressThenBuy(selected.id);
       });
 
       $("qty-minus").addEventListener("click", () => setQty(quantity - 1));

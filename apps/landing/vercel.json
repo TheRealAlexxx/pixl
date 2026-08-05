@@ -34,6 +34,8 @@
     { "source": "/hackatime/:path*", "destination": "https://play.pixl.rsvp/hackatime/:path*" },
     { "source": "/refers", "destination": "https://play.pixl.rsvp/refers/" },
     { "source": "/refers/:path*", "destination": "https://play.pixl.rsvp/refers/:path*" },
+    { "source": "/account", "destination": "https://play.pixl.rsvp/account/" },
+    { "source": "/account/:path*", "destination": "https://play.pixl.rsvp/account/:path*" },
 
     { "source": "/pixl.css", "destination": "https://play.pixl.rsvp/pixl.css" },
     { "source": "/pixl.js", "destination": "https://play.pixl.rsvp/pixl.js" },

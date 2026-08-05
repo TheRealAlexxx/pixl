@@ -791,6 +791,7 @@
           "Log more detail — journals need ~100 characters per hour.",
         not_in_review: "This project isn't in review.",
         trial_hours_below_minimum: "This Trial needs more tracked hours before you can ship it.",
+        eligibility_attestation_required: "Confirm this isn't a school assignment or paid Hack Club work before shipping.",
       };
       const err = (e) => ERRORS[e] || "Something went wrong — try again.";
 
@@ -798,6 +799,7 @@
       let projects = [];
       let trials = []; // Trials the player has accepted and not yet finished
       let activeTrial = null; // the Trial the player arrived to build for, if any
+      let hasBirthday = true; // assume yes until we hear otherwise — avoids a flash of the banner
       let form = null;
 
       function statusInfo(p) {
@@ -1008,7 +1010,7 @@
           <div class="thumb-preview" id="f-thumb-preview">${p.image_url ? `<img src="${Pixl.esc(p.image_url)}" alt="">` : ""}</div>
           <div style="display:flex;flex-direction:column;gap:8px">
             <button class="btn dark" id="f-thumb-btn" type="button">CHOOSE IMAGE</button>
-            <input type="file" id="f-thumb-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+            <input type="file" id="f-thumb-file" accept="image/png,image/jpeg,image/webp" hidden>
             <span class="faint" style="font-size:11px">or paste an image anywhere on this page</span>
           </div>
         </div>
@@ -1214,6 +1216,7 @@
       ${formHtml(p)}
 
       <div class="section-h">SHIP IT</div>
+      ${!hasBirthday ? `<div class="note-strip"><a href="/account">Add your birthday</a> for Hack Club compliance — takes 10 seconds.</div>` : ""}
       <div class="form-grid panel">
         <div class="ship-list">
           <div class="ship-item"><span class="${p.repo_url ? "ok" : "no"}">${p.repo_url ? "+" : "-"}</span> GitHub repo linked</div>
@@ -1231,6 +1234,10 @@
         </label>`
             : ""
         }
+        <label class="check-row">
+          <input type="checkbox" id="s-eligible">
+          This isn't a school assignment or paid Hack Club work
+        </label>
         ${
           inReview
             ? `
@@ -1271,7 +1278,7 @@
           <textarea class="field" id="j-content" maxlength="5000" placeholder="What did you build today? Markdown supported — **bold**, # headings, - lists, links, code blocks. Paste an image to attach it."></textarea>
           <div class="md-preview" id="j-preview" hidden></div>
         </div>
-        <input type="file" id="j-img-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+        <input type="file" id="j-img-file" accept="image/png,image/jpeg,image/webp" hidden>
         <div class="composer-foot">
           <span class="faint" style="font-size:12px">hours:</span>
           <input class="field" id="j-hours" type="number" min="0" max="100" step="0.5" value="0">
@@ -1406,6 +1413,8 @@
         if (!p.image_url) b.push("upload a thumbnail");
         if (checkedHtSeconds() < 3600)
           b.push("link a Hackatime project with ≥ 1h");
+        if (!$("s-eligible") || !$("s-eligible").checked)
+          b.push("confirm this isn't a school assignment or paid Hack Club work");
         if (isUpdate) {
           const notes =
             $("f-update") && $("f-update").checked
@@ -1423,7 +1432,10 @@
       }
 
       async function ship(p, isUpdate) {
-        const body = { otherYsws: $("s-ysws") ? $("s-ysws").checked : false };
+        const body = {
+          otherYsws: $("s-ysws") ? $("s-ysws").checked : false,
+          eligibilityAttested: $("s-eligible") ? $("s-eligible").checked : false,
+        };
         if (isUpdate && $("f-update") && $("f-update").checked)
           body.updateNotes = $("f-update-notes").value.trim();
         // 0 / absent tells the server this ship isn't for a Trial (clears any link).
@@ -1782,12 +1794,14 @@
       async function boot() {
         if (!Pixl.hasToken) return;
         try {
-          const [s] = await Promise.all([
+          const [s, elig] = await Promise.all([
             Pixl.api("/api/hackatime/stats"),
+            Pixl.api("/api/profile/eligibility"),
             loadProjects(),
             loadTrials(),
           ]);
           stats = s.stats || null;
+          hasBirthday = !!(elig && elig.ok && elig.birthday);
         } catch (e) {
           if (e.message !== "unauthorized")
             Pixl.toast("Couldn't reach the server.", true);

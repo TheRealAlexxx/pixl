@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
-import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
+import {
+  getProject,
+  listShippedProjects,
+  listSecondReviewProjects,
+  claimReview,
+  turnedNineteenSinceShipping,
+} from "@/lib/db";
 import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor, fetchHackatimeReport } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
@@ -107,6 +113,7 @@ export default async function ReviewDetail({
       : 0;
 
   const shippedAt = (p as { shipped_at?: string | null }).shipped_at ?? null;
+  const ageFlag = turnedNineteenSinceShipping(p.users?.birthday, shippedAt);
   let bounties: BountyOption[] = [];
   if (shippedAt) {
     const { data: bountyEvents } = await db
@@ -342,7 +349,7 @@ export default async function ReviewDetail({
         </div>
 
         {/* sidebar */}
-        <aside className="lg:w-80 shrink-0">
+        <aside className="lg:w-[30rem] shrink-0">
           <div className="lg:sticky lg:top-24 space-y-4">
             <Card className="p-5 gap-0">
               <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -427,6 +434,19 @@ export default async function ReviewDetail({
               </Card>
             )}
 
+            {ageFlag && (
+              <Card className="p-4 text-sm gap-1 ring-amber-300 dark:ring-amber-500/30">
+                <div className="font-semibold text-amber-700 dark:text-amber-300">
+                  Age eligibility
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  This submitter turns 19 between shipping this project and now , Hack
+                  Club's YSWS guidelines want an Override Age Justification documented
+                  before deciding. See the audit note below.
+                </div>
+              </Card>
+            )}
+
             {isOwn && p.status === "shipped" && (
               <Card className="p-5 text-sm gap-0 ring-amber-300 dark:ring-amber-500/30 text-amber-700 dark:text-amber-300">
                 This is your own submission , another reviewer has to do the first pass.
@@ -461,6 +481,9 @@ export default async function ReviewDetail({
                     trial={
                       trial?.name ? { name: trial.name, minHours: trial.min_hours ?? null } : null
                     }
+                    hackatimeProjects={hackatimeProjects}
+                    hackatimeSeconds={p.hackatime_seconds ?? 0}
+                    ageFlag={ageFlag}
                   />
                 </Card>
 

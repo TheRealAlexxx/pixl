@@ -41,11 +41,18 @@ export default async function ProjectsPage({
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">
           {archived ? "Archived projects" : "Projects"}
         </h1>
-        <Button asChild variant="outline">
-          <Link href={archived ? "/projects" : "/projects?view=archived"}>
-            {archived ? "← Active projects" : "View archive"}
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          {access.isSuper && (
+            <Button asChild variant="outline">
+              <a href="/api/projects/export">Export approved (CSV)</a>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link href={archived ? "/projects" : "/projects?view=archived"}>
+              {archived ? "← Active projects" : "View archive"}
+            </Link>
+          </Button>
+        </div>
       </div>
       <form className="mb-5 flex gap-2">
         {archived && <input type="hidden" name="view" value="archived" />}

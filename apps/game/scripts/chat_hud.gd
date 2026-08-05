@@ -29,6 +29,9 @@ var _bold_font: FontVariation
 var _italic_font: FontVariation
 var _bold_italic_font: FontVariation
 var _paste_cb
+var _paste_fail_cb
+var _last_paste_text := ""
+var _last_paste_ms := 0
 var _closing := false
 var _censor_regex := RegEx.create_from_string("([jJ])[oO]([bB])")
 # Strip [img]…[/img] from user chat so nobody can force-load arbitrary URLs.
@@ -59,13 +62,37 @@ func _ready() -> void:
 	_build_suggestions()
 	_build_open_bg()
 
-	# Desktop pastes via the OS clipboard fine; the web export can't (browser
-	# clipboard is async + permission-gated), so bridge Ctrl/Cmd+V to the real
-	# browser clipboard and insert the result ourselves.
+	# Desktop pastes via the OS clipboard fine; the web export can't reach the
+	# system clipboard directly, so bridge it in from the browser. Two paths,
+	# both registered directly in JS (not triggered from Godot's own gui_input)
+	# because routing the trigger through Godot's WASM event queue first loses
+	# the browser's transient-activation window, which navigator.clipboard
+	# needs - by the time GDScript calls back out to JS, Chrome no longer
+	# considers it part of the trusted user gesture and silently rejects it.
+	#  1) the native DOM "paste" event (real Ctrl+V, no permission prompt).
+	#  2) a document-level keydown listener (capture phase, so it runs even if
+	#     Godot's own canvas handler stops the event) calling
+	#     navigator.clipboard.readText() synchronously inside that real event.
+	# Both funnel into _on_js_paste; _last_paste_text/_last_paste_ms dedupe so
+	# a browser where both paths fire doesn't insert the text twice.
 	if OS.has_feature("web"):
 		_paste_cb = JavaScriptBridge.create_callback(_on_js_paste)
+		_paste_fail_cb = JavaScriptBridge.create_callback(_on_js_paste_fail)
 		JavaScriptBridge.get_interface("window").pixlPaste = _paste_cb
-		_input.gui_input.connect(_on_input_gui)
+		JavaScriptBridge.get_interface("window").pixlPasteFail = _paste_fail_cb
+		JavaScriptBridge.eval(
+			"document.addEventListener('paste', function(e){ " +
+			"var t = (e.clipboardData || window.clipboardData).getData('text'); " +
+			"if (t && window.pixlPaste) window.pixlPaste(t); " +
+			"});" +
+			"document.addEventListener('keydown', function(e){ " +
+			"if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) { " +
+			"navigator.clipboard.readText().then(function(t){ if (t && window.pixlPaste) window.pixlPaste(t); })" +
+			".catch(function(){ if (window.pixlPasteFail) window.pixlPasteFail(); }); " +
+			"} " +
+			"}, true);",
+			true,
+		)
 
 	var input_bg := StyleBoxFlat.new()
 	input_bg.bg_color = Color(0, 0, 0, 0.72)
@@ -160,6 +187,7 @@ func _open_input() -> void:
 		line["fading"] = false
 		line["expire"] = INF
 		line["panel"].modulate.a = 1.0
+		line["label"].mouse_filter = Control.MOUSE_FILTER_STOP
 
 func _close_input() -> void:
 	if _closing:
@@ -173,6 +201,7 @@ func _close_input() -> void:
 		line["fading"] = false
 		line["expire"] = now + LINE_TTL
 		line["panel"].modulate.a = 1.0
+		line["label"].mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_closing = false
 	if _suggest:
 		_suggest.visible = false
@@ -253,20 +282,24 @@ func _on_focus_exited() -> void:
 	if _input.visible:
 		_close_input()
 
-func _on_input_gui(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_V \
-			and (event.ctrl_pressed or event.meta_pressed):
-		_input.accept_event()
-		JavaScriptBridge.eval(
-			"navigator.clipboard.readText().then(function(t){ if(window.pixlPaste) window.pixlPaste(t); }).catch(function(){});",
-			true,
-		)
-
 func _on_js_paste(args: Array) -> void:
 	if args.is_empty() or not _input.visible:
 		return
 	var text := String(args[0]).replace("\r", "").replace("\n", " ")
+	if text == "":
+		return
+	# The native "paste" event and the Ctrl+V clipboard-read fallback can both
+	# fire for the same keystroke in some browsers; skip an exact repeat that
+	# lands within half a second so the text isn't inserted twice.
+	var now := Time.get_ticks_msec()
+	if text == _last_paste_text and now - _last_paste_ms < 500:
+		return
+	_last_paste_text = text
+	_last_paste_ms = now
 	_input.insert_text_at_caret(text)
+
+func _on_js_paste_fail(_args: Array) -> void:
+	add_system("Couldn't paste , your browser blocked clipboard access.")
 
 func _on_submit(text: String) -> void:
 	var t := text.strip_edges()
@@ -300,7 +333,11 @@ func _add_line(display: String, color: Color, own: bool) -> void:
 	label.bbcode_enabled = true
 	label.fit_content = true
 	label.scroll_active = false
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.selection_enabled = true
+	# Lines pass mouse events through while just floating on top of gameplay
+	# (so clicks/movement reach the world underneath), but become selectable
+	# for copy once the chat box is open and they're pinned on screen.
+	label.mouse_filter = Control.MOUSE_FILTER_STOP if _input.has_focus() else Control.MOUSE_FILTER_IGNORE
 	label.add_theme_color_override("default_color", color)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)
 	label.add_theme_constant_override("outline_size", 3)
@@ -330,7 +367,7 @@ func _add_line(display: String, color: Color, own: bool) -> void:
 	var pop := create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	pop.tween_property(panel, "scale", Vector2.ONE, 0.22)
 
-	var line := {"panel": panel, "expire": INF, "fading": false, "tween": null}
+	var line := {"panel": panel, "label": label, "expire": INF, "fading": false, "tween": null}
 	if not _input.has_focus():
 		line["expire"] = Time.get_ticks_msec() / 1000.0 + LINE_TTL
 	_lines.append(line)
