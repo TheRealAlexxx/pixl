@@ -62,6 +62,13 @@
   .upvote-btn:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); transform: translateY(-1px); }
   .upvote-btn.on { color: var(--btn-ink); background: var(--gold); border-color: var(--gold); cursor: default; }
   .upvote-btn:disabled { cursor: default; }
+  .vote-group { display: inline-flex; align-items: center; gap: 6px; }
+  .downvote-btn { display: inline-flex; align-items: center; gap: 5px; font-family: var(--pixel, inherit); font-size: 13px; font-weight: 600;
+    color: var(--dim); background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 999px; padding: 4px 11px; cursor: pointer;
+    transition: color .12s ease, border-color .12s ease, background .12s ease, transform .08s ease; }
+  .downvote-btn:hover:not(:disabled) { color: var(--bad); border-color: var(--bad); transform: translateY(-1px); }
+  .downvote-btn.on { color: var(--btn-ink); background: var(--bad); border-color: var(--bad); cursor: default; }
+  .downvote-btn:disabled { cursor: default; }
   .status-chip { text-transform: uppercase; }
   .board { display: flex; flex-direction: column; gap: 8px; }
   .board-row {
@@ -164,32 +171,46 @@ function projCard(p) {
       </div>
       <div class="proj-foot">
         <span>${statusChip(p)}${p.hackatime_seconds ? ` <span class="chip teal">${Pixl.hours(p.hackatime_seconds)}</span>` : ""}</span>
-        ${upvoteBtn(p)}
+        <span class="vote-group">${upvoteBtn(p)}${downvoteBtn(p)}</span>
       </div>
     </a>`;
 }
 
 // Upvote pill. Permanent — once cast it disables and stays lit.
 function upvoteBtn(p) {
-  return `<button class="upvote-btn${p.has_upvoted ? " on" : ""}" onclick="return upvote(event,${p.id})"${p.has_upvoted ? " disabled" : ""} aria-label="Upvote this project" title="${p.has_upvoted ? "You upvoted this" : "Upvote this project"}">▲ <span class="uv-count">${p.upvotes || 0}</span></button>`;
+  return `<button class="upvote-btn${p.has_upvoted ? " on" : ""}" onclick="return castVote(event,${p.id},'up')"${p.has_upvoted || p.has_downvoted ? " disabled" : ""} aria-label="Upvote this project" title="${p.has_upvoted ? "You upvoted this" : "Upvote this project"}">▲ <span class="uv-count">${p.upvotes || 0}</span></button>`;
 }
 
-// Cast a permanent upvote without following the card link. Updates the button in
-// place; the server is idempotent and rejects self-upvotes.
-window.upvote = async function (e, id) {
+// Downvote pill. Same permanent, one-shot behaviour as upvote.
+function downvoteBtn(p) {
+  return `<button class="downvote-btn${p.has_downvoted ? " on" : ""}" onclick="return castVote(event,${p.id},'down')"${p.has_upvoted || p.has_downvoted ? " disabled" : ""} aria-label="Downvote this project" title="${p.has_downvoted ? "You downvoted this" : "Downvote this project"}">▼ <span class="dv-count">${p.downvotes || 0}</span></button>`;
+}
+
+// Cast a permanent up/downvote without following the card link. Updates both
+// buttons in place; the server is idempotent, rejects self-votes, and blocks
+// voting the opposite direction if you've already voted the other way.
+window.castVote = async function (e, id, dir) {
   e.preventDefault();
   e.stopPropagation();
   const btn = e.currentTarget;
   if (btn.disabled) return false;
-  btn.disabled = true;
-  const r = await Pixl.send("POST", "/api/projects/" + id + "/upvote");
+  const group = btn.closest(".vote-group") || btn.parentElement;
+  const upBtn = group ? group.querySelector(".upvote-btn") : null;
+  const downBtn = group ? group.querySelector(".downvote-btn") : null;
+  if (upBtn) upBtn.disabled = true;
+  if (downBtn) downBtn.disabled = true;
+  const r = await Pixl.send("POST", "/api/projects/" + id + "/" + (dir === "up" ? "upvote" : "downvote"));
   if (r.ok) {
     btn.classList.add("on");
-    const c = btn.querySelector(".uv-count");
-    if (c) c.textContent = r.upvotes;
+    const c = btn.querySelector(dir === "up" ? ".uv-count" : ".dv-count");
+    if (c) c.textContent = dir === "up" ? r.upvotes : r.downvotes;
   } else {
-    btn.disabled = false;
-    Pixl.toast(r.error === "own_project" ? "You can't upvote your own project." : "Couldn't upvote right now.", true);
+    if (upBtn) upBtn.disabled = false;
+    if (downBtn) downBtn.disabled = false;
+    const msg = r.error === "own_project" ? "You can't vote on your own project."
+      : r.error === "already_upvoted" || r.error === "already_downvoted" ? "You've already voted on this project."
+      : `Couldn't ${dir}vote right now.`;
+    Pixl.toast(msg, true);
   }
   return false;
 };
@@ -363,7 +384,7 @@ async function showProject(id) {
           ${p.level ? `<span class="chip">LEVEL ${p.level}</span>` : ""}
         </div>
         <div class="muted" style="font-size:14px">by ${owner ? `<a href="#player=${Pixl.esc(owner.id)}">${Pixl.esc(owner.display_name)}</a>` : "?"} · started ${Pixl.timeAgo(p.created_at)}${p.shipped_at ? ` · shipped ${Pixl.timeAgo(p.shipped_at)}` : ""}</div>
-        <div style="margin-top:12px">${upvoteBtn({ id: p.id, upvotes: data.upvotes, has_upvoted: data.has_upvoted })}</div>
+        <div class="vote-group" style="margin-top:12px">${upvoteBtn({ id: p.id, upvotes: data.upvotes, has_upvoted: data.has_upvoted, has_downvoted: data.has_downvoted })}${downvoteBtn({ id: p.id, downvotes: data.downvotes, has_upvoted: data.has_upvoted, has_downvoted: data.has_downvoted })}</div>
       </div>
     </div>
     ${p.description ? `<div class="jbody md" style="margin-top:16px;font-size:16px">${Pixl.markdown(p.description)}</div>` : ""}
