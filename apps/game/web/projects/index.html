@@ -83,6 +83,58 @@
         margin: 26px 0 16px;
         letter-spacing: 1px;
       }
+      .invite-box {
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .invite-box-head {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 200px;
+      }
+      .invite-box-title {
+        font-family: var(--pixel, var(--sans));
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        color: var(--gold);
+      }
+      .invite-box-sub {
+        font-family: var(--sans);
+        font-size: 13px;
+        color: var(--faint);
+      }
+      .invite-box-row {
+        display: flex;
+        gap: 10px;
+        margin-left: auto;
+        flex-wrap: wrap;
+      }
+      .invite-box-row .field {
+        max-width: 180px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      @media (max-width: 560px) {
+        .invite-box {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .invite-box-row {
+          margin-left: 0;
+        }
+        .invite-box-row .field {
+          max-width: none;
+          flex: 1;
+        }
+      }
       .proj-thumb {
         height: 140px;
         border: 1px solid var(--stroke);
@@ -1654,10 +1706,15 @@
         const slot = $("join-code-slot");
         if (!slot) return;
         slot.innerHTML = `
-    <div class="card panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <span class="faint" style="font-size:13px">Got an invite code?</span>
-      <input class="field" id="join-code-input" placeholder="e.g. BLUE-FOX" style="max-width:160px;text-transform:uppercase" autocomplete="off">
-      <button class="btn ghost" id="join-code-btn">JOIN</button>
+    <div class="invite-box">
+      <div class="invite-box-head">
+        <span class="invite-box-title">GOT AN INVITE CODE?</span>
+        <span class="invite-box-sub">Join a friend's project as a collaborator.</span>
+      </div>
+      <div class="invite-box-row">
+        <input class="field" id="join-code-input" placeholder="E.G. BLUE-FOX" autocomplete="off">
+        <button class="btn" id="join-code-btn">JOIN</button>
+      </div>
     </div>`;
         const input = $("join-code-input");
         $("join-code-btn").addEventListener("click", async () => {
