@@ -90,9 +90,6 @@ input[type="checkbox"],input[type="radio"],select,.level-btn,.md-btn,
 
 body{
   background-color:var(--panel-deep);
-  /* golden dawn glow across the top of every page — fixed, fades into the wood */
-  background-image:linear-gradient(180deg,rgba(244,185,66,.35),rgba(200,140,40,.14) 13%,transparent 28%);
-  background-repeat:no-repeat;background-attachment:fixed;
   color:var(--ink);
   font-family:var(--sans);line-height:1.5;overflow-y:scroll;
   transition:color .15s ease;
@@ -105,9 +102,6 @@ body::before{
     linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
   background-size:30px 30px;
   opacity:.5;
-}
-:root[data-theme="light"] body{
-  background-image:linear-gradient(180deg,rgba(120,180,240,.4),rgba(120,170,230,.14) 13%,transparent 28%);
 }
 :root[data-theme="light"] body::before{
   background-image:
