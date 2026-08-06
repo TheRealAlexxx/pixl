@@ -2705,6 +2705,30 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 11
 text = "Press E to cross the bridge"
 
+[node name="DoorTrigger4" type="Area2D" parent="." unique_id=990011226]
+z_index = 13
+position = Vector2(260, 50)
+collision_mask = 2
+script = ExtResource("44_ci1yp")
+target = "lobbies"
+sign_name = "LOBBIES"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger4" unique_id=990011227]
+position = Vector2(2, 6)
+shape = SubResource("RectangleShape2D_05nbr")
+
+[node name="Label" type="Label" parent="DoorTrigger4" unique_id=990011228]
+visible = false
+offset_left = -38.0
+offset_top = -32.0
+offset_right = 46.0
+offset_bottom = -9.0
+theme_override_colors/font_color = Color(0.77315557, 0.55160576, 0.26933688, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+text = "Press E to open lobbies"
+
 [node name="PlayerSpawn" type="Marker2D" parent="." unique_id=332008319]
 position = Vector2(60, -81)
 
