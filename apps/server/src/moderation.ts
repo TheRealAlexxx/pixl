@@ -279,7 +279,8 @@ export async function recordChatViolation(
   const { count } = await supabase
     .from("violations")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("kind", "chat");
   const n = count ?? 0;
 
   if (n >= BAN_AFTER) {
@@ -297,6 +298,7 @@ export async function recordChatViolation(
         .from("violations")
         .select("content")
         .eq("user_id", userId)
+        .eq("kind", "chat")
         .order("created_at", { ascending: false })
         .limit(5);
       const list =
