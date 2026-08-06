@@ -20,66 +20,6 @@
       }
       .back-link:hover { color: var(--teal); }
 
-      /* keeper strip (compact, mirrors the shop hero) */
-      .keeper-strip {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 18px;
-        padding: 14px 18px;
-      }
-      .keeper-slot {
-        width: 72px;
-        height: 72px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        background: var(--panel-deep);
-        border: 1px solid var(--stroke);
-        border-radius: 3px;
-        overflow: hidden;
-        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
-      }
-      .keeper {
-        width: 32px;
-        height: 32px;
-        background: url("/img/gabin_char.png") no-repeat 0 -64px;
-        transform: scale(2.4);
-        transform-origin: bottom center;
-        image-rendering: pixelated;
-        animation: keeper-bob 1.6s steps(2) infinite;
-      }
-      @keyframes keeper-bob {
-        0%, 100% { transform: scale(2.4) translateY(0); }
-        50% { transform: scale(2.4) translateY(-0.6px); }
-      }
-      .bubble {
-        position: relative;
-        background: var(--panel-deep);
-        color: var(--ink);
-        border: 1px solid var(--teal);
-        border-radius: 3px;
-        padding: 11px 15px;
-        font-family: var(--pixel);
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-      }
-      .bubble::after {
-        content: "";
-        position: absolute;
-        left: -6px;
-        top: 16px;
-        width: 9px;
-        height: 9px;
-        background: var(--panel-deep);
-        border-left: 1px solid var(--teal);
-        border-bottom: 1px solid var(--teal);
-        transform: rotate(45deg);
-      }
-
       /* ── item detail ── */
       .detail-card { padding: 22px 24px 24px; }
       #detail-img {
@@ -186,6 +126,8 @@
         font-weight: 700;
         text-align: center;
         font-size: 14px;
+        appearance: textfield;
+        -moz-appearance: textfield;
       }
       .qty-stepper input::-webkit-outer-spin-button,
       .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -246,11 +188,6 @@
       </div>
 
       <div id="detail" hidden>
-        <div class="keeper-strip hud">
-          <div class="keeper-slot"><div class="keeper" id="keeper"></div></div>
-          <div class="bubble" id="bubble">TAKE YOUR TIME.</div>
-        </div>
-
         <section class="hud detail-card">
           <div class="detail-row">
             <div id="detail-img"></div>
@@ -493,21 +430,10 @@
         return `<img src="${Pixl.esc(url)}" alt="" onerror="this.outerHTML='<span class=ph></span>'">`;
       }
 
-      let bubbleTimer = null;
-      function say(text, hold = 4000) {
-        $("bubble").textContent = text;
-        clearTimeout(bubbleTimer);
-        if (hold)
-          bubbleTimer = setTimeout(() => {
-            $("bubble").textContent = "TAKE YOUR TIME.";
-          }, hold);
-      }
-      function nudgeKeeper() {
-        const k = $("keeper");
-        k.style.animation = "none";
-        void k.offsetWidth;
-        k.style.animation = "";
-      }
+      // The shopkeeper mascot/speech-bubble strip was removed from this page;
+      // these stay as no-ops so the many existing call sites don't need editing.
+      function say() {}
+      function nudgeKeeper() {}
 
       function renderDetail() {
         $("detail-img").innerHTML = imgHtml(selected);
