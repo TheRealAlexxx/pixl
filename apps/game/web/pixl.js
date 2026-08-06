@@ -149,24 +149,43 @@ const Pixl = (() => {
     return json.url;
   }
 
-  const PAGES = [
-    ["docs", "DOCS"],
-    ["shop", "SHOP"],
-    ["orders", "ORDERS"],
-    ["refers", "REFERS"],
-    ["collectibles", "COLLECT"],
-    // VAULT and QUESTS are hidden from the dash for now — not ready for players.
-    // Re-enable when they are.
-    // ["vault", "VAULT"],
-    ["explore", "EXPLORE"],
-    ["ideas", "IDEAS"],
-    // ["quests", "QUESTS"],
-    // STORY (The Chronicle) is disabled in the dash for now — the storyline is
-    // surfaced through community goals instead. Re-enable when it's ready.
-    // ["timeline", "STORY"],
-    ["projects", "PROJECTS"],
-    ["report", "REPORT"],
-    ["account", "ACCOUNT"],
+  // Grouped into little labeled shelves instead of one flat list — reads more
+  // like a game menu ("PLAY" / "ECONOMY" / "YOU") than a nav dump. Mobile
+  // collapses the groups back into one row (see .nav-group in pixl.css).
+  const NAV_GROUPS = [
+    {
+      label: "PLAY",
+      items: [
+        ["docs", "DOCS"],
+        ["explore", "EXPLORE"],
+        ["ideas", "IDEAS"],
+        // VAULT and QUESTS are hidden from the dash for now — not ready for
+        // players. Re-enable when they are.
+        // ["vault", "VAULT"],
+        // ["quests", "QUESTS"],
+        // STORY (The Chronicle) is disabled in the dash for now — the
+        // storyline is surfaced through community goals instead. Re-enable
+        // when it's ready.
+        // ["timeline", "STORY"],
+        ["projects", "PROJECTS"],
+      ],
+    },
+    {
+      label: "ECONOMY",
+      items: [
+        ["shop", "SHOP"],
+        ["orders", "ORDERS"],
+        ["collectibles", "COLLECT"],
+        ["refers", "REFERS"],
+      ],
+    },
+    {
+      label: "YOU",
+      items: [
+        ["report", "REPORT"],
+        ["account", "ACCOUNT"],
+      ],
+    },
   ];
 
   // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
@@ -191,8 +210,17 @@ const Pixl = (() => {
   const MOON_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="3" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="2" y="6" width="5" height="1"/><rect x="2" y="7" width="5" height="1"/><rect x="2" y="8" width="5" height="1"/><rect x="2" y="9" width="6" height="1"/><rect x="2" y="10" width="8" height="1"/><rect x="3" y="11" width="10" height="1"/><rect x="4" y="12" width="8" height="1"/><rect x="5" y="13" width="6" height="1"/></svg>`;
 
   function mountTopbar(active) {
-    const nav = PAGES.map(([slug, label]) =>
-      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${ICONS[slug] || ""}<span>${label}</span></a>`,
+    const nav = NAV_GROUPS.map(
+      (group) => `
+        <div class="nav-group">
+          <div class="nav-label">${group.label}</div>
+          ${group.items
+            .map(
+              ([slug, label]) =>
+                `<a href="/${slug}/" class="${slug === active ? "active" : ""}"><span class="ic">${ICONS[slug] || ""}</span><span>${label}</span></a>`,
+            )
+            .join("")}
+        </div>`,
     ).join("");
     // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
     // rail: no wallet, no tour replay, and the CTA invites them into the game.
@@ -212,12 +240,12 @@ const Pixl = (() => {
           ${themeBtn}`
       : `<a class="btn" href="${GAME}">ENTER THE GAME</a>${themeBtn}`;
     const foot = token
-      ? `<a class="btn dark" href="${GAME}">◄ BACK TO GAME</a>`
+      ? `<a class="btn dark back-to-game" href="${GAME}"><span class="arrow">◄</span> BACK TO GAME</a>`
       : `<a class="btn" href="${GAME}">ENTER GAME</a>`;
     document.body.classList.add("has-sidebar");
     document.body.insertAdjacentHTML("afterbegin", `
       <aside class="sidebar">
-        <a class="sb-logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt=""><span>PI<span>XL</span></span></a>
+        <a class="sb-logo" href="${GAME}" title="Back to the game"><span class="sb-logo-glow"></span><img src="/index.icon.png" alt=""><span>PI<span>XL</span></span></a>
         <nav class="nav">${nav}</nav>
         <div class="sb-foot">${foot}</div>
       </aside>

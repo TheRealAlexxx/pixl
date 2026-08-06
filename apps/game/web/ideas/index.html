@@ -12,7 +12,8 @@
   }
   .hero .page-sub { margin-bottom: 4px; color: var(--teal); }
   .compose { padding: 18px 20px; margin-bottom: 22px; display: flex; flex-direction: column; gap: 10px; }
-  .compose textarea.field { min-height: 90px; resize: vertical; }
+  .compose .field { font-size: 16.5px; line-height: 1.5; }
+  .compose textarea.field { min-height: 46px; max-height: 280px; resize: none; overflow-y: auto; transition: height .1s ease; }
   .compose-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   .compose-foot .count { font-size: 12.5px; color: var(--faint); }
   .tabs { display: flex; gap: 6px; margin: 0 0 18px; flex-wrap: wrap; }
@@ -29,7 +30,8 @@
   .tab.active { background: var(--gold); color: var(--btn-ink); border-color: var(--gold); }
   .searchbar { display: flex; gap: 10px; margin-bottom: 18px; }
   .searchbar input { flex: 1; }
-  .idea-list { display: flex; flex-direction: column; gap: 10px; max-width: 780px; }
+  .idea-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .idea-list { grid-template-columns: 1fr; } }
   .idea-card { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
   .idea-meta { font-size: 13px; color: var(--faint); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   .idea-title { font-size: 18px; color: var(--ink); }
@@ -179,6 +181,14 @@ const countEl = document.getElementById("i-count");
 const postBtn = document.getElementById("i-post");
 titleInput.addEventListener("input", () => { countEl.textContent = `${titleInput.value.length}/120`; });
 
+// Grows with the text up to max-height (280px, set in CSS), then scrolls —
+// stays roomy without letting one huge idea take over the page.
+function autoGrow() {
+  bodyInput.style.height = "auto";
+  bodyInput.style.height = bodyInput.scrollHeight + "px";
+}
+bodyInput.addEventListener("input", autoGrow);
+
 postBtn.addEventListener("click", async () => {
   const title = titleInput.value.trim();
   if (title.length < 3) return Pixl.toast("Give it a title (3+ characters).", true);
@@ -188,6 +198,7 @@ postBtn.addEventListener("click", async () => {
   if (r.ok) {
     titleInput.value = "";
     bodyInput.value = "";
+    bodyInput.style.height = "";
     countEl.textContent = "0/120";
     load();
   } else {
