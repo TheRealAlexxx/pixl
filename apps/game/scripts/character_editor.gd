@@ -28,7 +28,16 @@ var _top := 1
 var _bottom := 1
 var _preset := 1
 
+# Main menu & pause menu keep the original Monocraft face; the rest of the game
+# moved its default menu font to Pixelify Sans (see commit b8b1360). This menu
+# is reached straight from the main menu, so it keeps Monocraft too.
+const OLD_MENU_FONT := preload("res://assets/fonts/Monocraft.ttf")
+
 func _ready() -> void:
+	# Duplicate first so we don't mutate the shared theme resource other menus use.
+	theme = theme.duplicate(true)
+	theme.default_font = OLD_MENU_FONT
+
 	for part in _steppers:
 		var row: Control = _steppers[part]
 		var maxv: int = _maxes[part]
