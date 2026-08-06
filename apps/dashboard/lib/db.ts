@@ -627,12 +627,17 @@ export async function revokeProjectPixels(
   return Number(data) || 0;
 }
 
-// Net pixels a project has been credited so far (for delta display).
-export async function projectPixelTotal(projectId: number): Promise<number> {
+// Net pixels one beneficiary has been credited on a project so far (for delta
+// display). Scoped by user_id, not just project_id — a collaborative project
+// can have several independent beneficiaries, and credit_project_pixels
+// (0081_project_collaborators.sql) scopes its own "already credited" lookup
+// the same way.
+export async function projectPixelTotal(projectId: number, userId: string): Promise<number> {
   const { data, error } = await db
     .from("pixel_transactions")
     .select("amount")
     .eq("project_id", projectId)
+    .eq("user_id", userId)
     .in("reason", ["project_approved", "review_reverted"]);
   if (error) {
     console.error("projectPixelTotal", error.message);
@@ -1990,6 +1995,58 @@ export interface JournalRow {
   content: string;
   hours: number;
   created_at: string;
+}
+
+export interface CollaboratorRow {
+  id: number;
+  project_id: number;
+  user_id: string;
+  invited_by: string;
+  status: string;
+  hackatime_projects: string[];
+  hackatime_seconds: number | null;
+  approved_hours: number | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id"> | null;
+}
+
+// Accepted (and, for the reviewer's own visibility, pending) collaborators on
+// one project — the owner in `projects.user_id` is never included here.
+export async function listCollaboratorsForProject(projectId: number): Promise<CollaboratorRow[]> {
+  const { data, error } = await db
+    .from("project_collaborators")
+    .select("*, users(id, display_name, real_name, slack_id)")
+    .eq("project_id", projectId)
+    .in("status", ["pending", "accepted"])
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listCollaboratorsForProject", error.message);
+    return [];
+  }
+  return (data ?? []) as CollaboratorRow[];
+}
+
+// Bulk lookup for list views — only accepted collaborators (what's actually
+// worth showing next to the owner in a table row).
+export async function collaboratorsByProject(
+  projectIds: number[],
+): Promise<Map<number, CollaboratorRow[]>> {
+  const map = new Map<number, CollaboratorRow[]>();
+  if (projectIds.length === 0) return map;
+  const { data, error } = await db
+    .from("project_collaborators")
+    .select("*, users(id, display_name, real_name, slack_id)")
+    .in("project_id", projectIds)
+    .eq("status", "accepted");
+  if (error) {
+    console.error("collaboratorsByProject", error.message);
+    return map;
+  }
+  for (const row of (data ?? []) as CollaboratorRow[]) {
+    const list = map.get(row.project_id) ?? [];
+    list.push(row);
+    map.set(row.project_id, list);
+  }
+  return map;
 }
 
 export async function getProject(id: number) {

@@ -385,6 +385,153 @@ async function notifyOwner(
   await dmOrEmail(userId, title, body);
 }
 
+// Same "hackatime if tracked, else journal" source as claimedHoursFor(), but
+// scoped to one collaborator's own journal entries and their own tracked
+// Hackatime seconds (project_collaborators.hackatime_seconds), not the
+// project as a whole.
+async function claimedHoursForCollaborator(
+  projectId: number,
+  userId: string,
+  hackatimeSeconds: number | null,
+): Promise<number> {
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("hours")
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+  const journalHours =
+    Math.round((journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const hackatimeHours = Math.round(((hackatimeSeconds || 0) / 3600) * 10) / 10;
+  return hackatimeHours > 0 ? hackatimeHours : journalHours;
+}
+
+async function acceptedCollaboratorUserIds(projectId: number): Promise<string[]> {
+  const { data } = await db
+    .from("project_collaborators")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("status", "accepted");
+  return (data ?? []).map((r) => r.user_id as string);
+}
+
+interface BeneficiaryPayout {
+  totalPx: number;
+  deltaPx: number;
+  pxRate: number;
+  xpBefore: number;
+  goalNote: string;
+  referralNote: string;
+  alreadyPx: number;
+}
+
+// Credits one beneficiary (the project owner, or an accepted collaborator)
+// at their own rate tier for their own share of credited hours. This is what
+// "split payout" means for a collaborative project — each person is treated
+// like an independent earner (own lifetime-hours rate, own referral boost),
+// just for their own hours slice instead of the whole project.
+async function creditBeneficiary(
+  userId: string,
+  projectId: number,
+  projectType: string,
+  creditHours: number,
+  shippedAt: string | null,
+  by: string,
+): Promise<BeneficiaryPayout> {
+  let goalMult = 1;
+  let goalNote = "";
+  if (shippedAt) {
+    const { data: goals } = await db
+      .from("events")
+      .select("*")
+      .eq("type", "community_goal")
+      .is("stopped_at", null)
+      .lte("starts_at", shippedAt)
+      .gt("ends_at", shippedAt);
+    for (const g of (goals ?? []) as DashEventRow[]) {
+      const target = Number(g.config.target) || 0;
+      const bonusPct = Number(g.config.bonusPct) || 0;
+      const wantType = String(g.config.projectType ?? "");
+      if (wantType && wantType !== projectType) continue;
+      if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
+        goalMult *= 1 + bonusPct / 100;
+        goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
+      }
+    }
+  }
+
+  const xpBefore = await lifetimeApprovedHours(userId, projectId);
+  let pxRate = pxPerHourFor(xpBefore);
+  const alreadyPx = await projectPixelTotal(projectId, userId);
+  // A project only counts as a "new ship" for referral purposes the first
+  // time it earns any pixels , re-approvals of an already-credited project
+  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
+  const isNewShip = alreadyPx === 0;
+  const { data: referral } = isNewShip
+    ? await db
+        .from("referrals")
+        .select("id, referrer_id, rewarded_at, boosted_ships")
+        .eq("referred_id", userId)
+        .maybeSingle()
+    : { data: null };
+
+  let referralNote = "";
+  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
+    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
+    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
+    await db
+      .from("referrals")
+      .update({ boosted_ships: referral.boosted_ships + 1 })
+      .eq("id", referral.id);
+  }
+
+  const totalPx = Math.round(creditHours * pxRate * goalMult);
+  const deltaPx = totalPx - alreadyPx;
+  await creditProjectPixels(userId, projectId, totalPx, creditHours, by);
+
+  // Referrer payout: pays once per referral, on the first qualifying ship.
+  if (referral && !referral.rewarded_at) {
+    const tier = referralTierFor(creditHours);
+    if (tier) {
+      await db
+        .from("referrals")
+        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
+        .eq("id", referral.id);
+      await db.rpc("adjust_user_pixels", {
+        p_user_id: referral.referrer_id,
+        p_amount: tier.px,
+        p_reason: "referral_reward",
+        p_created_by: by,
+      });
+      await db.from("notifications").insert({
+        user_id: referral.referrer_id,
+        title: "Referral reward!",
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
+      });
+
+      const { count: rewardedCount } = await db
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_id", referral.referrer_id)
+        .not("rewarded_at", "is", null);
+      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
+        await db.rpc("adjust_user_pixels", {
+          p_user_id: referral.referrer_id,
+          p_amount: REFERRAL_MILESTONE_PX,
+          p_reason: "referral_milestone",
+          p_created_by: by,
+        });
+        await db.from("notifications").insert({
+          user_id: referral.referrer_id,
+          title: "Referral milestone!",
+          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
+        });
+      }
+    }
+  }
+
+  return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx };
+}
+
 // Two-pass review. A shipped project always gets a first pass from *some*
 // reviewer , even a final reviewer's first look on a fresh 'shipped' project is
 // only a proposal, same as anyone else's. It moves to 'second_review' and needs
@@ -565,6 +712,13 @@ export async function reviewProject(formData: FormData): Promise<void> {
       "Changes requested",
       `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
     );
+    for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+      await notifyOwner(
+        collaboratorId,
+        "Changes requested",
+        `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}`,
+      );
+    }
     await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
     const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
@@ -598,6 +752,10 @@ export async function reviewProject(formData: FormData): Promise<void> {
     const banBody = `Your project "${project.name}" was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
     await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
     await dmOrEmail(project.user_id, "Project banned", banBody);
+    for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+      await db.from("notifications").insert({ user_id: collaboratorId, title: "Project banned", body: banBody });
+      await dmOrEmail(collaboratorId, "Project banned", banBody);
+    }
     await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
     const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
@@ -645,99 +803,15 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * the player's level rate *
-  // any community-goal bonus); the DB function only adds the delta vs what
-  // earlier approvals already paid out.
-  let goalMult = 1;
-  let goalNote = "";
-  if (current.shipped_at) {
-    const { data: goals } = await db
-      .from("events")
-      .select("*")
-      .eq("type", "community_goal")
-      .is("stopped_at", null)
-      .lte("starts_at", current.shipped_at)
-      .gt("ends_at", current.shipped_at);
-    for (const g of (goals ?? []) as DashEventRow[]) {
-      const target = Number(g.config.target) || 0;
-      const bonusPct = Number(g.config.bonusPct) || 0;
-      const wantType = String(g.config.projectType ?? "");
-      if (wantType && wantType !== project.project_type) continue;
-      if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
-        goalMult *= 1 + bonusPct / 100;
-        goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
-      }
-    }
-  }
-  const xpBefore = await lifetimeApprovedHours(project.user_id, projectId);
-  let pxRate = pxPerHourFor(xpBefore);
-  const alreadyPx = await projectPixelTotal(project.id);
-  // A project only counts as a "new ship" for referral purposes the first
-  // time it earns any pixels , re-approvals of an already-credited project
-  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
-  const isNewShip = alreadyPx === 0;
-  const { data: referral } = isNewShip
-    ? await db
-        .from("referrals")
-        .select("id, referrer_id, rewarded_at, boosted_ships")
-        .eq("referred_id", project.user_id)
-        .maybeSingle()
-    : { data: null };
-
-  let referralNote = "";
-  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
-    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
-    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
-    await db
-      .from("referrals")
-      .update({ boosted_ships: referral.boosted_ships + 1 })
-      .eq("id", referral.id);
-  }
-
-  const totalPx = Math.round(creditHours * pxRate * goalMult);
-  const deltaPx = totalPx - alreadyPx;
-  await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
-
-  // Referrer payout: pays once per referral, on the first qualifying ship.
-  if (referral && !referral.rewarded_at) {
-    const tier = referralTierFor(creditHours);
-    if (tier) {
-      await db
-        .from("referrals")
-        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
-        .eq("id", referral.id);
-      await db.rpc("adjust_user_pixels", {
-        p_user_id: referral.referrer_id,
-        p_amount: tier.px,
-        p_reason: "referral_reward",
-        p_created_by: by,
-      });
-      await db.from("notifications").insert({
-        user_id: referral.referrer_id,
-        title: "Referral reward!",
-        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
-      });
-
-      const { count: rewardedCount } = await db
-        .from("referrals")
-        .select("id", { count: "exact", head: true })
-        .eq("referrer_id", referral.referrer_id)
-        .not("rewarded_at", "is", null);
-      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
-        await db.rpc("adjust_user_pixels", {
-          p_user_id: referral.referrer_id,
-          p_amount: REFERRAL_MILESTONE_PX,
-          p_reason: "referral_milestone",
-          p_created_by: by,
-        });
-        await db.from("notifications").insert({
-          user_id: referral.referrer_id,
-          title: "Referral milestone!",
-          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
-        });
-      }
-    }
-  }
+  const ownerPayout = await creditBeneficiary(
+    project.user_id,
+    project.id,
+    project.project_type,
+    creditHours,
+    current.shipped_at,
+    by,
+  );
+  const { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx } = ownerPayout;
 
   let credited: string;
   if (alreadyPx > 0 && deltaPx > 0) {
@@ -754,6 +828,48 @@ export async function reviewProject(formData: FormData): Promise<void> {
     credited += ` Your rate: ${pxRate} px/h ($${(pxRate * 0.07).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
   if (referralNote && deltaPx > 0) credited += referralNote;
+
+  // Split payout: every accepted collaborator is credited independently at
+  // their own rate tier for their own submitted hours slice (capped at what
+  // they actually tracked — see claimedHoursForCollaborator).
+  const { data: collabRows } = await db
+    .from("project_collaborators")
+    .select("id, user_id, hackatime_seconds")
+    .eq("project_id", projectId)
+    .eq("status", "accepted");
+  for (const c of (collabRows ?? []) as { id: number; user_id: string; hackatime_seconds: number | null }[]) {
+    const cClaimedHours = await claimedHoursForCollaborator(projectId, c.user_id, c.hackatime_seconds);
+    const rawHours = Number(String(formData.get(`collabHours_${c.id}`) ?? cClaimedHours));
+    const cCreditHours = Number.isFinite(rawHours)
+      ? Math.min(cClaimedHours, Math.max(0, Math.round(rawHours * 10) / 10))
+      : cClaimedHours;
+    await db.from("project_collaborators").update({ approved_hours: cCreditHours }).eq("id", c.id);
+    const cPayout = await creditBeneficiary(
+      c.user_id,
+      project.id,
+      project.project_type,
+      cCreditHours,
+      current.shipped_at,
+      by,
+    );
+    let cCredited: string;
+    if (cPayout.alreadyPx > 0 && cPayout.deltaPx > 0) {
+      cCredited = `\n\n+${cPayout.deltaPx} pixels for what's new (${cPayout.totalPx} pixels total for this project , ${cCreditHours}h approved).`;
+    } else if (cPayout.alreadyPx > 0 && cPayout.deltaPx <= 0) {
+      cCredited = `\n\nNo new pixels this time , you already earned ${cPayout.alreadyPx} pixels on this project.`;
+    } else {
+      cCredited = `\n\n${cPayout.totalPx} pixels credited for ${cCreditHours}h approved.`;
+    }
+    if (cPayout.deltaPx > 0)
+      cCredited += ` Your rate: ${cPayout.pxRate} px/h ($${(cPayout.pxRate * 0.07).toFixed(2)}/hr).`;
+    if (cPayout.goalNote && cPayout.deltaPx > 0) cCredited += cPayout.goalNote;
+    if (cPayout.referralNote && cPayout.deltaPx > 0) cCredited += cPayout.referralNote;
+    await notifyOwner(
+      c.user_id,
+      "Project approved!",
+      `"${project.name}" passed review , approved by ${reviewer}. Congrats on shipping!${cCredited}`,
+    );
+  }
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
   // only for projects shipped inside the bounty window.
@@ -917,8 +1033,20 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   const claimedHours = await claimedHoursFor(projectId);
 
   // The verdict is void, so the payout is too , claw back every pixel this
-  // project was credited and leave the reversal in the ledger.
-  const revoked = await revokeProjectPixels(project.user_id, project.id, by);
+  // project was credited and leave the reversal in the ledger. Collaborators
+  // were credited independently, so each gets their own clawback too.
+  let revoked = await revokeProjectPixels(project.user_id, project.id, by);
+  for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+    const collabRevoked = await revokeProjectPixels(collaboratorId, project.id, by);
+    revoked += collabRevoked;
+    if (collabRevoked > 0) {
+      await db.from("notifications").insert({
+        user_id: collaboratorId,
+        title: "Project back in review",
+        body: `"${project.name}" is getting another look from the review team. The ${collabRevoked} pixels it earned you are on hold until the new verdict.`,
+      });
+    }
+  }
 
   await logModAction(
     project.user_id,

@@ -7,6 +7,7 @@ import {
   listSecondReviewProjects,
   claimReview,
   turnedNineteenSinceShipping,
+  listCollaboratorsForProject,
 } from "@/lib/db";
 import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor, fetchHackatimeReport } from "@/lib/hackatime";
@@ -101,6 +102,26 @@ export default async function ReviewDetail({
   const hackatimeHours = Math.round(((p.hackatime_seconds ?? 0) / 3600) * 10) / 10;
   const hours = Math.round((hackatimeHours + journalHours) * 10) / 10;
   const htPct = hours > 0 ? Math.round((hackatimeHours / hours) * 100) : 0;
+
+  // Same "hackatime if tracked, else journal" source-of-truth as
+  // claimedHoursFor() in actions.ts uses for the owner — kept consistent so
+  // the cap shown here matches what reviewProject actually enforces.
+  const allCollaborators = await listCollaboratorsForProject(projectId);
+  const acceptedCollaborators = allCollaborators.filter((c) => c.status === "accepted");
+  const collaboratorHours = acceptedCollaborators.map((c) => {
+    const cJournalHours =
+      Math.round(
+        journals
+          .filter((j) => j.user_id === c.user_id)
+          .reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
+      ) / 10;
+    const cHackatimeHours = Math.round(((c.hackatime_seconds ?? 0) / 3600) * 10) / 10;
+    return {
+      id: c.id,
+      name: c.users?.real_name || c.users?.display_name || c.users?.slack_id || c.user_id,
+      claimedHours: cHackatimeHours > 0 ? cHackatimeHours : cJournalHours,
+    };
+  });
 
   const formDefaultHours =
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
@@ -311,6 +332,14 @@ export default async function ReviewDetail({
                 )}
               </div>
             </div>
+            {acceptedCollaborators.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                with{" "}
+                {acceptedCollaborators
+                  .map((c) => c.users?.real_name || c.users?.display_name || c.users?.slack_id || c.user_id)
+                  .join(", ")}
+              </div>
+            )}
             {p.repo_url && (
               <Button asChild variant="secondary" size="sm">
                 <a href={p.repo_url} target="_blank" rel="noreferrer">
@@ -484,6 +513,7 @@ export default async function ReviewDetail({
                     hackatimeProjects={hackatimeProjects}
                     hackatimeSeconds={p.hackatime_seconds ?? 0}
                     ageFlag={ageFlag}
+                    collaborators={collaboratorHours}
                   />
                 </Card>
 

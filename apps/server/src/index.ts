@@ -19,6 +19,7 @@ import storyRouter from "./routes/story.js";
 import villageRouter from "./routes/village.js";
 import upvotesRouter from "./routes/upvotes.js";
 import referralRouter from "./routes/referral.js";
+import collaboratorsRouter from "./routes/collaborators.js";
 import { rateLimit } from "./rateLimit.js";
 import { attachWebSocketServer } from "./ws/gameServer.js";
 
@@ -64,6 +65,7 @@ app.use(storyRouter);
 app.use(villageRouter);
 app.use(upvotesRouter);
 app.use(referralRouter);
+app.use(collaboratorsRouter);
 
 app.get("/", (_req, res) => res.json({ name: "pixl-server", status: "ok" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));

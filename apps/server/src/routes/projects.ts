@@ -26,13 +26,14 @@ const PROJECT_TYPES = [
   "other",
 ];
 
-// List the logged-in user's projects, newest first.
+// List the logged-in user's projects, newest first — their own plus any
+// they're an accepted collaborator on (view/log-hours only, not editable).
 router.get("/api/projects", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;
   if (!session) return res.status(401).json({ ok: false });
 
-  const { data, error } = await supabase
+  const { data: owned, error } = await supabase
     .from("projects")
     .select("*")
     .eq("user_id", session.userId)
@@ -42,7 +43,29 @@ router.get("/api/projects", async (req, res) => {
     console.error("[projects] list failed", error);
     return res.status(500).json({ ok: false });
   }
-  const projects = data ?? [];
+
+  const { data: collabRows } = await supabase
+    .from("project_collaborators")
+    .select("project_id")
+    .eq("user_id", session.userId)
+    .eq("status", "accepted");
+  const collabProjectIds = (collabRows ?? []).map((r) => r.project_id as number);
+  let collaborating: Record<string, unknown>[] = [];
+  if (collabProjectIds.length > 0) {
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .in("id", collabProjectIds)
+      .is("archived_at", null);
+    collaborating = data ?? [];
+  }
+
+  const projects = [
+    ...(owned ?? []).map((p) => ({ ...p, is_owner: true })),
+    ...collaborating.map((p) => ({ ...p, is_owner: false })),
+  ].sort(
+    (a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime(),
+  );
   const ids = projects.map((p) => p.id as number);
   const earned = new Map<number, number>();
   if (ids.length > 0) {
@@ -372,6 +395,39 @@ router.post("/api/projects/:id/ship", async (req, res) => {
   if (trackedSeconds < 3600)
     return res.status(400).json({ ok: false, error: "hackatime_hours_required" });
 
+  // Refresh each accepted collaborator's own tracked hours (their own
+  // Hackatime account, filtered by the projects *they* linked) so review-time
+  // crediting has up-to-date numbers per person. Purely informational — it
+  // never gates whether this ship goes through.
+  const { data: collaborators } = await supabase
+    .from("project_collaborators")
+    .select("id, user_id, hackatime_projects")
+    .eq("project_id", id)
+    .eq("status", "accepted");
+  if (collaborators && collaborators.length > 0) {
+    const collaboratorIds = collaborators.map((c) => c.user_id as string);
+    const { data: collabUsers } = await supabase
+      .from("users")
+      .select("id, hackatime_token")
+      .in("id", collaboratorIds);
+    const tokenFor = new Map(
+      (collabUsers ?? []).map((u) => [u.id as string, u.hackatime_token as string | null]),
+    );
+    await Promise.all(
+      collaborators.map(async (c) => {
+        const collabStats = await fetchHackatimeStats(tokenFor.get(c.user_id as string) ?? null);
+        const collabLinked = new Set((c.hackatime_projects as string[]) ?? []);
+        const collabSeconds = collabStats.projects
+          .filter((p) => collabLinked.has(p.name))
+          .reduce((sum, p) => sum + p.seconds, 0);
+        await supabase
+          .from("project_collaborators")
+          .update({ hackatime_seconds: collabSeconds })
+          .eq("id", c.id);
+      }),
+    );
+  }
+
   const isUpdate = project.status === "approved" && !project.rejected_at;
   const updateNotes = String(req.body?.updateNotes ?? "").trim().slice(0, 2000);
   if (isUpdate && !updateNotes)
@@ -512,7 +568,10 @@ router.post("/api/projects/:id/unship", async (req, res) => {
   res.json({ ok: true, project: data });
 });
 
-async function ownsProject(userId: string, projectId: number): Promise<boolean> {
+// True for the project's owner, or an accepted collaborator (view/log-hours
+// only — journal and timeline reads/writes are gated on this; edit/ship/
+// unship/delete stay owner-only via their own direct .eq("user_id", ...)).
+async function canAccessProject(userId: string, projectId: number): Promise<boolean> {
   const { data, error } = await supabase
     .from("projects")
     .select("id")
@@ -523,10 +582,20 @@ async function ownsProject(userId: string, projectId: number): Promise<boolean> 
     console.error("[projects] ownership check failed", error);
     return false;
   }
-  return data !== null;
+  if (data !== null) return true;
+
+  const { data: collab } = await supabase
+    .from("project_collaborators")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .eq("status", "accepted")
+    .maybeSingle();
+  return collab !== null;
 }
 
-// List journal entries for one of the user's own projects, newest first.
+// List journal entries for a project the caller owns or collaborates on,
+// newest first.
 router.get("/api/projects/:id/journal", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;
@@ -534,7 +603,7 @@ router.get("/api/projects/:id/journal", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const { data, error } = await supabase
@@ -559,7 +628,7 @@ router.get("/api/projects/:id/timeline", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const [{ data: proj }, { data: audits }] = await Promise.all([
@@ -599,7 +668,7 @@ router.post("/api/projects/:id/journal", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const content = String(req.body?.content ?? "").trim().slice(0, 5000);

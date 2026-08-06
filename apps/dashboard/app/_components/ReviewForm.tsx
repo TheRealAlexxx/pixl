@@ -66,6 +66,33 @@ export interface TrialInfo {
   minHours: number | null;
 }
 
+export interface CollaboratorHours {
+  id: number;
+  name: string;
+  claimedHours: number;
+}
+
+function CollaboratorHoursInput({ c }: { c: CollaboratorHours }) {
+  const [value, setValue] = useState(c.claimedHours);
+  return (
+    <Label className="flex items-center justify-between gap-2 font-normal text-muted-foreground">
+      {c.name}&apos;s hours to credit (decrease only)
+      <Input
+        name={`collabHours_${c.id}`}
+        type="number"
+        step="0.1"
+        min="0"
+        max={c.claimedHours}
+        value={value}
+        onChange={(e) =>
+          setValue(Math.min(c.claimedHours, Math.max(0, Number(e.target.value) || 0)))
+        }
+        className="w-28 text-sm"
+      />
+    </Label>
+  );
+}
+
 export function ReviewForm({
   projectId,
   repoUrl,
@@ -78,6 +105,7 @@ export function ReviewForm({
   hackatimeProjects = [],
   hackatimeSeconds = 0,
   ageFlag = false,
+  collaborators = [],
 }: {
   projectId: number;
   repoUrl: string | null;
@@ -90,6 +118,7 @@ export function ReviewForm({
   hackatimeProjects?: string[];
   hackatimeSeconds?: number;
   ageFlag?: boolean;
+  collaborators?: CollaboratorHours[];
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -194,6 +223,9 @@ export function ReviewForm({
           className="w-28 text-sm"
         />
       </Label>
+      {collaborators.map((c) => (
+        <CollaboratorHoursInput key={c.id} c={c} />
+      ))}
       {trial?.minHours != null && (
         <div
           className={`text-xs font-medium ${

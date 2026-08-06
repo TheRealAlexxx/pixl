@@ -744,6 +744,7 @@
       </section>
 
       <div id="ht-slot"></div>
+      <div id="invites-slot"></div>
       <div class="spin" id="loading"></div>
       <div id="view"></div>
     </main>
@@ -1193,6 +1194,9 @@
           return;
         }
         $("new-btn").style.display = "none";
+        // Collaborators are view/log-hours only — they get a trimmed read-only
+        // page instead of the owner's full editor.
+        if (p.is_owner === false) return renderCollabProjectView(p);
         const [label, cls] = statusInfo(p);
         const secs = linkedSeconds(p);
         const inReview = p.status === "shipped" || p.status === "second_review";
@@ -1214,6 +1218,9 @@
       ${p.rejected_at ? `<div class="note-strip" style="margin-bottom:14px">REJECTED${p.reject_reason ? ": " + Pixl.esc(p.reject_reason) : ""} — fix it up and ship again.</div>` : ""}
       ${inReview ? "" : trialBriefHtml(trialForProject(p))}
       ${formHtml(p)}
+
+      <div class="section-h">COLLABORATORS</div>
+      <div id="collab-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
 
       <div class="section-h">SHIP IT</div>
       ${!hasBirthday ? `<div class="note-strip"><a href="/account">Add your birthday</a> for Hack Club compliance — takes 10 seconds.</div>` : ""}
@@ -1349,6 +1356,271 @@
         updateJournalHint();
         autoGrow($("j-content"));
         loadJournal(p.id);
+        renderCollaborators(p);
+      }
+
+      /* ---------- collaborators ---------- */
+
+      async function renderCollaborators(p) {
+        const slot = $("collab-slot");
+        if (!slot) return;
+        let data;
+        try {
+          data = await Pixl.api(`/api/projects/${p.id}/collaborators`);
+        } catch {
+          slot.innerHTML = `<div class="faint" style="font-size:13px">Couldn't load collaborators.</div>`;
+          return;
+        }
+        const collabs = data.collaborators || [];
+        const isOwner = data.isOwner;
+        slot.innerHTML = `
+      ${
+        collabs.length
+          ? collabs
+              .map(
+                (c) => `
+        <div class="check-row" style="justify-content:space-between">
+          <span>${Pixl.esc(c.name)} ${c.status === "pending" ? '<span class="chip muted">INVITED</span>' : '<span class="chip status-approved">JOINED</span>'}</span>
+          ${isOwner ? `<button class="btn ghost" data-remove-collab="${c.id}">REMOVE</button>` : ""}
+        </div>`,
+              )
+              .join("")
+          : `<div class="faint" style="font-size:13px">No collaborators yet — view/log-hours only, they can't edit or ship this project.</div>`
+      }
+      ${
+        isOwner
+          ? `
+      <div style="position:relative;margin-top:10px">
+        <input class="field" id="collab-search" placeholder="Invite by name…" style="max-width:260px" autocomplete="off">
+        <div id="collab-results" class="panel" style="position:absolute;top:38px;left:0;z-index:5;display:none;max-width:260px;width:100%"></div>
+      </div>`
+          : ""
+      }`;
+        slot.querySelectorAll("[data-remove-collab]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            if (!(await Pixl.confirm({ title: "Remove this collaborator?", confirmText: "Remove", danger: true })))
+              return;
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.removeCollab}/remove`);
+            if (r.ok) {
+              Pixl.toast("Collaborator removed.");
+              renderCollaborators(p);
+            } else Pixl.toast("Couldn't remove them — try again.", true);
+          }),
+        );
+        const search = $("collab-search");
+        const results = $("collab-results");
+        if (!search) return;
+        let searchTimer;
+        search.addEventListener("input", () => {
+          clearTimeout(searchTimer);
+          const q = search.value.trim();
+          if (q.length < 2) {
+            results.style.display = "none";
+            return;
+          }
+          searchTimer = setTimeout(async () => {
+            let players = [];
+            try {
+              const d = await Pixl.api(`/api/players/search?q=${encodeURIComponent(q)}`);
+              players = d.players || [];
+            } catch {}
+            results.style.display = players.length ? "block" : "none";
+            results.innerHTML = players
+              .map((pl) => `<div class="check-row" data-invite="${pl.userId}" style="cursor:pointer">${Pixl.esc(pl.name)}</div>`)
+              .join("");
+            results.querySelectorAll("[data-invite]").forEach((row) =>
+              row.addEventListener("click", async () => {
+                const r = await Pixl.send("POST", `/api/projects/${p.id}/collaborators/invite`, {
+                  userId: row.dataset.invite,
+                });
+                search.value = "";
+                results.style.display = "none";
+                if (r.ok) {
+                  Pixl.toast("Invite sent!");
+                  renderCollaborators(p);
+                } else Pixl.toast(r.reason || "Couldn't send that invite — try again.", true);
+              }),
+            );
+          }, 250);
+        });
+      }
+
+      // Read-only view for a project the viewer collaborates on but doesn't
+      // own — they can journal their own hours and link their own Hackatime
+      // projects, but can't edit fields, ship, or delete.
+      async function renderCollabProjectView(p) {
+        const view = $("view");
+        const [label, cls] = statusInfo(p);
+        view.innerHTML = `
+    <a class="btn dark back-btn" href="#">← ALL PROJECTS</a>
+    <div class="editor">
+      <div class="section-h" style="margin-top:0;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        ${Pixl.esc(p.name)}
+        <span class="chip ${cls}">${label}</span>
+        <span class="chip muted">COLLABORATOR</span>
+      </div>
+      ${p.image_url ? `<div class="proj-thumb" style="height:200px;margin-bottom:14px"><img src="${Pixl.esc(p.image_url)}" alt=""></div>` : ""}
+      ${p.description ? `<p style="margin-bottom:14px">${Pixl.esc(p.description)}</p>` : ""}
+      <div class="proj-meta" style="margin-bottom:18px">
+        ${p.repo_url ? `<a class="btn ghost" href="${Pixl.esc(p.repo_url)}" target="_blank" rel="noreferrer">REPO</a>` : ""}
+        ${p.demo_url ? `<a class="btn ghost" href="${Pixl.esc(p.demo_url)}" target="_blank" rel="noreferrer">DEMO</a>` : ""}
+      </div>
+
+      <div class="section-h">COLLABORATORS</div>
+      <div id="collab-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
+
+      <div class="section-h">MY HACKATIME</div>
+      <div id="my-ht-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
+
+      <div class="section-h">JOURNAL</div>
+      <div class="composer panel">
+        <div class="md-editor">
+          <div class="md-bar" id="j-mdbar">
+            <button type="button" class="md-btn" data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="md-btn" data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+            <span class="md-sep"></span>
+            <button type="button" class="md-btn" data-md="h" title="Heading">H</button>
+            <button type="button" class="md-btn" data-md="ul" title="Bullet list">•</button>
+            <button type="button" class="md-btn" data-md="quote" title="Quote">&ldquo;</button>
+            <button type="button" class="md-btn" data-md="code" title="Code">&lt;/&gt;</button>
+            <button type="button" class="md-btn" data-md="link" title="Link">LINK</button>
+            <button type="button" class="md-btn" data-md="image" title="Add image">IMAGE</button>
+            <span class="md-sep"></span>
+            <button type="button" class="md-btn" data-md="preview" id="j-preview-btn" title="Toggle preview">PREVIEW</button>
+          </div>
+          <textarea class="field" id="j-content" maxlength="5000" placeholder="What did you build today? Markdown supported."></textarea>
+          <div class="md-preview" id="j-preview" hidden></div>
+        </div>
+        <input type="file" id="j-img-file" accept="image/png,image/jpeg,image/webp" hidden>
+        <div class="composer-foot">
+          <span class="faint" style="font-size:12px">hours:</span>
+          <input class="field" id="j-hours" type="number" min="0" max="100" step="0.5" value="0">
+          <span class="j-hint faint" id="j-hint"></span>
+          <button class="btn" id="j-post">POST ENTRY</button>
+        </div>
+      </div>
+      <div id="j-list" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"><div class="spin"></div></div>
+    </div>`;
+
+        initMdBar();
+        $("j-img-file").addEventListener("change", async () => {
+          const f = $("j-img-file").files[0];
+          if (!f) return;
+          Pixl.toast("Uploading image…");
+          try {
+            const url = await Pixl.upload(f);
+            $("j-content").value += ($("j-content").value ? "\n" : "") + `![](${url})`;
+            autoGrow($("j-content"));
+            Pixl.toast("Image attached!");
+          } catch (e) {
+            Pixl.toast(err(e.message), true);
+          }
+        });
+        $("j-post").addEventListener("click", () => postJournal(p.id));
+        $("j-content").addEventListener("input", updateJournalHint);
+        $("j-content").addEventListener("input", () => autoGrow($("j-content")));
+        $("j-hours").addEventListener("input", updateJournalHint);
+        updateJournalHint();
+        autoGrow($("j-content"));
+        loadJournal(p.id);
+        renderCollaborators(p);
+        renderMyHackatime(p);
+      }
+
+      // The viewer's own Hackatime projects, checked against whatever they've
+      // already linked on their own project_collaborators row (separate from
+      // the owner's hackatime_projects list).
+      async function renderMyHackatime(p) {
+        const slot = $("my-ht-slot");
+        if (!slot) return;
+        let collabRow;
+        try {
+          const d = await Pixl.api(`/api/projects/${p.id}/collaborators`);
+          collabRow = (d.collaborators || []).find((c) => c.isSelf);
+        } catch {}
+        if (!collabRow) {
+          slot.innerHTML = `<div class="faint" style="font-size:13px">Couldn't load your collaborator info.</div>`;
+          return;
+        }
+        if (!stats || !stats.connected) {
+          slot.innerHTML = `
+        <div class="faint" style="font-size:13px">Hackatime isn't connected — <a href="${Pixl.apiUrl("/hackatime/connect")}" target="_blank" rel="noopener">connect it</a> to track your own hours on this project.</div>`;
+          return;
+        }
+        const linked = new Set(collabRow.hackatimeProjects || []);
+        slot.innerHTML = `
+      <div class="faint" style="font-size:13px;margin-bottom:8px">Tick the Hackatime projects that are YOUR work on this project.</div>
+      ${[...stats.projects]
+        .sort((a, b) => b.seconds - a.seconds)
+        .map(
+          (h) => `
+        <label class="check-row">
+          <input type="checkbox" name="my-ht" value="${Pixl.esc(h.name)}" ${linked.has(h.name) ? "checked" : ""}>
+          ${Pixl.esc(h.name)} <span class="teal">${Pixl.hours(h.seconds)}</span>
+        </label>`,
+        )
+        .join("")}
+      <button class="btn" id="my-ht-save" style="margin-top:8px">SAVE</button>`;
+        $("my-ht-save").addEventListener("click", async () => {
+          const checked = [...document.querySelectorAll('input[name="my-ht"]:checked')].map(
+            (c) => c.value,
+          );
+          const r = await Pixl.send("PUT", `/api/collaborators/${collabRow.id}/hackatime`, {
+            hackatimeProjects: checked,
+          });
+          Pixl.toast(r.ok ? "Saved!" : "Couldn't save — try again.", !r.ok);
+        });
+      }
+
+      async function loadPendingInvites() {
+        const slot = $("invites-slot");
+        if (!slot) return;
+        let invites = [];
+        try {
+          const d = await Pixl.api("/api/collaborations/pending");
+          invites = d.invites || [];
+        } catch {
+          slot.innerHTML = "";
+          return;
+        }
+        if (!invites.length) {
+          slot.innerHTML = "";
+          return;
+        }
+        slot.innerHTML = `
+    <div class="section-h" style="margin-top:0">COLLABORATION INVITES</div>
+    ${invites
+      .map(
+        (inv) => `
+      <div class="card panel" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <span>${Pixl.esc(inv.invitedBy)} invited you to collaborate on <b>${Pixl.esc(inv.projectName)}</b></span>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn" data-accept="${inv.id}">ACCEPT</button>
+          <button class="btn ghost" data-decline="${inv.id}">DECLINE</button>
+        </span>
+      </div>`,
+      )
+      .join("")}`;
+        slot.querySelectorAll("[data-accept]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.accept}/accept`);
+            if (r.ok) {
+              Pixl.toast("Joined the project!");
+              await loadProjects();
+              await loadPendingInvites();
+              route();
+            } else Pixl.toast("Couldn't accept — try again.", true);
+          }),
+        );
+        slot.querySelectorAll("[data-decline]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.decline}/decline`);
+            if (r.ok) {
+              Pixl.toast("Invite declined.");
+              loadPendingInvites();
+            } else Pixl.toast("Couldn't decline — try again.", true);
+          }),
+        );
       }
 
       function journalNeed(hours) {
@@ -1808,6 +2080,7 @@
         }
         $("loading").remove();
         renderHt();
+        loadPendingInvites();
         route();
       }
       window.addEventListener("hashchange", route);
