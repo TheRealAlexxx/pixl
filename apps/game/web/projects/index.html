@@ -876,6 +876,8 @@
 
       // Seconds from the Hackatime boxes currently ticked in the editor (which
       // may not be saved yet), so ship-readiness reflects what the player sees.
+      // Uses secondsSinceCutoff when the server has computed it so this matches
+      // what actually counts toward shipping (only time after Aug 10).
       function checkedHtSeconds() {
         if (!stats || !stats.connected) return 0;
         const checked = new Set(
@@ -885,7 +887,7 @@
         );
         return stats.projects
           .filter((h) => checked.has(h.name))
-          .reduce((s, h) => s + h.seconds, 0);
+          .reduce((s, h) => s + (h.secondsSinceCutoff ?? h.seconds), 0);
       }
 
       /* ---------- hackatime strip ---------- */
@@ -1033,8 +1035,8 @@
                 .sort((a, b) => b.seconds - a.seconds)
                 .map(
                   (h) => `
-        <label><input type="checkbox" name="ht" value="${Pixl.esc(h.name)}" ${linked.has(h.name) ? "checked" : ""}>
-        ${Pixl.esc(h.name)}<span class="h">${Pixl.hours(h.seconds)}</span></label>`,
+        <label${h.beforeCutoff ? ` title="Only time coded after Aug 10 counts toward shipping — this project has older activity mixed in."` : ""}><input type="checkbox" name="ht" value="${Pixl.esc(h.name)}" data-before-cutoff="${h.beforeCutoff ? "1" : ""}" ${linked.has(h.name) ? "checked" : ""}>
+        ${Pixl.esc(h.name)}<span class="h">${Pixl.hours(h.seconds)}</span>${h.beforeCutoff ? `<span class="faint" style="font-size:11px"> ⚠ only time after Aug 10 counts</span>` : ""}</label>`,
                 )
                 .join("")
             : `<span class="faint" style="font-size:13px">Connect Hackatime above to link coding time.</span>`;
@@ -1374,6 +1376,11 @@
         // before any save.
         document.querySelectorAll('input[name="ht"]').forEach((box) =>
           box.addEventListener("change", () => {
+            if (box.checked && box.dataset.beforeCutoff === "1") {
+              Pixl.toast(
+                `"${box.value}" has coding time from before Aug 10 — only time tracked after Aug 10 will count toward shipping.`,
+              );
+            }
             const el = $("ship-ht");
             if (!el) return;
             const secs = checkedHtSeconds();

@@ -5,7 +5,7 @@ import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { addNotification } from "./notifications.js";
 import { findInYswsArchive } from "../shipsArchive.js";
-import { fetchHackatimeStats } from "../hackatime/api.js";
+import { fetchHackatimeStats, fetchTrackedSecondsSince } from "../hackatime/api.js";
 
 const router = Router();
 
@@ -380,18 +380,20 @@ router.post("/api/projects/:id/ship", async (req, res) => {
 
   const { data: userRow } = await supabase
     .from("users")
-    .select("hackatime_token")
+    .select("hackatime_token, slack_id")
     .eq("id", session.userId)
     .single();
-  const stats = await fetchHackatimeStats(
-    (userRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
-  );
+  const htToken = (userRow as { hackatime_token?: string } | null)?.hackatime_token ?? null;
+  const stats = await fetchHackatimeStats(htToken);
   if (!stats.connected && stats.error)
     return res.status(502).json({ ok: false, error: "hackatime_unavailable" });
-  const linked = new Set((project.hackatime_projects as string[]) ?? []);
-  const trackedSeconds = stats.projects
-    .filter((p) => linked.has(p.name))
-    .reduce((sum, p) => sum + p.seconds, 0);
+  const linked = (project.hackatime_projects as string[]) ?? [];
+  // Only hours logged from Aug 10 onward count — see HACKATIME_CUTOFF.
+  const trackedSeconds = await fetchTrackedSecondsSince(
+    (userRow as { slack_id?: string } | null)?.slack_id ?? null,
+    htToken,
+    linked,
+  );
   if (trackedSeconds < 3600)
     return res.status(400).json({ ok: false, error: "hackatime_hours_required" });
 
@@ -408,18 +410,22 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     const collaboratorIds = collaborators.map((c) => c.user_id as string);
     const { data: collabUsers } = await supabase
       .from("users")
-      .select("id, hackatime_token")
+      .select("id, hackatime_token, slack_id")
       .in("id", collaboratorIds);
     const tokenFor = new Map(
       (collabUsers ?? []).map((u) => [u.id as string, u.hackatime_token as string | null]),
     );
+    const slackFor = new Map(
+      (collabUsers ?? []).map((u) => [u.id as string, u.slack_id as string | null]),
+    );
     await Promise.all(
       collaborators.map(async (c) => {
-        const collabStats = await fetchHackatimeStats(tokenFor.get(c.user_id as string) ?? null);
-        const collabLinked = new Set((c.hackatime_projects as string[]) ?? []);
-        const collabSeconds = collabStats.projects
-          .filter((p) => collabLinked.has(p.name))
-          .reduce((sum, p) => sum + p.seconds, 0);
+        const collabLinked = (c.hackatime_projects as string[]) ?? [];
+        const collabSeconds = await fetchTrackedSecondsSince(
+          slackFor.get(c.user_id as string) ?? null,
+          tokenFor.get(c.user_id as string) ?? null,
+          collabLinked,
+        );
         await supabase
           .from("project_collaborators")
           .update({ hackatime_seconds: collabSeconds })
