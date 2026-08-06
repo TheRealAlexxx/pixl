@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { supabase, type UserRow } from "../db/client.js";
 import { issueSessionToken } from "../auth/session.js";
 import { activeBan } from "../moderation.js";
-import { fetchSlackAvatar } from "../slackAvatar.js";
+import { fetchSlackAvatar, fetchSlackDisplayName } from "../slackAvatar.js";
 
 const router = Router();
 
@@ -175,10 +175,17 @@ router.get("/auth/hackclub/callback", async (req, res) => {
 
   const me = (await meRes.json()) as HackClubMeResponse;
   const identity = me.identity;
-  const fullName = [identity.first_name, identity.last_name]
+  let fullName = [identity.first_name, identity.last_name]
     .filter(Boolean)
     .join(" ")
     .trim();
+  // HCA doesn't always have a name on file (younger/incomplete accounts) ,
+  // fall back to Slack's own directory before resorting to a generated
+  // placeholder, since every player is a real Slack workspace member.
+  if (!fullName && identity.slack_id) {
+    const slackName = await fetchSlackDisplayName(identity.slack_id);
+    if (slackName) fullName = slackName;
+  }
   const displayNameFromHca =
     fullName ||
     identity.primary_email ||
