@@ -7,6 +7,7 @@ import { PendingButton } from "@/app/_components/PendingButton";
 import { Disclosure } from "@/app/_components/Disclosure";
 import { OptionsEditor } from "@/app/_components/OptionsEditor";
 import { AddShopItemForm } from "@/app/_components/AddShopItemForm";
+import { BulkUploadShopItemsForm } from "@/app/_components/BulkUploadShopItemsForm";
 import { parseOptionGroups } from "@/lib/shopOptions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -128,6 +129,9 @@ export default async function ShopPage({
       <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-4">Add an item to {SHOP_REGION_LABELS[region]}</div>
         <AddShopItemForm action={addShopItem} region={region} />
+        <Disclosure summary="Bulk upload from CSV" className="mt-5">
+          <BulkUploadShopItemsForm region={region} />
+        </Disclosure>
       </Card>
 
       <div>

@@ -1930,13 +1930,13 @@ export async function kickPlayer(formData: FormData): Promise<void> {
 // which made shop pages painfully slow to load. Capping at 900×900 (a 3x
 // retina margin) and re-encoding to WebP keeps every upload small regardless
 // of what was submitted.
-async function uploadShopImage(file: File): Promise<string> {
+async function uploadShopImageBuffer(raw: Buffer): Promise<string> {
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
   const { default: sharp } = await import("sharp");
-  const body = await sharp(Buffer.from(await file.arrayBuffer()))
+  const body = await sharp(raw)
     .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
@@ -1965,6 +1965,16 @@ async function uploadShopImage(file: File): Promise<string> {
   }
   if (!res.ok) throw new Error(`image upload failed (${res.status})`);
   return `${base}/storage/v1/object/public/shop/${name}`;
+}
+
+async function uploadShopImage(file: File): Promise<string> {
+  return uploadShopImageBuffer(Buffer.from(await file.arrayBuffer()));
+}
+
+async function uploadShopImageFromUrl(url: string): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`image fetch failed (${res.status})`);
+  return uploadShopImageBuffer(Buffer.from(await res.arrayBuffer()));
 }
 
 function readRegion(raw: string): ShopRegion {
@@ -2071,6 +2081,101 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   const { error } = await db.from("shop_items").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/shop");
+}
+
+export interface ShopCsvRow {
+  key: string; // stable per-row id assigned client-side, echoed back so results line up
+  name: string;
+  price: number;
+  region: ShopRegion;
+  description: string;
+  options: string;
+  imageUrl: string;
+  unlockXp: number;
+}
+
+// Bulk-upload preview step: tell the client which rows already have a
+// same-name-and-region item in the shop, so it can ask the admin to
+// replace or skip each one before anything is written.
+export async function checkShopItemsConflicts(
+  rows: ShopCsvRow[],
+): Promise<Record<string, { id: number; price: number; description: string }>> {
+  await requireSuper();
+  const names = [...new Set(rows.map((r) => r.name).filter(Boolean))];
+  if (names.length === 0) return {};
+  const { data, error } = await db
+    .from("shop_items")
+    .select("id, name, region, price, description")
+    .in("name", names);
+  if (error) throw new Error(error.message);
+  const byKey: Record<string, { id: number; price: number; description: string }> = {};
+  for (const row of data ?? []) {
+    byKey[`${row.name}|${row.region}`] = {
+      id: row.id,
+      price: row.price,
+      description: row.description,
+    };
+  }
+  const out: Record<string, { id: number; price: number; description: string }> = {};
+  for (const r of rows) {
+    const hit = byKey[`${r.name}|${r.region}`];
+    if (hit) out[r.key] = hit;
+  }
+  return out;
+}
+
+// Bulk-upload commit step. `resolutions[row.key]` is "replace" or "skip" for
+// rows that checkShopItemsConflicts flagged as already existing; rows with no
+// conflict are always inserted.
+export async function commitShopItemsCsv(
+  rows: ShopCsvRow[],
+  conflicts: Record<string, number>, // key -> existing shop_items.id
+  resolutions: Record<string, "replace" | "skip">,
+): Promise<{ added: number; replaced: number; skipped: number; errors: string[] }> {
+  const access = await requireSuper();
+  let added = 0;
+  let replaced = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  for (const row of rows) {
+    const name = row.name.trim().slice(0, 60);
+    if (!name) continue;
+    const existingId = conflicts[row.key];
+    if (existingId && resolutions[row.key] !== "replace") {
+      skipped++;
+      continue;
+    }
+    let imageUrl = "";
+    if (row.imageUrl.trim()) {
+      try {
+        imageUrl = await uploadShopImageFromUrl(row.imageUrl.trim());
+      } catch (e) {
+        errors.push(`${name}: ${e instanceof Error ? e.message : "image fetch failed"}`);
+      }
+    }
+    const patch: Record<string, unknown> = {
+      name,
+      description: row.description.trim().slice(0, 300),
+      price: Math.max(0, Math.round(row.price || 0)),
+      options: readOptions(row.options),
+      region: readRegion(row.region),
+      unlock_xp: Math.max(0, Math.round(row.unlockXp || 0)),
+    };
+    if (imageUrl) patch.image_url = imageUrl;
+    if (existingId) {
+      const { error } = await db.from("shop_items").update(patch).eq("id", existingId);
+      if (error) errors.push(`${name}: ${error.message}`);
+      else replaced++;
+    } else {
+      const { error } = await db
+        .from("shop_items")
+        .insert({ ...patch, image_url: imageUrl, created_by: actorName(access) });
+      if (error) errors.push(`${name}: ${error.message}`);
+      else added++;
+    }
+  }
+  revalidatePath("/shop");
+  return { added, replaced, skipped, errors };
 }
 
 // Claim an unclaimed (pending) order: the fulfiller has placed the real order
