@@ -18,6 +18,11 @@ import {
   removeHelper,
   addFulfiller,
   removeFulfiller,
+  addModerator,
+  removeModerator,
+  insertBanProposal,
+  getBanProposal,
+  decideBanProposal,
   nextReviewId,
   EVENT_TYPES,
   REFERRAL_BOOST_PX_PER_HOUR,
@@ -39,6 +44,8 @@ import {
   requireSuper,
   requireReportViewer,
   requireFulfiller,
+  requireModerator,
+  requireWarnAccess,
   ownerSlackIds,
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
@@ -132,8 +139,7 @@ async function isOwnProject(access: AdminAccess, userId: string): Promise<boolea
 }
 
 export async function warnPlayer(formData: FormData): Promise<void> {
-  const access = await requirePerm("warn");
-  const by = actorName(access);
+  const by = await requireWarnAccess();
   const userId = String(formData.get("userId") ?? "");
   const message = String(formData.get("message") ?? "").trim() || DEFAULT_WARNING;
   if (!userId) return;
@@ -1464,6 +1470,71 @@ export async function banPlayer(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+// Moderators can't ban directly , they propose one, and an admin/owner with
+// the "ban" permission confirms or rejects it (see confirmBanProposal /
+// rejectBanProposal below).
+export async function proposeBan(formData: FormData): Promise<void> {
+  const session = await requireModerator();
+  const by = `${session.name} (${session.slackId})`;
+  const userId = String(formData.get("userId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const hours = Number(formData.get("hours") ?? 0);
+  if (!userId || !reason) return;
+  await insertBanProposal(userId, reason, hours, by);
+  await logModAction(userId, "ban_proposed", hours > 0 ? `${hours}h , ${reason}` : `permanent , ${reason}`, by);
+  revalidatePath("/reports");
+  revalidatePath("/bans");
+}
+
+export async function confirmBanProposal(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const proposal = await getBanProposal(id);
+  if (!proposal || proposal.status !== "pending") return;
+
+  const expiresAt =
+    proposal.hours > 0 ? new Date(Date.now() + proposal.hours * 3600_000).toISOString() : null;
+  const { data: inserted, error } = await db
+    .from("bans")
+    .insert({ user_id: proposal.user_id, reason: proposal.reason, banned_by: by, expires_at: expiresAt })
+    .select("id")
+    .single();
+  if (error || !inserted) throw new Error(error?.message ?? "ban insert failed");
+
+  await decideBanProposal(id, "confirmed", by, inserted.id as number);
+  await logModAction(
+    proposal.user_id,
+    "ban",
+    `${expiresAt ? `${proposal.hours}h` : "permanent"} , ${proposal.reason} (proposed by ${proposal.proposed_by})`,
+    by,
+  );
+
+  const lines = [
+    expiresAt
+      ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
+      : "You've been permanently banned from Pixl.",
+  ];
+  if (proposal.reason) lines.push(`Reason: ${proposal.reason}`);
+  lines.push("If you believe this is a mistake, reach out to the Pixl team.");
+  await dmOrEmail(proposal.user_id, "Banned from Pixl", lines.join("\n\n"));
+  revalidatePath("/", "layout");
+  revalidatePath("/bans");
+}
+
+export async function rejectBanProposal(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const proposal = await getBanProposal(id);
+  if (!proposal || proposal.status !== "pending") return;
+  await decideBanProposal(id, "rejected", by);
+  await logModAction(proposal.user_id, "ban_rejected", `proposed by ${proposal.proposed_by}`, by);
+  revalidatePath("/bans");
+}
+
 export async function liftBan(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);
@@ -1971,6 +2042,26 @@ export async function removeFulfillerAction(formData: FormData): Promise<void> {
   if (!slackId) return;
   await removeFulfiller(slackId);
   revalidatePath("/fulfillment");
+}
+
+// Moderators are an owner-managed allow-list (see lib/guard.ts) , granted
+// from the Reports page since seeing reports is the core of the role.
+export async function addModeratorAction(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim().toUpperCase();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!/^[UW][A-Z0-9]{6,}$/.test(slackId))
+    redirect(`/reports?verror=${encodeURIComponent("Enter a valid Slack member ID (starts with U).")}`);
+  await addModerator(slackId, name, actorName(access));
+  revalidatePath("/reports");
+}
+
+export async function removeModeratorAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await removeModerator(slackId);
+  revalidatePath("/reports");
 }
 
 export async function kickPlayer(formData: FormData): Promise<void> {

@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { requireReportViewer } from "@/lib/guard";
-import { listReports, listReportViewers } from "@/lib/db";
-import { addReportViewerAction, removeReportViewerAction } from "@/app/actions";
+import { requireReportViewer, getAccess } from "@/lib/guard";
+import { listReports, listReportViewers, listModerators } from "@/lib/db";
+import {
+  addReportViewerAction,
+  removeReportViewerAction,
+  addModeratorAction,
+  removeModeratorAction,
+} from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -32,8 +37,13 @@ export default async function ReportsPage({
 }) {
   const session = await requireReportViewer();
   const { status, verror } = await searchParams;
-  const all = await listReports(500);
-  const viewers = await listReportViewers();
+  const [all, viewers, moderators, access] = await Promise.all([
+    listReports(500),
+    listReportViewers(),
+    listModerators(),
+    getAccess(),
+  ]);
+  const isOwner = !!access?.isSuper;
 
   const REPEAT_THRESHOLD = 3;
   const targetCounts = new Map<string, number>();
@@ -174,6 +184,60 @@ export default async function ReportsPage({
           </form>
         </details>
       </div>
+
+      {isOwner && (
+        <div className="mt-3">
+          <details className="rounded-xl border border-border bg-card p-4">
+            <summary className="cursor-pointer text-sm font-semibold select-none">
+              Moderators ({moderators.length})
+            </summary>
+            <p className="text-xs text-muted-foreground mt-2 mb-3">
+              Moderators can see reports, warn players, and propose a ban , only an admin with the
+              &ldquo;ban&rdquo; permission can confirm a proposal (on the{" "}
+              <Link href="/bans" className="text-brand underline">
+                Bans
+              </Link>{" "}
+              page). They still need a sub-admin row (any permissions, even none) on the{" "}
+              <Link href="/admins" className="text-brand underline">
+                Sub-admins
+              </Link>{" "}
+              page to be able to sign in at all.
+            </p>
+            <div className="flex flex-col divide-y divide-border border border-border rounded-lg mb-3">
+              {moderators.map((m) => (
+                <div key={m.slack_id} className="flex items-center gap-3 px-3 py-2 text-sm">
+                  <span className="font-mono">{m.slack_id}</span>
+                  {m.name && <span className="text-muted-foreground">{m.name}</span>}
+                  <span className="text-xs text-muted-foreground">added by {m.added_by || "seed"}</span>
+                  <form action={removeModeratorAction} className="ml-auto">
+                    <input type="hidden" name="slackId" value={m.slack_id} />
+                    <PendingButton
+                      type="submit"
+                      size="sm"
+                      variant="ghost"
+                      pendingText="Removing…"
+                      confirm={`Remove ${m.name || m.slack_id} as a moderator?`}
+                      className="text-destructive"
+                    >
+                      Remove
+                    </PendingButton>
+                  </form>
+                </div>
+              ))}
+              {moderators.length === 0 && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">No moderators yet.</div>
+              )}
+            </div>
+            <form action={addModeratorAction} className="flex gap-2">
+              <Input name="slackId" placeholder="Slack member ID (U…)" className="text-sm font-mono max-w-40" />
+              <Input name="name" placeholder="Name (optional)" className="text-sm max-w-40" />
+              <PendingButton type="submit" size="sm" pendingText="Adding…">
+                Add moderator
+              </PendingButton>
+            </form>
+          </details>
+        </div>
+      )}
     </div>
   );
 }

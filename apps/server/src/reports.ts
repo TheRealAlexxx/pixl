@@ -56,14 +56,14 @@ export async function analyzeReport(
       .join("\n")
       .slice(0, 8000) || "(no recent messages)";
   const prompt = [
-    `You are a moderation assistant for a kids' game chat. A player was reported: "${targetName}".`,
-    `Reporter's reason: ${reason || "(none given)"}`,
+    `You are a moderation assistant for a kids' game chat. Another player filed a report against "${targetName}" (you were not told the reporter's identity, and don't need it).`,
+    `Reporter's stated reason for the report: ${reason || "(none given)"}`,
     ``,
-    `Here are ${targetName}'s recent chat messages:`,
+    `Here are ${targetName}'s own recent chat messages (the accused player, not the reporter):`,
     transcript,
     ``,
     `Assess whether ${targetName} was being mean, harassing, bullying, threatening, or otherwise breaking chat rules.`,
-    `Respond ONLY with strict JSON, no prose: {"score": <0-100 integer likelihood they were being mean>, "verdict": "<one of: clear, minor, concerning, severe>", "summary": "<1-2 sentences citing what you saw>"}.`,
+    `Respond ONLY with strict JSON, no prose: {"score": <0-100 integer likelihood they were being mean>, "verdict": "<one of: clear, minor, concerning, severe>", "summary": "<1-2 sentences, always refer to the accused player by name (${targetName}), never as just \\"the player\\", citing specifically what they said>"}.`,
   ].join("\n");
   try {
     const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {

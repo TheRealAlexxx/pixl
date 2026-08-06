@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireReportViewer, getAccess, canView } from "@/lib/guard";
+import { requireReportViewer, getAccess, canView, isModerator } from "@/lib/guard";
 import { getReport, listChatFor, reportCounts } from "@/lib/db";
 import { resolveReport } from "@/app/actions";
 import { slackHandle } from "@/lib/slack";
-import { BanForm, WarnForm } from "@/app/_components/Moderate";
+import { BanForm, ProposeBanForm, WarnForm } from "@/app/_components/Moderate";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -29,14 +29,16 @@ export default async function ReportDetailPage({
   const report = await getReport(Number(id));
   if (!report) notFound();
 
-  const [chat, access, targetHandle, counts] = await Promise.all([
+  const [chat, access, targetHandle, counts, moderator] = await Promise.all([
     listChatFor(report.target_id, 10),
     getAccess(),
     slackHandle(report.target_slack),
     reportCounts(report.target_id, report.reporter_id),
+    isModerator(),
   ]);
   const canBan = !!access && canView(access, ["ban"]);
-  const canWarn = !!access && canView(access, ["warn"]);
+  const canWarn = (!!access && canView(access, ["warn"])) || moderator;
+  const canProposeBan = !canBan && moderator;
 
   // Serial reporters get deanonymized to viewers; heavily-reported targets get
   // flagged for a closer look.
@@ -195,7 +197,7 @@ export default async function ReportDetailPage({
           )}
         </div>
 
-        {(canWarn || canBan) && (
+        {(canWarn || canBan || canProposeBan) && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <div className="text-xs text-muted-foreground">
               On the reported player (<span className="font-medium">{report.target_name}</span>)
@@ -203,11 +205,12 @@ export default async function ReportDetailPage({
             <div className="flex gap-3 flex-wrap items-center">
               {canWarn && <WarnForm userId={report.target_id} compact />}
               {canBan && <BanForm userId={report.target_id} compact />}
+              {canProposeBan && <ProposeBanForm userId={report.target_id} compact />}
             </div>
           </div>
         )}
 
-        {revealReporter && (canWarn || canBan) && (
+        {revealReporter && (canWarn || canBan || canProposeBan) && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <div className="text-xs text-muted-foreground">
               On the reporter (<span className="font-medium">{report.reporter_name}</span>) , for false or
@@ -216,6 +219,7 @@ export default async function ReportDetailPage({
             <div className="flex gap-3 flex-wrap items-center">
               {canWarn && <WarnForm userId={report.reporter_id} compact />}
               {canBan && <BanForm userId={report.reporter_id} compact />}
+              {canProposeBan && <ProposeBanForm userId={report.reporter_id} compact />}
             </div>
           </div>
         )}
@@ -225,9 +229,9 @@ export default async function ReportDetailPage({
             {report.handled_at ? ` · ${new Date(report.handled_at).toLocaleString()}` : ""}
           </div>
         )}
-        {!canBan && !canWarn && (
+        {!canBan && !canWarn && !canProposeBan && (
           <div className="text-xs text-muted-foreground">
-            You can resolve reports, but banning/warning needs admin permissions.
+            You can resolve reports, but banning/warning needs admin or moderator permissions.
           </div>
         )}
       </Card>

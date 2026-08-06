@@ -1477,6 +1477,51 @@ export async function removeReportViewer(slackId: string): Promise<void> {
   if (error) console.error("removeReportViewer", error.message);
 }
 
+// Moderators: a lighter-weight role than sub-admins. Listing here folds into
+// the report_viewers check (see lib/guard.ts isReportViewer) and lets someone
+// warn players directly, but they can only propose a ban , an admin/owner
+// with the "ban" permission confirms it. Same allow-list shape as
+// report_viewers/helpers/fulfillers.
+export interface ModeratorRow {
+  slack_id: string;
+  name: string;
+  added_by: string;
+  created_at: string;
+}
+
+export async function listModeratorIds(): Promise<string[]> {
+  const { data, error } = await db.from("moderators").select("slack_id");
+  if (error) {
+    console.error("listModeratorIds", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.slack_id as string);
+}
+
+export async function listModerators(): Promise<ModeratorRow[]> {
+  const { data, error } = await db
+    .from("moderators")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listModerators", error.message);
+    return [];
+  }
+  return (data ?? []) as ModeratorRow[];
+}
+
+export async function addModerator(slackId: string, name: string, by: string): Promise<void> {
+  const { error } = await db
+    .from("moderators")
+    .upsert({ slack_id: slackId, name, added_by: by }, { onConflict: "slack_id" });
+  if (error) console.error("addModerator", error.message);
+}
+
+export async function removeModerator(slackId: string): Promise<void> {
+  const { error } = await db.from("moderators").delete().eq("slack_id", slackId);
+  if (error) console.error("removeModerator", error.message);
+}
+
 // Helpers manage the support/ticket queue. Shared with the Pixorpheus bot,
 // which reads/writes the same `helpers` table (slack_user_id PK) via its
 // /pixl-addhelper etc. commands.
@@ -2141,6 +2186,73 @@ export async function listBans(): Promise<BanRow[]> {
     return [];
   }
   return (data ?? []) as BanRow[];
+}
+
+// Ban proposals: a moderator flags a player for a ban; an admin/owner with
+// the "ban" permission confirms (which creates the real `bans` row) or
+// rejects. See [[moderator-role]] , moderators can never ban directly.
+export interface BanProposalRow {
+  id: number;
+  user_id: string;
+  reason: string;
+  hours: number;
+  proposed_by: string;
+  status: "pending" | "confirmed" | "rejected";
+  decided_by: string | null;
+  decided_at: string | null;
+  ban_id: number | null;
+  created_at: string;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name"> | null;
+}
+
+export async function listBanProposals(status?: string): Promise<BanProposalRow[]> {
+  let q = db
+    .from("ban_proposals")
+    .select("*, users(id, display_name, real_name)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (status) q = q.eq("status", status);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listBanProposals", error.message);
+    return [];
+  }
+  return (data ?? []) as BanProposalRow[];
+}
+
+export async function getBanProposal(id: number): Promise<BanProposalRow | null> {
+  const { data, error } = await db
+    .from("ban_proposals")
+    .select("*, users(id, display_name, real_name)")
+    .eq("id", id)
+    .single();
+  if (error || !data) return null;
+  return data as BanProposalRow;
+}
+
+export async function insertBanProposal(
+  userId: string,
+  reason: string,
+  hours: number,
+  by: string,
+): Promise<void> {
+  const { error } = await db
+    .from("ban_proposals")
+    .insert({ user_id: userId, reason, hours, proposed_by: by });
+  if (error) console.error("insertBanProposal", error.message);
+}
+
+export async function decideBanProposal(
+  id: number,
+  status: "confirmed" | "rejected",
+  by: string,
+  banId?: number,
+): Promise<void> {
+  const { error } = await db
+    .from("ban_proposals")
+    .update({ status, decided_by: by, decided_at: new Date().toISOString(), ban_id: banId ?? null })
+    .eq("id", id);
+  if (error) console.error("decideBanProposal", error.message);
 }
 
 export async function listViolations(limit = 100): Promise<ViolationRow[]> {
