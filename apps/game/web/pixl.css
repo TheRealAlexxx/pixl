@@ -58,7 +58,7 @@ html{font-size:15px;-webkit-text-size-adjust:100%}
     calc(100% - var(--notch)) 0,calc(100% - var(--notch)) var(--notch),100% var(--notch),
     100% calc(100% - var(--notch)),calc(100% - var(--notch)) calc(100% - var(--notch)),calc(100% - var(--notch)) 100%,
     var(--notch) 100%,var(--notch) calc(100% - var(--notch)),0 calc(100% - var(--notch)));
-  --sidebar:212px;--toprail:54px;
+  --sidebar:260px;--toprail:54px;
 }
 
 /* Light mode — warm parchment in daylight. Cream/paper surfaces, darker gold
