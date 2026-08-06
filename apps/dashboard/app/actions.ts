@@ -1368,6 +1368,67 @@ export async function unbanProject(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+export async function banIdea(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const ideaId = Number(formData.get("ideaId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const returnTo = String(formData.get("returnTo") ?? "") || "/ideas";
+  if (!ideaId) return;
+  if (!reason)
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to ban an idea.")}`);
+
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
+
+  const { data: idea, error } = await db
+    .from("ideas")
+    .update({
+      banned_at: new Date().toISOString(),
+      ban_reason: reason,
+      ban_by: reviewer,
+    })
+    .eq("id", ideaId)
+    .select("id, title, user_id")
+    .single();
+  if (error || !idea) {
+    console.error("banIdea failed", error?.message);
+    return;
+  }
+  await logModAction(idea.user_id, "idea_banned", `${idea.title}: ${reason}`, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: idea.user_id,
+    title: "Idea removed",
+    body: `Your idea "${idea.title}" was removed by ${reviewer}.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`,
+  });
+  if (notifyError) console.error("idea ban notification failed", notifyError.message);
+  revalidatePath("/ideas");
+}
+
+export async function unbanIdea(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const ideaId = Number(formData.get("ideaId") ?? 0);
+  if (!ideaId) return;
+  const { data: idea, error } = await db
+    .from("ideas")
+    .update({ banned_at: null, ban_reason: "", ban_by: "" })
+    .eq("id", ideaId)
+    .select("id, title, user_id")
+    .single();
+  if (error || !idea) {
+    console.error("unbanIdea failed", error?.message);
+    return;
+  }
+  await logModAction(idea.user_id, "idea_unbanned", idea.title, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: idea.user_id,
+    title: "Idea restored",
+    body: `Your idea "${idea.title}" was restored. Sorry for the mix-up!`,
+  });
+  if (notifyError) console.error("idea unban notification failed", notifyError.message);
+  revalidatePath("/ideas");
+}
+
 export async function banPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);

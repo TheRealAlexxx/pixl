@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { banPlayer, liftBan, sendNotification, warnPlayer } from "@/app/actions";
+import { banIdea, banPlayer, liftBan, sendNotification, unbanIdea, warnPlayer } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -112,6 +112,32 @@ export function LiftBanForm({ userId }: { userId: string }) {
     <form action={liftBan}>
       <input type="hidden" name="userId" value={userId} />
       <SubmitBtn className="bg-mint text-ink hover:bg-mint/90">Lift ban</SubmitBtn>
+    </form>
+  );
+}
+
+export function IdeaBanForm({ ideaId }: { ideaId: number }) {
+  return (
+    <form action={banIdea} className="flex gap-2 items-center flex-wrap">
+      <input type="hidden" name="ideaId" value={ideaId} />
+      <input type="hidden" name="returnTo" value="/ideas" />
+      <Input
+        name="reason"
+        placeholder="Reason"
+        maxLength={1000}
+        className="text-sm w-40"
+        required
+      />
+      <SubmitBtn className="bg-rose-800 text-white hover:bg-rose-900">Remove</SubmitBtn>
+    </form>
+  );
+}
+
+export function IdeaUnbanForm({ ideaId }: { ideaId: number }) {
+  return (
+    <form action={unbanIdea}>
+      <input type="hidden" name="ideaId" value={ideaId} />
+      <SubmitBtn className="bg-mint text-ink hover:bg-mint/90">Restore</SubmitBtn>
     </form>
   );
 }

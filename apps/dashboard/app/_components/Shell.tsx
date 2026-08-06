@@ -26,6 +26,7 @@ export interface NavFlags {
   review: boolean;
   pixels: boolean;
   moderation: boolean;
+  ideas: boolean;
   reports: boolean;
   tickets: boolean;
   notify: boolean;
@@ -52,6 +53,7 @@ const GLYPHS = {
   reports: "message-exclamation",
   tickets: "support-fill",
   bans: "private",
+  ideas: "lightbulb-fill",
   notify: "bell",
   admins: "person-badge",
   reviewers: "checkmark",
@@ -205,6 +207,7 @@ export function Shell({
           show: nav.moderation,
         },
         { href: "/bans", label: "Bans", icon: "bans", show: nav.moderation },
+        { href: "/ideas", label: "Ideas", icon: "ideas", show: nav.ideas },
       ],
     },
     {

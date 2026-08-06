@@ -422,6 +422,18 @@ export interface ShippedProject extends ProjectWithUser {
   own?: boolean;
 }
 
+export interface IdeaWithUser {
+  id: number;
+  user_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  banned_at: string | null;
+  ban_reason: string;
+  ban_by: string;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name"> | null;
+}
+
 async function hydrateHours(projects: ShippedProject[]): Promise<ShippedProject[]> {
   if (projects.length === 0) return projects;
   const { data: journals } = await db
@@ -2101,6 +2113,21 @@ export async function listProjects(
     return [];
   }
   return (data ?? []) as ProjectWithUser[];
+}
+
+export async function listIdeas(query?: string): Promise<IdeaWithUser[]> {
+  let q = db
+    .from("ideas")
+    .select("*, users(id, display_name, real_name)")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (query) q = q.ilike("title", `%${query}%`);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listIdeas", error.message);
+    return [];
+  }
+  return (data ?? []) as IdeaWithUser[];
 }
 
 export async function listBans(): Promise<BanRow[]> {

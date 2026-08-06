@@ -49,6 +49,7 @@ export default async function RootLayout({
         review: canView(access, ["review"]),
         pixels: access.isSuper,
         moderation: canView(access, ["warn", "ban"]),
+        ideas: canView(access, ["warn", "ban"]),
         reports: reportViewer,
         tickets: helper,
         notify: access.isSuper || access.perms.has("notify"),
