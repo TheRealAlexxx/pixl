@@ -642,11 +642,20 @@ dist/</code></pre>
   // On play.* the game is at the root; under pixl.rsvp it lives at /play.
   const GAME_HREF = location.hostname.startsWith("play.") ? "/" : "/play";
   document.getElementById("docs-brand").href = GAME_HREF;
-  // Real "back" — previous page in history, not always the game. Falls back
-  // to the game only when there's nowhere to go back to (e.g. a direct link).
+  // Where the player actually came from (e.g. /shop/), captured once at load
+  // — NOT history.back(), because navigate() below pushes a new history entry
+  // for every doc section the player reads, so history.back() would just pop
+  // the last section instead of leaving the docs entirely. Falls back to the
+  // game if there's no same-origin referrer (direct link, new tab, etc.).
+  const RETURN_HREF = (() => {
+    try {
+      const ref = document.referrer;
+      if (ref && new URL(ref).origin === location.origin) return ref;
+    } catch (e) {}
+    return GAME_HREF;
+  })();
   document.getElementById("docs-back").addEventListener("click", () => {
-    if (history.length > 1) history.back();
-    else location.href = GAME_HREF;
+    location.href = RETURN_HREF;
   });
 
   // When the player was reading these docs as a detour from the first-project
