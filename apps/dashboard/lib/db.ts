@@ -1501,6 +1501,114 @@ export async function removeHelper(slackId: string): Promise<void> {
   if (error) console.error("removeHelper", error.message);
 }
 
+// Fulfillers work the shop-order queue. Same shape as the `helpers` table,
+// just a separate allow-list since working tickets and working orders are
+// different jobs.
+export interface FulfillerRow {
+  slack_user_id: string;
+  created_at: string;
+}
+
+export async function listFulfillerIds(): Promise<string[]> {
+  const { data, error } = await db.from("fulfillers").select("slack_user_id");
+  if (error) {
+    console.error("listFulfillerIds", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.slack_user_id as string);
+}
+
+export async function listFulfillers(): Promise<FulfillerRow[]> {
+  const { data, error } = await db
+    .from("fulfillers")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listFulfillers", error.message);
+    return [];
+  }
+  return (data ?? []) as FulfillerRow[];
+}
+
+export async function addFulfiller(slackId: string): Promise<void> {
+  const { error } = await db
+    .from("fulfillers")
+    .upsert({ slack_user_id: slackId }, { onConflict: "slack_user_id" });
+  if (error) console.error("addFulfiller", error.message);
+}
+
+export async function removeFulfiller(slackId: string): Promise<void> {
+  const { error } = await db.from("fulfillers").delete().eq("slack_user_id", slackId);
+  if (error) console.error("removeFulfiller", error.message);
+}
+
+export interface FulfillerStats {
+  claimed: number;
+  shipped: number;
+  done: number;
+  inQueue: number;
+  avgShipSeconds: number;
+  lastActivity: string | null;
+}
+
+// Per-fulfiller order stats, keyed by claimed_by_slack , mirrors
+// reviewerStatsBySlackId's shape (one query, grouped client-side) so the
+// /fulfillers/[id] page can reuse the same Stat-card pattern as /reviewers/[id].
+export async function fulfillerStatsBySlackId(): Promise<Map<string, FulfillerStats>> {
+  const { data, error } = await db
+    .from("shop_orders")
+    .select("claimed_by_slack, status, claimed_at, shipped_at, done_at")
+    .not("claimed_by_slack", "is", null)
+    .neq("claimed_by_slack", "");
+  if (error) {
+    console.error("fulfillerStatsBySlackId", error.message);
+    return new Map();
+  }
+  const out = new Map<
+    string,
+    FulfillerStats & { _shipSecondsSum: number; _shipSecondsCount: number }
+  >();
+  for (const r of data ?? []) {
+    const slack = r.claimed_by_slack as string;
+    const s = out.get(slack) ?? {
+      claimed: 0,
+      shipped: 0,
+      done: 0,
+      inQueue: 0,
+      avgShipSeconds: 0,
+      lastActivity: null,
+      _shipSecondsSum: 0,
+      _shipSecondsCount: 0,
+    };
+    s.claimed += 1;
+    if (r.status === "shipped" || r.status === "done") s.shipped += 1;
+    if (r.status === "done") s.done += 1;
+    if (r.status === "ordered" || r.status === "credited") s.inQueue += 1;
+    if (r.claimed_at && r.shipped_at) {
+      const secs = (new Date(r.shipped_at).getTime() - new Date(r.claimed_at).getTime()) / 1000;
+      if (secs > 0) {
+        s._shipSecondsSum += secs;
+        s._shipSecondsCount += 1;
+      }
+    }
+    const latest = r.done_at ?? r.shipped_at ?? r.claimed_at;
+    if (latest && (!s.lastActivity || latest > s.lastActivity)) s.lastActivity = latest;
+    out.set(slack, s);
+  }
+  const result = new Map<string, FulfillerStats>();
+  for (const [slack, s] of out) {
+    result.set(slack, {
+      claimed: s.claimed,
+      shipped: s.shipped,
+      done: s.done,
+      inQueue: s.inQueue,
+      avgShipSeconds: s._shipSecondsCount > 0 ? Math.round(s._shipSecondsSum / s._shipSecondsCount) : 0,
+      lastActivity: s.lastActivity,
+    });
+  }
+  return result;
+}
+
 export async function countOpenReports(): Promise<number> {
   const { count, error } = await db
     .from("reports")
@@ -1590,6 +1698,34 @@ export async function listShopOrders(status?: string, limit = 500): Promise<Shop
   const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
   if (error) {
     console.error("listShopOrders", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ShopOrderRow[];
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const users = ids.length
+    ? await db.from("users").select("id, display_name, real_name, slack_id").in("id", ids)
+    : { data: [] };
+  const names = new Map(
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; real_name: string; slack_id: string | null }]),
+  );
+  for (const r of rows) {
+    r.player_name = playerLabel(names.get(r.user_id), r.user_id);
+    r.player_slack = names.get(r.user_id)?.slack_id ?? null;
+  }
+  return rows;
+}
+
+// Orders a specific fulfiller has claimed (any stage), newest first , powers
+// the order-history table on /fulfillers/[id].
+export async function listOrdersForFulfiller(slackId: string, limit = 100): Promise<ShopOrderRow[]> {
+  const { data, error } = await db
+    .from("shop_orders")
+    .select("*")
+    .eq("claimed_by_slack", slackId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listOrdersForFulfiller", error.message);
     return [];
   }
   const rows = (data ?? []) as ShopOrderRow[];

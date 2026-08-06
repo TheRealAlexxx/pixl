@@ -16,6 +16,8 @@ import {
   removeReportViewer,
   addHelper,
   removeHelper,
+  addFulfiller,
+  removeFulfiller,
   nextReviewId,
   EVENT_TYPES,
   REFERRAL_BOOST_PX_PER_HOUR,
@@ -36,6 +38,7 @@ import {
   requirePerm,
   requireSuper,
   requireReportViewer,
+  requireFulfiller,
   ownerSlackIds,
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
@@ -1763,6 +1766,24 @@ export async function removeHelperAction(formData: FormData): Promise<void> {
   revalidatePath("/tickets");
 }
 
+// Fulfillers work the shop-order queue. Owners add/remove them here, same
+// shape as the ticket helpers list.
+export async function addFulfillerAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await addFulfiller(slackId);
+  revalidatePath("/fulfillment");
+}
+
+export async function removeFulfillerAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await removeFulfiller(slackId);
+  revalidatePath("/fulfillment");
+}
+
 export async function kickPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);
@@ -1928,7 +1949,7 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
 // and now owns it. It moves into their queue at the 'ordered' stage (placed, not
 // yet credited by HCB) and nobody else advances it unless they reassign it.
 export async function claimOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   if (!id) return;
   const { data: order } = await db
@@ -1973,7 +1994,7 @@ function ownsOrder(access: AdminAccess, claimedSlack: string): boolean {
 // HCB credited the card and the fulfiller uploaded the receipt: ordered ->
 // credited (paid, not shipped yet). Only the claiming fulfiller can advance it.
 export async function markOrderCredited(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   if (!id) return;
   const { data: order } = await db
@@ -1998,7 +2019,7 @@ export async function markOrderCredited(formData: FormData): Promise<void> {
 // DM'd to the buyer by Pixo and also lands as an in-game notification. Only the
 // claiming fulfiller can ship it, and tracking is required.
 export async function shipOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   const tracking = String(formData.get("tracking") ?? "").trim().slice(0, 120);
   if (!id) return;

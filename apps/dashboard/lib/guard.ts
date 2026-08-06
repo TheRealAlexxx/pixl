@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, isAllowed, type AdminSession } from "./session";
-import { getAdmin, listReportViewerIds, listHelperIds } from "./db";
+import { getAdmin, listReportViewerIds, listHelperIds, listFulfillerIds } from "./db";
 
 export const ALL_PERMISSIONS = ["warn", "ban", "notify", "review"] as const;
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -137,6 +137,28 @@ export async function isHelper(): Promise<boolean> {
 export async function requireHelper(): Promise<AdminAccess> {
   await requireAdmin();
   const access = await getHelperAccess();
+  if (!access) redirect("/");
+  return access;
+}
+
+// Fulfillers work the shop-order queue (claim/credit/ship), the same
+// allow-list shape as ticket helpers. Owners always qualify; other sub-admins
+// do NOT unless they're explicitly listed as a fulfiller. The final close
+// (mark done), reassign, and cancel/refund stay owner-only.
+export async function getFulfillerAccess(): Promise<AdminAccess | null> {
+  const access = await getAccess();
+  if (!access) return null;
+  if (access.isSuper) return access;
+  return (await listFulfillerIds()).includes(access.session.slackId) ? access : null;
+}
+
+export async function isFulfiller(): Promise<boolean> {
+  return (await getFulfillerAccess()) !== null;
+}
+
+export async function requireFulfiller(): Promise<AdminAccess> {
+  await requireAdmin();
+  const access = await getFulfillerAccess();
   if (!access) redirect("/");
   return access;
 }

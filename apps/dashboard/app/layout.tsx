@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { getAccess, canView, isReportViewer, isHelper } from "@/lib/guard";
+import { getAccess, canView, isReportViewer, isHelper, isFulfiller } from "@/lib/guard";
 import { countPendingReviews, countOpenReports, countPendingOrders } from "@/lib/db";
 import { ticketStats } from "@/lib/tickets";
 import { Shell } from "@/app/_components/Shell";
@@ -40,6 +40,7 @@ export default async function RootLayout({
   const session = access?.session ?? null;
   const reportViewer = await isReportViewer();
   const helper = await isHelper();
+  const fulfiller = await isFulfiller();
   const nav = access
     ? {
         overview: access.isSuper,
@@ -61,7 +62,7 @@ export default async function RootLayout({
         sidequests: access.isSuper,
         story: access.isSuper,
         goals: access.isSuper,
-        fulfillment: access.isSuper,
+        fulfillment: fulfiller,
       }
     : null;
   const reviewCount =
