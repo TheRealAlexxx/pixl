@@ -20,6 +20,8 @@
     { "source": "/vault/:path*", "destination": "https://play.pixl.rsvp/vault/:path*" },
     { "source": "/explore", "destination": "https://play.pixl.rsvp/explore/" },
     { "source": "/explore/:path*", "destination": "https://play.pixl.rsvp/explore/:path*" },
+    { "source": "/ideas", "destination": "https://play.pixl.rsvp/ideas/" },
+    { "source": "/ideas/:path*", "destination": "https://play.pixl.rsvp/ideas/:path*" },
     { "source": "/quests", "destination": "https://play.pixl.rsvp/quests/" },
     { "source": "/quests/:path*", "destination": "https://play.pixl.rsvp/quests/:path*" },
     { "source": "/timeline", "destination": "https://play.pixl.rsvp/timeline/" },
