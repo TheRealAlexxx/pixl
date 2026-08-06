@@ -2646,6 +2646,32 @@ receiver.app.post('/webhooks/github', express.raw({ type: 'application/json' }),
   handleGitHubEvent(req.headers['x-github-event'], payload).catch(e => console.error('[github-webhook]', e.message));
 });
 
+// Lets the Pixl HQ dashboard (apps/dashboard) resolve a ticket through this bot
+// instead of its own separate, more narrowly-scoped Slack app , this bot is
+// reliably a member of the help channel, that one isn't. Reuses the exact same
+// resolveTicket() the in-thread "Mark resolved" button calls.
+function requireExternalApiKey(req, res, next) {
+  const key = process.env.EXTERNAL_API_KEY;
+  if (!key) return res.status(503).json({ error: 'API key not configured' });
+  if (req.headers['x-api-key'] !== key) return res.status(401).json({ error: 'Invalid API key' });
+  next();
+}
+
+receiver.app.post('/api/external/tickets/:ts/resolve', express.json(), requireExternalApiKey, async (req, res) => {
+  const { ts } = req.params;
+  const slackId = req.body?.slackId?.trim();
+  if (!slackId) return res.status(400).json({ error: 'Missing slackId' });
+
+  try {
+    const result = await resolveTicket(ts, slackId, app.client);
+    if (result === 'not_found') return res.status(404).json({ error: 'Ticket not found' });
+    if (result === 'already_closed') return res.json({ ok: true, alreadyClosed: true });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 (async () => {
   await app.start(process.env.PORT || 3000);
   try {
