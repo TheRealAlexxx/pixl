@@ -365,8 +365,8 @@ export async function resolveTicketFromDash(
           },
         ],
       });
-    } catch {
-      /* thread note is a nicety, not required */
+    } catch (e) {
+      console.error(`resolveTicketFromDash: failed to post resolved note for ${ts}:`, e);
     }
 
     if (ticketRow.ticket_msg_ts) {
@@ -377,27 +377,27 @@ export async function resolveTicketFromDash(
           text: `Ticket resolved by <@${actor.slackId}>`,
           blocks: ticketBlocks(ticketRow),
         });
-      } catch {
-        /* ticket-channel card update is a nicety, not required */
+      } catch (e) {
+        console.error(`resolveTicketFromDash: failed to update ticket-channel card for ${ts}:`, e);
       }
     }
 
     try {
       await slackCall("reactions.add", { channel, timestamp: ts, name: "white_check_mark" });
-    } catch {
-      /* reaction may already exist */
+    } catch (e) {
+      console.error(`resolveTicketFromDash: failed to add checkmark reaction for ${ts}:`, e);
     }
     try {
       await slackCall("reactions.remove", { channel, timestamp: ts, name: "thinking_face" });
-    } catch {
-      /* reaction may not be present */
+    } catch (e) {
+      console.error(`resolveTicketFromDash: failed to remove thinking reaction for ${ts}:`, e);
     }
 
     if (ticketRow.title_prompt_ts) {
       try {
         await slackCall("chat.delete", { channel, ts: ticketRow.title_prompt_ts });
-      } catch {
-        /* prompt may already be gone */
+      } catch (e) {
+        console.error(`resolveTicketFromDash: failed to delete title prompt for ${ts}:`, e);
       }
       db.from("tickets").update({ title_prompt_ts: null }).eq("msg_ts", ts).then(
         () => {},
