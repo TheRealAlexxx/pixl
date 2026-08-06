@@ -314,15 +314,47 @@ function ticketBlocks(ticket: FullTicketRow) {
   return blocks;
 }
 
-// Resolve a ticket straight from the dashboard: close it in the DB and run
-// the exact same Slack side-effects as Pixorpheus's "Mark resolved" button
-// (help-channel reactions + resolved message with a Reopen button, the
-// ticket-channel card update, and cleaning up any pending title prompt), so
-// resolving from either side looks and behaves identically.
+// Resolve a ticket via Pixorpheus's bot instead of the dashboard's own Slack
+// app , the dashboard's bot isn't reliably a member of the help channel (and
+// lacks the scope to self-join), so posting the resolved message straight
+// from here was silently failing. Pixorpheus's bot already lives in the
+// channel and already has a working "Mark resolved" flow, so this just asks
+// it to replay that exact flow via its EXTERNAL_API_KEY-guarded API instead
+// of duplicating the Slack calls with a weaker token.
+async function resolveViaPixorpheus(
+  url: string,
+  key: string,
+  ts: string,
+  actor: { slackId: string; username: string },
+): Promise<ResolveResult> {
+  const res = await fetch(`${url}/${ts}/resolve`, {
+    method: "POST",
+    headers: { "x-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ slackId: actor.slackId, username: actor.username }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (res.ok) return { ok: true };
+  let msg = "";
+  try {
+    msg = ((await res.json()) as { error?: string }).error ?? "";
+  } catch {}
+  if (res.status === 400 && /already resolved/i.test(msg)) return { ok: true, alreadyClosed: true };
+  if (res.status === 404) return { ok: false, error: "No ticket found for this message." };
+  return { ok: false, error: msg || `Pixorpheus resolve failed (${res.status})` };
+}
+
+// Resolve a ticket straight from the dashboard. Prefers routing through
+// Pixorpheus (see resolveViaPixorpheus) when EXTERNAL_TICKETS_URL +
+// EXTERNAL_API_KEY are configured; otherwise falls back to closing the row
+// and running the Slack side-effects directly from here, same as before.
 export async function resolveTicketFromDash(
   ts: string,
   actor: { slackId: string; username: string },
 ): Promise<ResolveResult> {
+  const extUrl = process.env.EXTERNAL_TICKETS_URL;
+  const extKey = process.env.EXTERNAL_API_KEY;
+  if (extUrl && extKey) return resolveViaPixorpheus(extUrl, extKey, ts, actor);
+
   const { data: ticket, error: readError } = await db
     .from("tickets")
     .select("status")
