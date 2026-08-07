@@ -135,6 +135,108 @@
           flex: 1;
         }
       }
+      .ysws-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .ysws-modal-veil {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 10, 14, 0.66);
+        backdrop-filter: blur(2px);
+      }
+      .ysws-modal-box {
+        position: relative;
+        width: 100%;
+        max-width: 540px;
+        max-height: 86vh;
+        overflow-y: auto;
+        background: var(--panel);
+        color: var(--ink);
+        border: 2px solid var(--stroke);
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        animation: ysws-pop 0.16s ease;
+      }
+      @keyframes ysws-pop {
+        from {
+          transform: scale(0.96);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .ysws-modal-title {
+        font-family: var(--pixel, var(--sans));
+        font-size: 17px;
+        color: var(--gold);
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+      .ysws-modal-body {
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--dim);
+      }
+      .ysws-modal-acts {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+      .ysws-pick-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+        max-height: 44vh;
+        overflow-y: auto;
+      }
+      .ysws-pick {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        width: 100%;
+        text-align: left;
+        padding: 11px 13px;
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: none;
+        cursor: pointer;
+        transition:
+          border-color 0.12s ease,
+          background 0.12s ease;
+      }
+      .ysws-pick:hover:not(:disabled) {
+        border-color: var(--gold);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .ysws-pick:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .ysws-pick-name {
+        font-family: var(--pixel, var(--sans));
+        font-size: 13px;
+        color: var(--ink);
+        letter-spacing: 0.5px;
+      }
+      .ysws-pick-meta {
+        font-size: 12px;
+        color: var(--gold);
+      }
+      .ysws-pick-desc {
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--faint);
+      }
       .proj-thumb {
         height: 140px;
         border: 1px solid var(--stroke);
@@ -798,6 +900,7 @@
       <div id="ht-slot"></div>
       <div id="invites-slot"></div>
       <div id="join-code-slot"></div>
+      <div id="ysws-import-slot"></div>
       <div class="spin" id="loading"></div>
       <div id="view"></div>
     </main>
@@ -1740,6 +1843,107 @@
         });
       }
 
+      let yswsShips = [];
+
+      async function renderYswsImportBox() {
+        const slot = $("ysws-import-slot");
+        if (!slot) return;
+        let r = null;
+        try {
+          r = await Pixl.api("/api/projects/ysws-available");
+        } catch (e) {
+          slot.innerHTML = "";
+          return;
+        }
+        yswsShips = r && r.ok && Array.isArray(r.ships) ? r.ships : [];
+        if (yswsShips.length === 0) {
+          slot.innerHTML = "";
+          return;
+        }
+        const n = yswsShips.length;
+        slot.innerHTML = `
+    <div class="invite-box">
+      <div class="invite-box-head">
+        <span class="invite-box-title">SHIPPED SOMETHING ELSEWHERE?</span>
+        <span class="invite-box-sub">${n} project${n === 1 ? "" : "s"} from other YSWS programs , import one to keep building it here.</span>
+      </div>
+      <div class="invite-box-row">
+        <button class="btn" id="ysws-import-btn">IMPORT</button>
+      </div>
+    </div>`;
+        $("ysws-import-btn").addEventListener("click", openYswsPicker);
+      }
+
+      function openYswsPicker() {
+        const rows = yswsShips
+          .map((s) => {
+            const when = s.approvedAt
+              ? new Date(s.approvedAt * 1000).toISOString().slice(0, 10)
+              : "";
+            const meta = [s.ysws, s.hours ? `${s.hours}h there` : "", when]
+              .filter(Boolean)
+              .map(Pixl.esc)
+              .join(" · ");
+            return `
+        <button class="ysws-pick" data-entry="${Pixl.esc(s.id)}">
+          <span class="ysws-pick-name">${Pixl.esc(s.name)}</span>
+          <span class="ysws-pick-meta">${meta}</span>
+          ${s.description ? `<span class="ysws-pick-desc">${Pixl.esc(s.description.slice(0, 140))}</span>` : ""}
+        </button>`;
+          })
+          .join("");
+        const root = document.createElement("div");
+        root.className = "ysws-modal";
+        root.tabIndex = -1;
+        root.innerHTML = `
+      <div class="ysws-modal-veil"></div>
+      <div class="ysws-modal-box" role="dialog" aria-modal="true">
+        <div class="ysws-modal-title">IMPORT FROM ANOTHER YSWS</div>
+        <div class="ysws-modal-body">
+          Pick a project to bring in as a draft. Its links, description and thumbnail
+          get filled in for you.
+          <br><br>
+          <strong>The hours it earned elsewhere don't carry over.</strong> Only new time
+          you track from here counts toward what you're paid , your reviewer sees the
+          earlier ship either way.
+        </div>
+        <div class="ysws-pick-list">${rows}</div>
+        <div class="ysws-modal-acts"><button class="btn dark">CANCEL</button></div>
+      </div>`;
+        document.body.appendChild(root);
+        root.focus();
+        const close = () => root.remove();
+        root.querySelector(".ysws-modal-veil").onclick = close;
+        root.querySelector(".ysws-modal-acts .btn").onclick = close;
+        root.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") close();
+        });
+        root.querySelectorAll("[data-entry]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            const r = await Pixl.send("POST", "/api/projects/import-ysws", {
+              entryId: btn.dataset.entry,
+            });
+            if (r.ok && r.project) {
+              close();
+              Pixl.toast("Imported , add a thumbnail and start logging hours.");
+              await loadProjects();
+              await renderYswsImportBox();
+              location.hash = `#p=${r.project.id}`;
+              route();
+            } else {
+              btn.disabled = false;
+              Pixl.toast(
+                r.error === "already_imported"
+                  ? "You've already imported that one."
+                  : "Couldn't import that , try again.",
+                true,
+              );
+            }
+          }),
+        );
+      }
+
       function journalNeed(hours) {
         return hours > 0 ? Math.max(100, Math.round(hours * 100)) : 0;
       }
@@ -2199,6 +2403,7 @@
         renderHt();
         loadPendingInvites();
         renderJoinCodeBox();
+        renderYswsImportBox();
         route();
       }
       window.addEventListener("hashchange", route);

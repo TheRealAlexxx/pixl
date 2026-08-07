@@ -373,6 +373,17 @@ export default async function ReviewDetail({
             journals={journals}
             verdicts={verdicts}
             yswsShips={yswsShips}
+            yswsImport={
+              p.imported_from_ysws
+                ? {
+                    ysws: String(p.imported_from_ysws),
+                    hours: Number(p.imported_ysws_hours) || 0,
+                    approvedAt: p.imported_ysws_approved_at
+                      ? String(p.imported_ysws_approved_at)
+                      : null,
+                  }
+                : null
+            }
             hackatime={hackatimeReport}
           />
         </div>
