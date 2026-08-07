@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import {
   db,
   getAdmin,
+  listAdmins,
+  playerLabel,
   logModAction,
   creditProjectPixels,
   revokeProjectPixels,
@@ -1470,6 +1472,14 @@ export async function banPlayer(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+// Everyone who can confirm a ban proposal: env owners plus sub-admins
+// explicitly holding the "ban" permission.
+async function banConfirmerSlackIds(): Promise<string[]> {
+  const admins = await listAdmins();
+  const withBanPerm = admins.filter((a) => a.permissions.includes("ban")).map((a) => a.slack_id);
+  return [...new Set([...ownerSlackIds(), ...withBanPerm])];
+}
+
 // Moderators can't ban directly , they propose one, and an admin/owner with
 // the "ban" permission confirms or rejects it (see confirmBanProposal /
 // rejectBanProposal below).
@@ -1482,6 +1492,24 @@ export async function proposeBan(formData: FormData): Promise<void> {
   if (!userId || !reason) return;
   await insertBanProposal(userId, reason, hours, by);
   await logModAction(userId, "ban_proposed", hours > 0 ? `${hours}h , ${reason}` : `permanent , ${reason}`, by);
+
+  const { data: player } = await db
+    .from("users")
+    .select("display_name, real_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const playerName = playerLabel(player, userId);
+  const durationText = hours > 0 ? `${hours}h` : "permanent";
+  const text = `${session.name} proposed a ${durationText} ban for ${playerName}: ${reason}\n\nReview it: ${DASH_URL}/bans`;
+  const confirmers = await banConfirmerSlackIds();
+  await Promise.all(
+    confirmers.map((slackId) =>
+      dmUser(slackId, text).catch((e) =>
+        console.error("ban proposal DM failed", slackId, (e as Error).message),
+      ),
+    ),
+  );
+
   revalidatePath("/reports");
   revalidatePath("/bans");
 }
