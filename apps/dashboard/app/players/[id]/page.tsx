@@ -3,7 +3,15 @@ import { notFound } from "next/navigation";
 import { requirePagePerm, isReportViewer } from "@/lib/guard";
 import { banIsActive, getPlayer, listReportsAgainst } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
-import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
+import {
+  BanForm,
+  DeleteAccountForm,
+  EditInfoForm,
+  LiftBanForm,
+  NotifyForm,
+  ResetPositionForm,
+  WarnForm,
+} from "@/app/_components/Moderate";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -142,6 +150,18 @@ export default async function PlayerPage({
         )}
       </div>
 
+      {access.isSuper && (
+        <Card className="p-5 mb-8 gap-0">
+          <div className="text-base font-semibold mb-3">Player info</div>
+          <EditInfoForm
+            userId={user.id}
+            displayName={user.display_name}
+            realName={user.real_name}
+            email={user.email ?? ""}
+          />
+        </Card>
+      )}
+
       <Card className="p-5 mb-8 gap-0">
         <div className="text-base font-semibold mb-3">Moderate</div>
         <div className="flex flex-col gap-3">
@@ -149,6 +169,7 @@ export default async function PlayerPage({
           {can("ban") && <BanForm userId={user.id} isBanned={!!activeBan} />}
           {can("ban") && activeBan && <LiftBanForm userId={user.id} />}
           {can("notify") && <NotifyForm userId={user.id} />}
+          {can("ban") && <ResetPositionForm userId={user.id} />}
           {!can("warn") && !can("ban") && !can("notify") && (
             <div className="text-sm text-muted-foreground">
               You don&apos;t have any moderation permissions.
@@ -156,6 +177,15 @@ export default async function PlayerPage({
           )}
         </div>
       </Card>
+
+      {access.isSuper && (
+        <Card className="p-5 mb-8 gap-0 border-rose-200 dark:border-rose-500/30">
+          <div className="text-base font-semibold mb-3 text-rose-600 dark:text-rose-400">
+            Danger zone
+          </div>
+          <DeleteAccountForm userId={user.id} />
+        </Card>
+      )}
 
       <Section title="Projects" count={projects.length}>
         <Card className="divide-y divide-border py-0">

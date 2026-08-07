@@ -2104,6 +2104,96 @@ export async function kickPlayer(formData: FormData): Promise<void> {
   revalidatePath("/online");
 }
 
+// Clears every saved (user, scene) row so the player spawns at each scene's
+// default next time they connect. If they're currently online we also kick
+// them , otherwise their in-memory position just gets written straight back
+// on disconnect (see gameServer.ts persist()), undoing the reset.
+export async function resetPlayerPosition(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return;
+
+  const { data: cleared, error } = await db
+    .from("player_state")
+    .delete()
+    .eq("user_id", userId)
+    .select("scene");
+  if (error) throw new Error(error.message);
+
+  await kickOnlinePlayer(userId, "Your position was reset by an admin");
+  await logModAction(
+    userId,
+    "reset_position",
+    `cleared ${(cleared ?? []).length} saved position(s)`,
+    by,
+  );
+  revalidatePath(`/players/${userId}`);
+}
+
+// Owners only , touches the identity fields the review/export pipeline and
+// DMs key off of.
+export async function updatePlayerInfo(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 60);
+  const realName = String(formData.get("realName") ?? "").trim().slice(0, 100);
+  const email = String(formData.get("email") ?? "").trim().slice(0, 200);
+  if (!userId || !displayName) return;
+
+  const { error } = await db
+    .from("users")
+    .update({ display_name: displayName, real_name: realName, email: email || null })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+
+  await logModAction(
+    userId,
+    "edit_info",
+    `name: ${displayName}${realName ? ` (${realName})` : ""}${email ? `, email: ${email}` : ""}`,
+    by,
+  );
+  revalidatePath(`/players/${userId}`);
+}
+
+// Owners only , irreversible. Every FK back to users(id) cascades (see
+// drizzle/0019_user_delete_cascade.sql), including mod_actions, so there's no
+// row left to log this against afterwards , console.log is the only record
+// that survives.
+export async function deletePlayerAccount(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  if (!userId || !reason) return;
+
+  const { data: player } = await db
+    .from("users")
+    .select("display_name, real_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const playerName = playerLabel(player, userId);
+
+  await dmOrEmail(
+    userId,
+    "Pixl account deleted",
+    [
+      "Your Pixl account has been deleted by an admin.",
+      `Reason: ${reason}`,
+      "If you believe this is a mistake, reach out to the Pixl team.",
+    ].join("\n\n"),
+  );
+  await kickOnlinePlayer(userId, "Your account was deleted");
+
+  const { error } = await db.from("users").delete().eq("id", userId);
+  if (error) throw new Error(error.message);
+
+  console.log(`[admin] ${by} deleted account ${playerName} (${userId}): ${reason}`);
+  revalidatePath("/players");
+  redirect(`/players?done=${encodeURIComponent(`Deleted ${playerName}'s account.`)}`);
+}
+
 // Upload a shop image to Supabase Storage (public "shop" bucket, created on
 // first use) and return its public URL. Resized/re-encoded to WebP first —
 // shop images are shown at most at 300×300 (the item detail page), but
