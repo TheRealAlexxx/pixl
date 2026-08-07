@@ -993,6 +993,35 @@
           .reduce((s, h) => s + (h.secondsSinceCutoff ?? h.seconds), 0);
       }
 
+      // Sum of the currently-ticked Hackatime boxes, shown right next to the
+      // picker so the player can see their proof-of-hours total without
+      // scrolling down to the ship checklist.
+      function updateHtTotal() {
+        const el = $("f-ht-total");
+        if (!el) return;
+        const n = document.querySelectorAll('input[name="ht"]:checked').length;
+        el.textContent = n ? `${Pixl.hours(checkedHtSeconds())} selected` : "";
+      }
+
+      // Wires the Hackatime picker in whichever form it's rendered in (new
+      // project or existing): keeps the running total next to the label in
+      // sync and warns when a ticked project has time from before the Aug 10
+      // cutoff. `onChange` lets renderProject also refresh its ship checklist.
+      function wireHtPicker(onChange) {
+        updateHtTotal();
+        document.querySelectorAll('input[name="ht"]').forEach((box) =>
+          box.addEventListener("change", () => {
+            if (box.checked && box.dataset.beforeCutoff === "1") {
+              Pixl.toast(
+                `"${box.value}" has coding time from before Aug 10 — only time tracked after Aug 10 will count toward shipping.`,
+              );
+            }
+            updateHtTotal();
+            if (onChange) onChange();
+          }),
+        );
+      }
+
       /* ---------- hackatime strip ---------- */
 
       function renderHt() {
@@ -1207,7 +1236,7 @@
         </select>
       </div>
       <div class="form-row">
-        <label>HACKATIME PROJECTS (proof of hours)</label>
+        <label>HACKATIME PROJECTS (proof of hours)<span class="teal" id="f-ht-total" style="margin-left:8px;font-size:12px;letter-spacing:0"></span></label>
         <div class="ht-pick">${htOpts}</div>
       </div>
       ${
@@ -1475,22 +1504,15 @@
             const fresh = projects.find((x) => x.id === p.id) || p;
             ship(fresh, isUpdate);
           });
-        // Keep the ship checklist's Hackatime line in sync as boxes are ticked,
-        // before any save.
-        document.querySelectorAll('input[name="ht"]').forEach((box) =>
-          box.addEventListener("change", () => {
-            if (box.checked && box.dataset.beforeCutoff === "1") {
-              Pixl.toast(
-                `"${box.value}" has coding time from before Aug 10 — only time tracked after Aug 10 will count toward shipping.`,
-              );
-            }
-            const el = $("ship-ht");
-            if (!el) return;
-            const secs = checkedHtSeconds();
-            const ok = secs >= 3600;
-            el.innerHTML = `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span>`;
-          }),
-        );
+        // Keep the ship checklist's Hackatime line in sync as boxes are
+        // ticked, before any save.
+        wireHtPicker(() => {
+          const el = $("ship-ht");
+          if (!el) return;
+          const secs = checkedHtSeconds();
+          const ok = secs >= 3600;
+          el.innerHTML = `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span>`;
+        });
         if ($("s-unship"))
           $("s-unship").addEventListener("click", () => unship(p));
         initMdBar();
@@ -2333,6 +2355,7 @@
           $("view").innerHTML =
             `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${trialBriefHtml(activeTrial)}${formHtml({})}</div>`;
           bindForm({});
+          wireHtPicker();
           return;
         }
         if (h.startsWith("p=")) return renderProject(Number(h.slice(2)));
