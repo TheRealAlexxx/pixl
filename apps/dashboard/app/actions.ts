@@ -444,6 +444,7 @@ async function creditBeneficiary(
   creditHours: number,
   shippedAt: string | null,
   by: string,
+  otherBeneficiaryIds: string[] = [],
 ): Promise<BeneficiaryPayout> {
   let goalMult = 1;
   let goalNote = "";
@@ -497,7 +498,14 @@ async function creditBeneficiary(
   await creditProjectPixels(userId, projectId, totalPx, creditHours, by);
 
   // Referrer payout: pays once per referral, on the first qualifying ship.
-  if (referral && !referral.rewarded_at) {
+  // Skipped if the referrer is also a credited beneficiary (owner or
+  // collaborator) on this same project , otherwise a referrer could invite
+  // themselves onto the referred user's project (or vice versa) and collect
+  // both their own collaborator pay and the referral bonus off one ship.
+  // Left un-rewarded so the referral still pays out on a genuinely
+  // independent ship later.
+  const referrerRidingAlong = otherBeneficiaryIds.includes(referral?.referrer_id ?? "");
+  if (referral && !referral.rewarded_at && !referrerRidingAlong) {
     const tier = referralTierFor(creditHours);
     if (tier) {
       await db
@@ -812,6 +820,17 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
+  // Collected up front so each beneficiary's referral check can see who else
+  // is being credited on this same project , see the referrerRidingAlong
+  // guard in creditBeneficiary.
+  const { data: collabRows } = await db
+    .from("project_collaborators")
+    .select("id, user_id, hackatime_seconds")
+    .eq("project_id", projectId)
+    .eq("status", "accepted");
+  const collaborators = (collabRows ?? []) as { id: number; user_id: string; hackatime_seconds: number | null }[];
+  const allBeneficiaryIds = [project.user_id, ...collaborators.map((c) => c.user_id)];
+
   const ownerPayout = await creditBeneficiary(
     project.user_id,
     project.id,
@@ -819,6 +838,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     creditHours,
     current.shipped_at,
     by,
+    collaborators.map((c) => c.user_id),
   );
   const { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx } = ownerPayout;
 
@@ -841,12 +861,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   // Split payout: every accepted collaborator is credited independently at
   // their own rate tier for their own submitted hours slice (capped at what
   // they actually tracked — see claimedHoursForCollaborator).
-  const { data: collabRows } = await db
-    .from("project_collaborators")
-    .select("id, user_id, hackatime_seconds")
-    .eq("project_id", projectId)
-    .eq("status", "accepted");
-  for (const c of (collabRows ?? []) as { id: number; user_id: string; hackatime_seconds: number | null }[]) {
+  for (const c of collaborators) {
     const cClaimedHours = await claimedHoursForCollaborator(projectId, c.user_id, c.hackatime_seconds);
     const rawHours = Number(String(formData.get(`collabHours_${c.id}`) ?? cClaimedHours));
     const cCreditHours = Number.isFinite(rawHours)
@@ -860,6 +875,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       cCreditHours,
       current.shipped_at,
       by,
+      allBeneficiaryIds.filter((id) => id !== c.user_id),
     );
     let cCredited: string;
     if (cPayout.alreadyPx > 0 && cPayout.deltaPx > 0) {
