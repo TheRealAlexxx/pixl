@@ -165,12 +165,6 @@ func _process(delta: float) -> void:
 			_save_npcs()
 			get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
 			return
-		if global.active_door_target == "open_world":
-			can_transition = false
-			_save_npcs()
-			global.request_transition("open_world", "PlayerSpawn")
-			Loader.change_scene("res://scenes/open_world.tscn", "Entering the Open World")
-			return
 		can_transition = false
 		_save_npcs()
 		var door := Vector2i(global.active_door_pos.round())

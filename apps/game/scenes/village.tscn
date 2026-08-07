@@ -2681,30 +2681,6 @@ theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 11
 text = "Press E to shop"
 
-[node name="DoorTrigger3" type="Area2D" parent="." unique_id=990011223]
-z_index = 13
-position = Vector2(300, 50)
-collision_mask = 2
-script = ExtResource("44_ci1yp")
-target = "open_world"
-sign_name = "OPEN WORLD"
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="DoorTrigger3" unique_id=990011224]
-position = Vector2(2, 6)
-shape = SubResource("RectangleShape2D_05nbr")
-
-[node name="Label" type="Label" parent="DoorTrigger3" unique_id=990011225]
-visible = false
-offset_left = -38.0
-offset_top = -32.0
-offset_right = 46.0
-offset_bottom = -9.0
-theme_override_colors/font_color = Color(0.77315557, 0.55160576, 0.26933688, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 11
-text = "Press E to cross the bridge"
-
 [node name="DoorTrigger4" type="Area2D" parent="." unique_id=990011226]
 z_index = 13
 position = Vector2(260, 50)
@@ -2906,5 +2882,3 @@ wanders = false
 [connection signal="body_exited" from="DoorTrigger" to="DoorTrigger" method="_on_body_exited"]
 [connection signal="body_entered" from="DoorTrigger2" to="DoorTrigger2" method="_on_body_entered"]
 [connection signal="body_exited" from="DoorTrigger2" to="DoorTrigger2" method="_on_body_exited"]
-[connection signal="body_entered" from="DoorTrigger3" to="DoorTrigger3" method="_on_body_entered"]
-[connection signal="body_exited" from="DoorTrigger3" to="DoorTrigger3" method="_on_body_exited"]
