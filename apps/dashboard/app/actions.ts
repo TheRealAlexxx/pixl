@@ -485,12 +485,21 @@ async function creditBeneficiary(
 
   let referralNote = "";
   if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
-    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
-    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
-    await db
+    // Conditioned on the boosted_ships value we just read, so two ships for
+    // the same referred player approved at the same instant can't both pass
+    // the check before either write lands , only the update that still
+    // matches the value it read wins the boost.
+    const { data: claimed } = await db
       .from("referrals")
-      .update({ boosted_ships: referral.boosted_ships + 1 })
-      .eq("id", referral.id);
+      .update({ boosted_ships: referral.boosted_ships + 1, boost_project_id: projectId })
+      .eq("id", referral.id)
+      .eq("boosted_ships", referral.boosted_ships)
+      .select("id")
+      .maybeSingle();
+    if (claimed) {
+      pxRate += REFERRAL_BOOST_PX_PER_HOUR;
+      referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
+    }
   }
 
   const totalPx = Math.round(creditHours * pxRate * goalMult);
@@ -508,10 +517,22 @@ async function creditBeneficiary(
   if (referral && !referral.rewarded_at && !referrerRidingAlong) {
     const tier = referralTierFor(creditHours);
     if (tier) {
-      await db
+      // Conditioned on rewarded_at still being null, so two qualifying ships
+      // for the same referred player approved at the same instant can't both
+      // pay the referrer , only the update that still finds it unrewarded wins.
+      const { data: claimed } = await db
         .from("referrals")
-        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
-        .eq("id", referral.id);
+        .update({
+          rewarded_at: new Date().toISOString(),
+          reward_tier: tier.key,
+          reward_pixels: tier.px,
+          reward_project_id: projectId,
+        })
+        .eq("id", referral.id)
+        .is("rewarded_at", null)
+        .select("id")
+        .maybeSingle();
+      if (!claimed) return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx };
       await db.rpc("adjust_user_pixels", {
         p_user_id: referral.referrer_id,
         p_amount: tier.px,
@@ -1036,6 +1057,49 @@ export async function setProjectLevel(formData: FormData): Promise<void> {
   redirect(back);
 }
 
+// Undoes whatever referral side effects this specific project caused for a
+// beneficiary, if any , counterpart to the boost/reward grants in
+// creditBeneficiary. Without this, voiding a verdict clawed back the pixels
+// but left the referrer holding a reward (and the referred player holding a
+// spent boost slot) for a ship that turned out not to count.
+async function reverseReferralForRevokedProject(
+  userId: string,
+  projectId: number,
+  by: string,
+): Promise<void> {
+  const { data: referral } = await db
+    .from("referrals")
+    .select("id, referrer_id, boosted_ships, boost_project_id, rewarded_at, reward_pixels, reward_project_id")
+    .eq("referred_id", userId)
+    .maybeSingle();
+  if (!referral) return;
+
+  if (referral.boost_project_id === projectId) {
+    await db
+      .from("referrals")
+      .update({ boosted_ships: Math.max(0, Number(referral.boosted_ships) - 1), boost_project_id: null })
+      .eq("id", referral.id);
+  }
+
+  if (referral.reward_project_id === projectId && referral.rewarded_at) {
+    await db
+      .from("referrals")
+      .update({ rewarded_at: null, reward_tier: null, reward_pixels: null, reward_project_id: null })
+      .eq("id", referral.id);
+    await db.rpc("adjust_user_pixels", {
+      p_user_id: referral.referrer_id,
+      p_amount: -(Number(referral.reward_pixels) || 0),
+      p_reason: "referral_reward_reverted",
+      p_created_by: by,
+    });
+    await db.from("notifications").insert({
+      user_id: referral.referrer_id,
+      title: "Referral reward reversed",
+      body: "The ship that earned you a referral reward got sent back for another review, so that reward's on hold , it'll pay out again once a qualifying ship clears review.",
+    });
+  }
+}
+
 export async function reReviewProject(formData: FormData): Promise<void> {
   // Send back to review is a staff action , admins only (not plain reviewers).
   const access = await requirePerm("ban");
@@ -1061,9 +1125,11 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   // project was credited and leave the reversal in the ledger. Collaborators
   // were credited independently, so each gets their own clawback too.
   let revoked = await revokeProjectPixels(project.user_id, project.id, by);
+  await reverseReferralForRevokedProject(project.user_id, project.id, by);
   for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
     const collabRevoked = await revokeProjectPixels(collaboratorId, project.id, by);
     revoked += collabRevoked;
+    await reverseReferralForRevokedProject(collaboratorId, project.id, by);
     if (collabRevoked > 0) {
       await db.from("notifications").insert({
         user_id: collaboratorId,
