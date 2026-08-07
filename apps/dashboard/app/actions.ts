@@ -760,9 +760,10 @@ export async function reviewProject(formData: FormData): Promise<void> {
     const banBody = `Your project "${project.name}" was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
     await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
     await dmOrEmail(project.user_id, "Project banned", banBody);
+    const collabBanBody = `A project you collaborate on, "${project.name}", was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
     for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
-      await db.from("notifications").insert({ user_id: collaboratorId, title: "Project banned", body: banBody });
-      await dmOrEmail(collaboratorId, "Project banned", banBody);
+      await db.from("notifications").insert({ user_id: collaboratorId, title: "Project banned", body: collabBanBody });
+      await dmOrEmail(collaboratorId, "Project banned", collabBanBody);
     }
     await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
     const nextPath = await nextReviewPath(access, by, stage, projectId);
