@@ -18,13 +18,12 @@ interface ArchiveEntry {
   code_url?: string;
   demo_url?: string;
   description?: string;
-  slack_id?: string;
 }
 
 let cache: { at: number; entries: ArchiveEntry[] } | null = null;
 
 function norm(raw: string): string {
-  let s = (raw ?? "").trim().toLowerCase();
+  let s = String(raw ?? "").trim().toLowerCase();
   if (s === "" || s === "null") return "";
   s = s.replace(/^https?:\/\//, "").replace(/^www\./, "");
   s = s.replace(/\.git$/, "");
@@ -38,7 +37,7 @@ async function loadArchive(): Promise<ArchiveEntry[]> {
     const r = await fetch(ARCHIVE_URL, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) throw new Error(`status ${r.status}`);
     const json = (await r.json()) as unknown;
-    const entries = (Array.isArray(json) ? json : []) as ArchiveEntry[];
+    const entries = Array.isArray(json) ? (json as ArchiveEntry[]) : [];
     cache = { at: Date.now(), entries };
     return entries;
   } catch (e) {
@@ -47,10 +46,6 @@ async function loadArchive(): Promise<ArchiveEntry[]> {
   }
 }
 
-// Archive entries that reuse THIS project's repo/demo URL , i.e. the same
-// project shipped to another YSWS (a possible double-dip). Reviewers compare
-// hours and dates for overlap before crediting. The maker's unrelated ships are
-// intentionally not returned; they're noise on a per-project review.
 export async function yswsShipsFor(
   _slackId: string | null | undefined,
   repoUrl: string | null,

@@ -4,7 +4,8 @@ import { isIP } from "node:net";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { addNotification } from "./notifications.js";
-import { findInYswsArchive } from "../shipsArchive.js";
+import { findInYswsArchive } from "../ysws/archive.js";
+import { buildDoubleDip } from "../ysws/doubleDip.js";
 import { fetchHackatimeStats, fetchTrackedSecondsSince } from "../hackatime/api.js";
 
 const router = Router();
@@ -240,8 +241,9 @@ interface ProjectFields {
 }
 
 // Shared field parsing/validation for create + update. Returns an error code
-// on a missing name or a repo link that isn't a GitHub repository.
-function parseProjectBody(
+// on a missing name or a repo link that isn't a GitHub repository. Also used by
+// the YSWS importer (src/ysws/routes.ts) to turn an archive entry into a draft.
+export function parseProjectBody(
   body: any,
 ): { error: string; fields?: never } | { error?: never; fields: ProjectFields } {
   const name = String(body?.name ?? "").trim().slice(0, 120);
@@ -340,7 +342,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, name, status, repo_url, demo_url, image_url, hackatime_projects, rejected_at, banned_at")
+    .select("*")
     .eq("id", id)
     .eq("user_id", session.userId)
     .maybeSingle();
@@ -440,7 +442,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "update_notes_required" });
   if (isUpdate && updateNotes.length < 100)
     return res.status(400).json({ ok: false, error: "update_notes_too_short" });
-  const otherYsws = req.body?.otherYsws === true;
+  const otherYsws = req.body?.otherYsws === true || !!project.imported_ysws_entry_id;
 
   // Optional: the player flags this ship as a submission for a Trial. Only an
   // active Trial they've actually accepted (unlocked) can be linked; anything
@@ -475,30 +477,32 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     }
   }
 
-  let systemNote = "";
   const matched = await findInYswsArchive(
     project.repo_url as string,
     project.demo_url as string,
   );
-  if (matched) {
-    const claimedHours = Math.round((trackedSeconds / 3600) * 10) / 10;
-    const suggested = Math.max(0, Math.round((claimedHours - matched.hours) * 10) / 10);
-    const when = matched.approvedAt
-      ? new Date(matched.approvedAt * 1000).toISOString().slice(0, 10)
-      : "unknown date";
-    const overlap = `It got ${matched.hours}h there (approved ${when}); the player claims ${claimedHours}h here — suggest crediting at most ${suggested}h unless the new work is clearly separate.`;
-    if (otherYsws) {
-      systemNote = `SYSTEM: Player disclosed this was submitted to "${matched.ysws}" (${matched.url}). ${overlap}`;
-    } else {
-      systemNote = `SYSTEM: ${matched.url} already appears in the Hack Club YSWS archive under "${matched.ysws}" but the player did NOT disclose it. Possible double dip. ${overlap}`;
-      const { error: flagError } = await supabase.from("mod_actions").insert({
-        user_id: session.userId,
-        action: "double_dip_flag",
-        detail: `"${project.name}" shipped without disclosure — ${matched.url} found in the YSWS archive (${matched.ysws}, ${matched.hours}h)`,
-        actor: "system",
-      });
-      if (flagError) console.error("[projects] double dip log failed", flagError);
-    }
+  const { systemNote, flagDetail } = buildDoubleDip({
+    project: {
+      name: project.name as string,
+      imported_ysws_entry_id: (project.imported_ysws_entry_id as string | null) ?? null,
+      imported_from_ysws: (project.imported_from_ysws as string | null) ?? null,
+      imported_ysws_hours: project.imported_ysws_hours != null
+        ? Number(project.imported_ysws_hours)
+        : null,
+      imported_ysws_approved_at: (project.imported_ysws_approved_at as string | null) ?? null,
+    },
+    matched,
+    otherYsws,
+    trackedSeconds,
+  });
+  if (flagDetail) {
+    const { error: flagError } = await supabase.from("mod_actions").insert({
+      user_id: session.userId,
+      action: "double_dip_flag",
+      detail: flagDetail,
+      actor: "system",
+    });
+    if (flagError) console.error("[projects] double dip log failed", flagError);
   }
 
   const { data, error: updateError } = await supabase

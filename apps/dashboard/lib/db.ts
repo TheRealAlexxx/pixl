@@ -130,6 +130,10 @@ export interface ProjectRow {
   update_notes: string;
   other_ysws: boolean;
   system_note: string;
+  imported_ysws_entry_id: string | null;
+  imported_from_ysws: string | null;
+  imported_ysws_hours: number | null;
+  imported_ysws_approved_at: string | null;
   archived_at: string | null;
   rejected_at: string | null;
   reject_reason: string;
