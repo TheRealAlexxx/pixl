@@ -247,11 +247,12 @@ router.post("/api/shop/buy/:id", async (req, res) => {
 
   // We physically ship every order, so an address has to be on file before we
   // let the purchase through — see /account in apps/game/web.
-  const { data: buyer } = await supabase
+  const { data: buyer, error: buyerError } = await supabase
     .from("users")
     .select("address_line1, address_city, address_country, address_postal")
     .eq("id", session.userId)
     .maybeSingle();
+  if (buyerError) console.error("[shop] address lookup failed", buyerError.message);
   const addressOnFile =
     !!buyer &&
     String(buyer.address_line1 ?? "").trim() !== "" &&

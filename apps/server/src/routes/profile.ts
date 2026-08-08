@@ -335,52 +335,60 @@ router.post("/api/profile/eligibility", async (req, res) => {
   const session = token ? verifySessionToken(token) : null;
   if (!session) return res.status(401).json({ ok: false });
 
-  const patch: Record<string, string | null> = {};
+  // encryptPII throws if PII_ENCRYPTION_KEY is missing/malformed — without
+  // this, that throw was unhandled inside an async handler and just hung the
+  // request instead of returning an error (looked like "save does nothing").
+  try {
+    const patch: Record<string, string | null> = {};
 
-  if (req.body?.birthday !== undefined) {
-    const raw = String(req.body.birthday ?? "").trim();
-    if (raw) {
-      const date = new Date(raw);
-      const now = new Date();
-      if (Number.isNaN(date.getTime()) || date > now || date.getFullYear() < 1900) {
-        return res.json({ ok: false, reason: "That birthday doesn't look right." });
+    if (req.body?.birthday !== undefined) {
+      const raw = String(req.body.birthday ?? "").trim();
+      if (raw) {
+        const date = new Date(raw);
+        const now = new Date();
+        if (Number.isNaN(date.getTime()) || date > now || date.getFullYear() < 1900) {
+          return res.json({ ok: false, reason: "That birthday doesn't look right." });
+        }
+        patch.birthday = encryptPII(raw.slice(0, 10));
+      } else {
+        patch.birthday = null;
       }
-      patch.birthday = encryptPII(raw.slice(0, 10));
-    } else {
-      patch.birthday = null;
     }
-  }
 
-  const wantsAddress = ADDRESS_FIELDS.some((f) => req.body?.[toCamel(f)] !== undefined);
-  if (wantsAddress) {
-    const line1 = String(req.body?.addressLine1 ?? "").trim().slice(0, 200);
-    const line2 = String(req.body?.addressLine2 ?? "").trim().slice(0, 200);
-    const city = String(req.body?.addressCity ?? "").trim().slice(0, 100);
-    const state = String(req.body?.addressState ?? "").trim().slice(0, 100);
-    const country = String(req.body?.addressCountry ?? "").trim().slice(0, 100);
-    const postal = String(req.body?.addressPostal ?? "").trim().slice(0, 20);
-    if (!line1 || !city || !country || !postal) {
-      return res.json({
-        ok: false,
-        reason: "Address line 1, city, country and postal code are required.",
-      });
+    const wantsAddress = ADDRESS_FIELDS.some((f) => req.body?.[toCamel(f)] !== undefined);
+    if (wantsAddress) {
+      const line1 = String(req.body?.addressLine1 ?? "").trim().slice(0, 200);
+      const line2 = String(req.body?.addressLine2 ?? "").trim().slice(0, 200);
+      const city = String(req.body?.addressCity ?? "").trim().slice(0, 100);
+      const state = String(req.body?.addressState ?? "").trim().slice(0, 100);
+      const country = String(req.body?.addressCountry ?? "").trim().slice(0, 100);
+      const postal = String(req.body?.addressPostal ?? "").trim().slice(0, 20);
+      if (!line1 || !city || !country || !postal) {
+        return res.json({
+          ok: false,
+          reason: "Address line 1, city, country and postal code are required.",
+        });
+      }
+      patch.address_line1 = encryptPII(line1);
+      patch.address_line2 = encryptPII(line2);
+      patch.address_city = encryptPII(city);
+      patch.address_state = encryptPII(state);
+      patch.address_country = encryptPII(country);
+      patch.address_postal = encryptPII(postal);
     }
-    patch.address_line1 = encryptPII(line1);
-    patch.address_line2 = encryptPII(line2);
-    patch.address_city = encryptPII(city);
-    patch.address_state = encryptPII(state);
-    patch.address_country = encryptPII(country);
-    patch.address_postal = encryptPII(postal);
-  }
 
-  if (Object.keys(patch).length === 0) return res.json({ ok: true });
+    if (Object.keys(patch).length === 0) return res.json({ ok: true });
 
-  const { error } = await supabase.from("users").update(patch).eq("id", session.userId);
-  if (error) {
-    console.error("[profile] eligibility update failed", error.message);
-    return res.status(500).json({ ok: false, reason: "Database error." });
+    const { error } = await supabase.from("users").update(patch).eq("id", session.userId);
+    if (error) {
+      console.error("[profile] eligibility update failed", error.message);
+      return res.status(500).json({ ok: false, reason: "Database error." });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[profile] eligibility update crashed", (err as Error).message);
+    return res.status(500).json({ ok: false, reason: "Server error — try again in a moment." });
   }
-  res.json({ ok: true });
 });
 
 function toCamel(snake: string): string {
