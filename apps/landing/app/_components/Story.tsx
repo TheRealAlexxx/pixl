@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useLocale } from "./LocaleProvider";
-import { launchDate } from "@pixl/config";
+import { launchDate } from "../_generated/config";
 
 // Was new Date("2026-08-18T00:00:00") - no timezone, so the countdown hit zero
 // at midnight *local to each visitor*, i.e. a different moment per timezone.

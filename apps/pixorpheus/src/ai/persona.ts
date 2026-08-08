@@ -1,6 +1,6 @@
 import { NO_CREDITS, RATE_LIMITED, AIError, aiPost, streamedAICall } from "./client.js";
 import { extractReaction } from "./emoji.js";
-import { config, hasLaunched, launchDateLabel } from "@pixl/config";
+import { config, hasLaunched, launchDateLabel } from "../config.generated.js";
 import { PIXL_MAIN_CHANNEL } from "../constants.js";
 import type { AIMessage, AIReplyResult, StreamTarget, ThreadContext } from "./types.js";
 import { userMemory, personalityMemory, getDisplayName, parseFacts } from "../memory/users.js";

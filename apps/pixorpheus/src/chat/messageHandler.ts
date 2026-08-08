@@ -1,6 +1,6 @@
 import { app } from "../slack/app.js";
 import { SILENCED_CHANNELS, TRAINING_CHANNEL } from "../constants.js";
-import { config, hasLaunched, launchDateLabel } from "@pixl/config";
+import { config, hasLaunched, launchDateLabel } from "../config.generated.js";
 import { botIdentity } from "../slack/identity.js";
 import { aiPost } from "../ai/client.js";
 import { getAIReply } from "../ai/persona.js";

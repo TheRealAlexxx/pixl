@@ -1,4 +1,4 @@
-import { hackatimeCutoffUnix } from "@pixl/config";
+import { hackatimeCutoffUnix } from "../config.generated.js";
 
 // Thin client for the HackTime API. We only need the authenticated project
 // list (used to show "connected" + per-project time and to offer projects to

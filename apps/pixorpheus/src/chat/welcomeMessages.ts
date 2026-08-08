@@ -2,7 +2,7 @@ import { app } from "../slack/app.js";
 import { RIDIT_ID, PIXL_MAIN_CHANNEL, RIDIT_CHANNEL } from "../constants.js";
 import { botIdentity } from "../slack/identity.js";
 import { welcomeThreads } from "./thread.js";
-import { hasLaunched } from "@pixl/config";
+import { hasLaunched } from "../config.generated.js";
 
 // Two sets, picked at send time by the launch date in packages/config — no
 // code change needed on launch day. PIXL_WELCOME_MSGS_LAUNCHED used to be dead
