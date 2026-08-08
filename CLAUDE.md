@@ -13,7 +13,8 @@ Pixl is a Bun/Turborepo monorepo (`bun` workspaces: `apps/*`, `packages/*`) for 
 | `apps/landing` | Next.js 16, React 19, Tailwind 4 | Marketing site (pixl.rsvp) |
 | `apps/dashboard` | Next.js 16, React 19, Tailwind 4, shadcn/radix, Supabase | Admin/review dashboard — moderation, tickets, review queue, stats |
 | `apps/pixorpheus` | Bun, TypeScript, Slack Bolt v4, Express, Supabase | Slack bot — tickets, AI chat, moderation DMs, slash commands |
-| `packages/*` (`types`, `ui`, `utils`, `config`) | — | Currently scaffolded but empty; intended for shared code across apps |
+| `packages/config` | JSON + plain ESM | **Single source of truth** for the program's facts — name, launch date, Hackatime cutoff, canonical URLs, economy rates. See below. |
+| `packages/*` (`types`, `ui`, `utils`) | — | Currently scaffolded but empty; intended for shared code across apps |
 
 Each app has its own `package.json`/scripts and is largely independent; they share only Supabase as a common data layer (each app talks to Supabase directly rather than through a shared internal API), plus Hack Club Auth/Slack OAuth for identity.
 
@@ -52,6 +53,18 @@ There is no root-level test suite; `apps/pixorpheus`'s `test` script is a placeh
 
 Each app has its own `.env` (see `.env.example` where present, e.g. `apps/server/.env.example`). Bun auto-loads `.env` files — don't add `dotenv` to Bun-run apps (note `apps/server` still imports `dotenv/config` itself in some files; follow existing conventions in that file rather than changing it unprompted — `apps/pixorpheus` relies on Bun's auto-load and has no `dotenv` dependency). Common vars: `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` (shared across apps), `JWT_SECRET`, Hack Club Auth (`HCA_CLIENT_ID`/`SECRET`/`REDIRECT_URI`), Slack tokens for `pixorpheus`/`dashboard`.
 
+### `packages/config` (shared program facts)
+
+Never hardcode the launch date, the Hackatime cutoff, a pixl.rsvp URL or the
+economy rates in an app — they all live in `packages/config/pixl.json`.
+
+- **TS apps** (`server`, `landing`, `dashboard`, `pixorpheus`) `import { config, launchDate, hackatimeCutoffUnix, hasLaunched, launchDateLabel } from "@pixl/config"`. The package entry is deliberately plain `.js` + `.d.ts`, not `.ts`: `apps/server` runs its `dist/` on bare `node`, which can only load a `.ts` entry through experimental type-stripping.
+- **Godot** (`apps/game/scripts/pixl_config.gd`) and **the game's web pages** (`Pixl.config` in `apps/game/web/pixl.js`) can't import a workspace package, so they read *generated copies*. After editing `pixl.json`, run `bun run config:sync` — the copies are committed but must never be hand-edited.
+- Dates are ISO-8601 **UTC**. Format them with `timeZone: "UTC"`; a naive `new Date("2026-08-18T00:00:00")` means midnight in the *reader's* timezone and is the exact drift this package exists to stop.
+
+Launch-state copy (Pixo's persona/FAQ, the Slack welcome messages) switches itself
+via `hasLaunched()` — there is no string to flip on launch day.
+
 ## Architecture notes
 
 ### `apps/server` (game server)
@@ -64,6 +77,7 @@ Each app has its own `.env` (see `.env.example` where present, e.g. `apps/server
 ### `apps/game` (Godot client)
 - Not a Node/Bun project — it's a Godot 4 project (`project.godot`, `scenes/`, `scripts/`, `addons/`, `shaders/`). GDScript, not TypeScript. Don't try to `bun install`/run it like the other apps.
 - `web/` holds the web export target; `exports/` and `build/` hold build artifacts (gitignored).
+- The minimap and world map draw a **baked** top-down PNG of each world (`assets/map/*.png` + `bounds.json`), produced by `scripts/tools/world_map_baker.gd`. Re-bake after moving tilemaps: open `scripts/tools/bake_world_map.gd` in the editor and hit File > Run, or `godot --script scripts/tools/bake_world_map_cli.gd` (needs a real display — `--headless` bakes black). If the PNGs are missing both maps fall back to a flat placeholder rect.
 
 ### `apps/landing` and `apps/dashboard` (Next.js)
 - Both run **Next.js 16** with React 19 and Tailwind 4 (very recent — training-data knowledge of Next.js APIs/conventions is likely stale). `apps/landing` has an `AGENTS.md` flagging this explicitly: **read the relevant guide in `node_modules/next/dist/docs/` before writing Next.js code in either app**, and heed deprecation notices.

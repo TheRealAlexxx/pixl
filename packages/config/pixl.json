@@ -1,0 +1,17 @@
+{
+  "name": "Pixl",
+  "tagline": "A retro 2D world where you level up by building real things",
+  "launchDate": "2026-08-18T00:00:00Z",
+  "hackatimeCutoff": "2026-08-18T00:00:00Z",
+  "urls": {
+    "site": "https://www.pixl.rsvp",
+    "play": "https://play.pixl.rsvp",
+    "docs": "https://pixl.rsvp/docs",
+    "repo": "https://github.com/ridit-jangra/pixl"
+  },
+  "economy": {
+    "pixelsPerHour": 50,
+    "pixelValueUsd": 0.07
+  },
+  "team": ["Gabin", "Ridit", "Ricky"]
+}

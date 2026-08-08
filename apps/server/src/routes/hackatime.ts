@@ -143,7 +143,7 @@ router.get("/api/hackatime/stats", async (req, res) => {
   const slackId = row?.slack_id ?? null;
   const stats = await fetchHackatimeStats(htToken);
   // Flag projects with any activity before the event cutoff so the picker can
-  // warn "only time after Aug 10 counts" before the player links one. Capped
+  // warn "only time after the cutoff counts" before the player links one. Capped
   // to the top 40 by tracked time so a prolific account doesn't fan out into
   // dozens of Hackatime API calls.
   if (stats.connected && slackId) {

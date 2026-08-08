@@ -1,9 +1,12 @@
 import { app } from "../slack/app.js";
-import { RIDIT_ID } from "../constants.js";
+import { RIDIT_ID, PIXL_MAIN_CHANNEL, RIDIT_CHANNEL } from "../constants.js";
 import { botIdentity } from "../slack/identity.js";
 import { welcomeThreads } from "./thread.js";
+import { hasLaunched } from "@pixl/config";
 
-// Post-launch welcome messages — swap these back in once pixl launches
+// Two sets, picked at send time by the launch date in packages/config — no
+// code change needed on launch day. PIXL_WELCOME_MSGS_LAUNCHED used to be dead
+// code nobody remembered to swap in.
 export const PIXL_WELCOME_MSGS_LAUNCHED = [
   "yo welcome to <#C0B5P4N0WHH> !! go ship something and earn your first pixels :pixel_heart:",
   "welcome !! pixl is a retro 2D world where you level up by building real stuff - go crazy :yay:",
@@ -31,11 +34,12 @@ export const RIDIT_CHANNEL_MSGS = [
 ];
 
 app.event("member_joined_channel", async ({ event, client }) => {
-  if (event.channel !== "C0B5P4N0WHH" && event.channel !== "C0BHLGJ7YBA") return;
+  if (event.channel !== PIXL_MAIN_CHANNEL && event.channel !== RIDIT_CHANNEL) return;
   if (event.user === botIdentity.userId) return;
 
   try {
-    const messages = event.channel === "C0BHLGJ7YBA" ? RIDIT_CHANNEL_MSGS : PIXL_WELCOME_MSGS;
+    const pixlMsgs = hasLaunched() ? PIXL_WELCOME_MSGS_LAUNCHED : PIXL_WELCOME_MSGS;
+    const messages = event.channel === RIDIT_CHANNEL ? RIDIT_CHANNEL_MSGS : pixlMsgs;
 
     const msg = messages[Math.floor(Math.random() * messages.length)];
 
@@ -46,7 +50,7 @@ app.event("member_joined_channel", async ({ event, client }) => {
 
     welcomeThreads.add(posted.ts!);
 
-    const ccText = event.channel === "C0B5P4N0WHH" ? `cc <!subteam^S0BFM30573R>` : `cc <@${RIDIT_ID}>`;
+    const ccText = event.channel === PIXL_MAIN_CHANNEL ? `cc <!subteam^S0BFM30573R>` : `cc <@${RIDIT_ID}>`;
 
     await client.chat.postMessage({
       channel: event.channel,

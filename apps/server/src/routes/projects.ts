@@ -390,7 +390,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
   if (!stats.connected && stats.error)
     return res.status(502).json({ ok: false, error: "hackatime_unavailable" });
   const linked = (project.hackatime_projects as string[]) ?? [];
-  // Only hours logged from Aug 10 onward count — see HACKATIME_CUTOFF.
+  // Only hours logged from the cutoff onward count — see HACKATIME_CUTOFF.
   const trackedSeconds = await fetchTrackedSecondsSince(
     (userRow as { slack_id?: string } | null)?.slack_id ?? null,
     htToken,

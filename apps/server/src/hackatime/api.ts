@@ -1,3 +1,5 @@
+import { hackatimeCutoffUnix } from "@pixl/config";
+
 // Thin client for the HackTime API. We only need the authenticated project
 // list (used to show "connected" + per-project time and to offer projects to
 // link). Base URL is overridable via env for staging.
@@ -28,7 +30,7 @@ const DISCONNECTED: HackatimeStats = { connected: false, projects: [], totalSeco
 // countable and nothing can be shipped — that's intended, but it means the
 // client copy has to explain it (see htBlockerText in web/projects/index.html,
 // which mirrors this date; change both together).
-export const HACKATIME_CUTOFF = Math.floor(Date.UTC(2026, 7, 10) / 1000);
+export const HACKATIME_CUTOFF = hackatimeCutoffUnix;
 
 interface HackatimeSpan {
   start: number;

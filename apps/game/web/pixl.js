@@ -1,4 +1,29 @@
 const Pixl = (() => {
+  // <pixl-config>
+  // GENERATED from packages/config/pixl.json by `bun run config:sync` - do not edit
+  const config = {
+    "name": "Pixl",
+    "tagline": "A retro 2D world where you level up by building real things",
+    "launchDate": "2026-08-18T00:00:00Z",
+    "hackatimeCutoff": "2026-08-18T00:00:00Z",
+    "urls": {
+      "site": "https://www.pixl.rsvp",
+      "play": "https://play.pixl.rsvp",
+      "docs": "https://pixl.rsvp/docs",
+      "repo": "https://github.com/ridit-jangra/pixl"
+    },
+    "economy": {
+      "pixelsPerHour": 50,
+      "pixelValueUsd": 0.07
+    },
+    "team": [
+      "Gabin",
+      "Ridit",
+      "Ricky"
+    ]
+  };
+  // </pixl-config>
+
   // play.pixl.rsvp is the raw game origin; the canonical host is the apex
   // pixl.rsvp (which proxies these same pages). Bounce direct visitors to the
   // apex so every link lives on one host. This is client-side and host-keyed, so
@@ -897,5 +922,5 @@ const Pixl = (() => {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
+  return { API, config, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
 })();
