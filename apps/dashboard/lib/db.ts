@@ -130,6 +130,10 @@ export interface ProjectRow {
   update_notes: string;
   other_ysws: boolean;
   system_note: string;
+  imported_ysws_entry_id: string | null;
+  imported_from_ysws: string | null;
+  imported_ysws_hours: number | null;
+  imported_ysws_approved_at: string | null;
   archived_at: string | null;
   rejected_at: string | null;
   reject_reason: string;
@@ -422,6 +426,18 @@ export interface ShippedProject extends ProjectWithUser {
   own?: boolean;
 }
 
+export interface IdeaWithUser {
+  id: number;
+  user_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  banned_at: string | null;
+  ban_reason: string;
+  ban_by: string;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name"> | null;
+}
+
 async function hydrateHours(projects: ShippedProject[]): Promise<ShippedProject[]> {
   if (projects.length === 0) return projects;
   const { data: journals } = await db
@@ -627,12 +643,17 @@ export async function revokeProjectPixels(
   return Number(data) || 0;
 }
 
-// Net pixels a project has been credited so far (for delta display).
-export async function projectPixelTotal(projectId: number): Promise<number> {
+// Net pixels one beneficiary has been credited on a project so far (for delta
+// display). Scoped by user_id, not just project_id — a collaborative project
+// can have several independent beneficiaries, and credit_project_pixels
+// (0081_project_collaborators.sql) scopes its own "already credited" lookup
+// the same way.
+export async function projectPixelTotal(projectId: number, userId: string): Promise<number> {
   const { data, error } = await db
     .from("pixel_transactions")
     .select("amount")
     .eq("project_id", projectId)
+    .eq("user_id", userId)
     .in("reason", ["project_approved", "review_reverted"]);
   if (error) {
     console.error("projectPixelTotal", error.message);
@@ -1460,6 +1481,51 @@ export async function removeReportViewer(slackId: string): Promise<void> {
   if (error) console.error("removeReportViewer", error.message);
 }
 
+// Moderators: a lighter-weight role than sub-admins. Listing here folds into
+// the report_viewers check (see lib/guard.ts isReportViewer) and lets someone
+// warn players directly, but they can only propose a ban , an admin/owner
+// with the "ban" permission confirms it. Same allow-list shape as
+// report_viewers/helpers/fulfillers.
+export interface ModeratorRow {
+  slack_id: string;
+  name: string;
+  added_by: string;
+  created_at: string;
+}
+
+export async function listModeratorIds(): Promise<string[]> {
+  const { data, error } = await db.from("moderators").select("slack_id");
+  if (error) {
+    console.error("listModeratorIds", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.slack_id as string);
+}
+
+export async function listModerators(): Promise<ModeratorRow[]> {
+  const { data, error } = await db
+    .from("moderators")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listModerators", error.message);
+    return [];
+  }
+  return (data ?? []) as ModeratorRow[];
+}
+
+export async function addModerator(slackId: string, name: string, by: string): Promise<void> {
+  const { error } = await db
+    .from("moderators")
+    .upsert({ slack_id: slackId, name, added_by: by }, { onConflict: "slack_id" });
+  if (error) console.error("addModerator", error.message);
+}
+
+export async function removeModerator(slackId: string): Promise<void> {
+  const { error } = await db.from("moderators").delete().eq("slack_id", slackId);
+  if (error) console.error("removeModerator", error.message);
+}
+
 // Helpers manage the support/ticket queue. Shared with the Pixorpheus bot,
 // which reads/writes the same `helpers` table (slack_user_id PK) via its
 // /pixl-addhelper etc. commands.
@@ -1499,6 +1565,114 @@ export async function addHelper(slackId: string): Promise<void> {
 export async function removeHelper(slackId: string): Promise<void> {
   const { error } = await db.from("helpers").delete().eq("slack_user_id", slackId);
   if (error) console.error("removeHelper", error.message);
+}
+
+// Fulfillers work the shop-order queue. Same shape as the `helpers` table,
+// just a separate allow-list since working tickets and working orders are
+// different jobs.
+export interface FulfillerRow {
+  slack_user_id: string;
+  created_at: string;
+}
+
+export async function listFulfillerIds(): Promise<string[]> {
+  const { data, error } = await db.from("fulfillers").select("slack_user_id");
+  if (error) {
+    console.error("listFulfillerIds", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.slack_user_id as string);
+}
+
+export async function listFulfillers(): Promise<FulfillerRow[]> {
+  const { data, error } = await db
+    .from("fulfillers")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listFulfillers", error.message);
+    return [];
+  }
+  return (data ?? []) as FulfillerRow[];
+}
+
+export async function addFulfiller(slackId: string): Promise<void> {
+  const { error } = await db
+    .from("fulfillers")
+    .upsert({ slack_user_id: slackId }, { onConflict: "slack_user_id" });
+  if (error) console.error("addFulfiller", error.message);
+}
+
+export async function removeFulfiller(slackId: string): Promise<void> {
+  const { error } = await db.from("fulfillers").delete().eq("slack_user_id", slackId);
+  if (error) console.error("removeFulfiller", error.message);
+}
+
+export interface FulfillerStats {
+  claimed: number;
+  shipped: number;
+  done: number;
+  inQueue: number;
+  avgShipSeconds: number;
+  lastActivity: string | null;
+}
+
+// Per-fulfiller order stats, keyed by claimed_by_slack , mirrors
+// reviewerStatsBySlackId's shape (one query, grouped client-side) so the
+// /fulfillers/[id] page can reuse the same Stat-card pattern as /reviewers/[id].
+export async function fulfillerStatsBySlackId(): Promise<Map<string, FulfillerStats>> {
+  const { data, error } = await db
+    .from("shop_orders")
+    .select("claimed_by_slack, status, claimed_at, shipped_at, done_at")
+    .not("claimed_by_slack", "is", null)
+    .neq("claimed_by_slack", "");
+  if (error) {
+    console.error("fulfillerStatsBySlackId", error.message);
+    return new Map();
+  }
+  const out = new Map<
+    string,
+    FulfillerStats & { _shipSecondsSum: number; _shipSecondsCount: number }
+  >();
+  for (const r of data ?? []) {
+    const slack = r.claimed_by_slack as string;
+    const s = out.get(slack) ?? {
+      claimed: 0,
+      shipped: 0,
+      done: 0,
+      inQueue: 0,
+      avgShipSeconds: 0,
+      lastActivity: null,
+      _shipSecondsSum: 0,
+      _shipSecondsCount: 0,
+    };
+    s.claimed += 1;
+    if (r.status === "shipped" || r.status === "done") s.shipped += 1;
+    if (r.status === "done") s.done += 1;
+    if (r.status === "ordered" || r.status === "credited") s.inQueue += 1;
+    if (r.claimed_at && r.shipped_at) {
+      const secs = (new Date(r.shipped_at).getTime() - new Date(r.claimed_at).getTime()) / 1000;
+      if (secs > 0) {
+        s._shipSecondsSum += secs;
+        s._shipSecondsCount += 1;
+      }
+    }
+    const latest = r.done_at ?? r.shipped_at ?? r.claimed_at;
+    if (latest && (!s.lastActivity || latest > s.lastActivity)) s.lastActivity = latest;
+    out.set(slack, s);
+  }
+  const result = new Map<string, FulfillerStats>();
+  for (const [slack, s] of out) {
+    result.set(slack, {
+      claimed: s.claimed,
+      shipped: s.shipped,
+      done: s.done,
+      inQueue: s.inQueue,
+      avgShipSeconds: s._shipSecondsCount > 0 ? Math.round(s._shipSecondsSum / s._shipSecondsCount) : 0,
+      lastActivity: s.lastActivity,
+    });
+  }
+  return result;
 }
 
 export async function countOpenReports(): Promise<number> {
@@ -1590,6 +1764,34 @@ export async function listShopOrders(status?: string, limit = 500): Promise<Shop
   const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
   if (error) {
     console.error("listShopOrders", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ShopOrderRow[];
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const users = ids.length
+    ? await db.from("users").select("id, display_name, real_name, slack_id").in("id", ids)
+    : { data: [] };
+  const names = new Map(
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; real_name: string; slack_id: string | null }]),
+  );
+  for (const r of rows) {
+    r.player_name = playerLabel(names.get(r.user_id), r.user_id);
+    r.player_slack = names.get(r.user_id)?.slack_id ?? null;
+  }
+  return rows;
+}
+
+// Orders a specific fulfiller has claimed (any stage), newest first , powers
+// the order-history table on /fulfillers/[id].
+export async function listOrdersForFulfiller(slackId: string, limit = 100): Promise<ShopOrderRow[]> {
+  const { data, error } = await db
+    .from("shop_orders")
+    .select("*")
+    .eq("claimed_by_slack", slackId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listOrdersForFulfiller", error.message);
     return [];
   }
   const rows = (data ?? []) as ShopOrderRow[];
@@ -1751,7 +1953,7 @@ export async function listBanLog(limit = 100): Promise<BanLogRow[]> {
 // that was a drifted assumption this file used to make; fixed 2026-08-01.
 // Pixel amounts below are the nearest whole pixel to the real dollar targets
 // (they were originally specified in dollars): 2h->$2, 5h->$4, 10h->$7,
-// milestone->$25, boost->$1/hr.
+// 25h->$15, 50h->$22, 100h->$40 (top tier), milestone->$25, boost->$1/hr.
 // - Referred player: +14px/hr (~$1/hr) on top of their normal rate, for
 //   their first newly-approved ship only.
 // - Referrer: a one-time pixel reward once the referred player's first
@@ -1762,6 +1964,9 @@ export const REFERRAL_BOOST_SHIP_CAP = 1;
 export const REFERRAL_MILESTONE_EVERY = 10;
 export const REFERRAL_MILESTONE_PX = 357; // $24.99
 export const REFERRAL_TIERS: { minHours: number; key: string; px: number }[] = [
+  { minHours: 100, key: "100h", px: 571 }, // $39.97
+  { minHours: 50, key: "50h", px: 314 }, // $21.98
+  { minHours: 25, key: "25h", px: 214 }, // $14.98
   { minHours: 10, key: "10h", px: 100 }, // $7.00
   { minHours: 5, key: "5h", px: 57 }, // $3.99
   { minHours: 2, key: "2h", px: 29 }, // $2.03
@@ -1856,6 +2061,58 @@ export interface JournalRow {
   created_at: string;
 }
 
+export interface CollaboratorRow {
+  id: number;
+  project_id: number;
+  user_id: string;
+  invited_by: string;
+  status: string;
+  hackatime_projects: string[];
+  hackatime_seconds: number | null;
+  approved_hours: number | null;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name" | "slack_id"> | null;
+}
+
+// Accepted (and, for the reviewer's own visibility, pending) collaborators on
+// one project — the owner in `projects.user_id` is never included here.
+export async function listCollaboratorsForProject(projectId: number): Promise<CollaboratorRow[]> {
+  const { data, error } = await db
+    .from("project_collaborators")
+    .select("*, users(id, display_name, real_name, slack_id)")
+    .eq("project_id", projectId)
+    .in("status", ["pending", "accepted"])
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listCollaboratorsForProject", error.message);
+    return [];
+  }
+  return (data ?? []) as CollaboratorRow[];
+}
+
+// Bulk lookup for list views — only accepted collaborators (what's actually
+// worth showing next to the owner in a table row).
+export async function collaboratorsByProject(
+  projectIds: number[],
+): Promise<Map<number, CollaboratorRow[]>> {
+  const map = new Map<number, CollaboratorRow[]>();
+  if (projectIds.length === 0) return map;
+  const { data, error } = await db
+    .from("project_collaborators")
+    .select("*, users(id, display_name, real_name, slack_id)")
+    .in("project_id", projectIds)
+    .eq("status", "accepted");
+  if (error) {
+    console.error("collaboratorsByProject", error.message);
+    return map;
+  }
+  for (const row of (data ?? []) as CollaboratorRow[]) {
+    const list = map.get(row.project_id) ?? [];
+    list.push(row);
+    map.set(row.project_id, list);
+  }
+  return map;
+}
+
 export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
@@ -1910,6 +2167,21 @@ export async function listProjects(
   return (data ?? []) as ProjectWithUser[];
 }
 
+export async function listIdeas(query?: string): Promise<IdeaWithUser[]> {
+  let q = db
+    .from("ideas")
+    .select("*, users(id, display_name, real_name)")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (query) q = q.ilike("title", `%${query}%`);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listIdeas", error.message);
+    return [];
+  }
+  return (data ?? []) as IdeaWithUser[];
+}
+
 export async function listBans(): Promise<BanRow[]> {
   const { data, error } = await db
     .from("bans")
@@ -1921,6 +2193,73 @@ export async function listBans(): Promise<BanRow[]> {
     return [];
   }
   return (data ?? []) as BanRow[];
+}
+
+// Ban proposals: a moderator flags a player for a ban; an admin/owner with
+// the "ban" permission confirms (which creates the real `bans` row) or
+// rejects. See [[moderator-role]] , moderators can never ban directly.
+export interface BanProposalRow {
+  id: number;
+  user_id: string;
+  reason: string;
+  hours: number;
+  proposed_by: string;
+  status: "pending" | "confirmed" | "rejected";
+  decided_by: string | null;
+  decided_at: string | null;
+  ban_id: number | null;
+  created_at: string;
+  users?: Pick<UserRow, "id" | "display_name" | "real_name"> | null;
+}
+
+export async function listBanProposals(status?: string): Promise<BanProposalRow[]> {
+  let q = db
+    .from("ban_proposals")
+    .select("*, users(id, display_name, real_name)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (status) q = q.eq("status", status);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listBanProposals", error.message);
+    return [];
+  }
+  return (data ?? []) as BanProposalRow[];
+}
+
+export async function getBanProposal(id: number): Promise<BanProposalRow | null> {
+  const { data, error } = await db
+    .from("ban_proposals")
+    .select("*, users(id, display_name, real_name)")
+    .eq("id", id)
+    .single();
+  if (error || !data) return null;
+  return data as BanProposalRow;
+}
+
+export async function insertBanProposal(
+  userId: string,
+  reason: string,
+  hours: number,
+  by: string,
+): Promise<void> {
+  const { error } = await db
+    .from("ban_proposals")
+    .insert({ user_id: userId, reason, hours, proposed_by: by });
+  if (error) console.error("insertBanProposal", error.message);
+}
+
+export async function decideBanProposal(
+  id: number,
+  status: "confirmed" | "rejected",
+  by: string,
+  banId?: number,
+): Promise<void> {
+  const { error } = await db
+    .from("ban_proposals")
+    .update({ status, decided_by: by, decided_at: new Date().toISOString(), ban_id: banId ?? null })
+    .eq("id", id);
+  if (error) console.error("decideBanProposal", error.message);
 }
 
 export async function listViolations(limit = 100): Promise<ViolationRow[]> {

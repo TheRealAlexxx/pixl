@@ -7,9 +7,7 @@
     <link rel="icon" href="/index.icon.png" />
     <link rel="stylesheet" href="/pixl.css" />
     <style>
-      /* ── shop hero: a pixel-HUD outpost window with the keeper in an
-         inventory-slot frame (re-skinned off Beest's confidence, none of its
-         parchment). ── */
+      /* ── shop hero: a pixel-HUD outpost window ── */
       .shop-hero {
         margin-top: 4px;
         padding: 22px 26px 24px;
@@ -20,62 +18,8 @@
         align-items: center;
         flex-wrap: wrap;
       }
-      .keeper-slot {
-        width: 96px;
-        height: 96px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        background: var(--panel-deep);
-        border: 1px solid var(--stroke);
-        border-radius: 3px;
-        overflow: hidden;
-        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
-      }
-      .keeper {
-        width: 32px;
-        height: 32px;
-        background: url("/img/gabin_char.png") no-repeat 0 -64px;
-        transform: scale(3);
-        transform-origin: bottom center;
-        image-rendering: pixelated;
-        animation: keeper-bob 1.6s steps(2) infinite;
-      }
-      @keyframes keeper-bob {
-        0%, 100% { transform: scale(3) translateY(0); }
-        50% { transform: scale(3) translateY(-0.6px); }
-      }
-      .bubble {
-        position: relative;
-        align-self: flex-start;
-        margin-top: 10px;
-        background: var(--panel-deep);
-        color: var(--ink);
-        border: 1px solid var(--teal);
-        border-radius: 3px;
-        padding: 11px 15px;
-        font-family: var(--pixel);
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        max-width: 340px;
-        line-height: 1.5;
-      }
-      .bubble::after {
-        content: "";
-        position: absolute;
-        left: -6px;
-        top: 16px;
-        width: 9px;
-        height: 9px;
-        background: var(--panel-deep);
-        border-left: 1px solid var(--teal);
-        border-bottom: 1px solid var(--teal);
-        transform: rotate(45deg);
-      }
       .shop-title-box {
-        margin-left: auto;
-        text-align: right;
+        text-align: left;
       }
       .open-sign {
         display: inline-flex;
@@ -335,10 +279,6 @@
     <main class="wrap">
       <section class="shop-hero hud">
         <div class="shop-hero-inner">
-          <div class="keeper-slot">
-            <div class="keeper" id="keeper"></div>
-          </div>
-          <div class="bubble" id="bubble">HEY! WELCOME IN.</div>
           <div class="shop-title-box">
             <h1 class="page-title">THE PIXL SHOP</h1>
             <div class="page-sub">Stickers · Licenses · Plushies · Hardware, all real</div>
@@ -437,29 +377,10 @@
         return xp >= Number(item.unlock_xp) ? "claimable" : "locked";
       }
 
-      const GREETS = [
-        "HEY! WELCOME IN.",
-        "FRESH STOCK, STRAIGHT FROM HQ.",
-        "PIXELS WELL SPENT ARE PIXELS WELL EARNED.",
-        "CLICK ANYTHING ON THE SHELF!",
-        "SHIP PROJECTS → EARN PIXELS → LEAVE RICH.",
-      ];
-      let greetIdx = 0;
-      let bubbleTimer = null;
-
-      function say(text, hold = 2600) {
-        $("bubble").textContent = text;
-        clearTimeout(bubbleTimer);
-        bubbleTimer = setTimeout(() => {
-          greetIdx = (greetIdx + 1) % GREETS.length;
-          $("bubble").textContent = GREETS[greetIdx];
-        }, hold);
-      }
-
-      setInterval(() => {
-        greetIdx = (greetIdx + 1) % GREETS.length;
-        $("bubble").textContent = GREETS[greetIdx];
-      }, 7000);
+      // No-op: the shopkeeper avatar + speech bubble were removed from the
+      // hero. Kept as a stub so callers (e.g. the trophy-claim celebration)
+      // don't need their own guard.
+      function say() {}
 
       function canAfford(item) {
         return wallet && wallet.pixels >= basePrice(item);

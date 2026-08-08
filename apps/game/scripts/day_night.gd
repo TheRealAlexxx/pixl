@@ -10,8 +10,6 @@ extends CanvasModulate
 
 # Only the outdoor scenes get a sky; interiors and menus stay neutral white.
 const OUTDOOR := ["village", "open_world"]
-# Real seconds for one full dawn -> day -> dusk -> night -> dawn loop.
-const CYCLE_SECONDS := 720.0
 
 var _grad: Gradient
 var _glow_tex: GradientTexture2D
@@ -36,8 +34,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	var target := Color.WHITE
 	if Settings.day_night_enabled and _is_outdoor():
-		var phase := fposmod(Time.get_unix_time_from_system() / CYCLE_SECONDS, 1.0)
-		target = _grad.sample(phase)
+		target = _grad.sample(_phase())
 	# Ease toward the target so scene changes and the toggle fade instead of snap.
 	color = color.lerp(target, clampf(delta * 2.0, 0.0, 1.0))
 
@@ -45,14 +42,21 @@ func _is_outdoor() -> bool:
 	var cur := get_tree().current_scene
 	return cur != null and OUTDOOR.has(cur.scene_file_path.get_file().get_basename())
 
+# Where we are in the 24h cycle, driven by the player's own local wall clock
+# (not server time or unix epoch) so in-game night actually lines up with
+# night outside their window: 0.0 = local midnight, 0.5 = local noon.
+func _phase() -> float:
+	var t := Time.get_time_dict_from_system()
+	var seconds_into_day: int = int(t.hour) * 3600 + int(t.minute) * 60 + int(t.second)
+	return seconds_into_day / 86400.0
+
 # 0.0 in broad daylight -> 1.0 at deep night, following the same phase as the
 # sky. Returns 0.0 whenever the cycle is off or we're indoors/in a menu, so
 # night-only ambience (fireflies, lit windows) can just multiply by this.
 func night_amount() -> float:
 	if not Settings.day_night_enabled or not _is_outdoor():
 		return 0.0
-	var phase := fposmod(Time.get_unix_time_from_system() / CYCLE_SECONDS, 1.0)
-	var lum := _grad.sample(phase).get_luminance()
+	var lum := _grad.sample(_phase()).get_luminance()
 	return clampf((1.0 - lum) / 0.5, 0.0, 1.0)
 
 # A shared soft round glow, built once and reused by lanterns and fireflies.

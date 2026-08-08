@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isAllowed, setSessionCookie } from "@/lib/session";
-import { getAdmin } from "@/lib/db";
+import { getAdmin, listModeratorIds, listReportViewerIds } from "@/lib/db";
+import { getSlackUserProfile } from "@/lib/slack";
 
 const HCA_BASE_URL = "https://auth.hackclub.com";
 
@@ -69,9 +70,25 @@ export async function GET(req: NextRequest) {
     .filter(Boolean)
     .join(" ")
     .trim();
-  const name = fullName || identity.primary_email || slackId;
+  // HCA doesn't always have a name/email on file (younger/incomplete accounts) ,
+  // Slack's own directory almost always does since every admin is a real
+  // workspace member, so it's a better fallback than showing the raw Slack ID.
+  let name = fullName || identity.primary_email || "";
+  if (!name) {
+    const profile = await getSlackUserProfile(slackId);
+    name = profile?.displayName || profile?.realName || profile?.name || slackId;
+  }
 
-  if (!isAllowed(slackId) && !(await getAdmin(slackId))) return fail("denied");
+  // Moderators and report-viewers live in their own tables, not `admins`
+  // (see lib/guard.ts) , check those too or a standalone moderator/viewer
+  // (no admins row) can never get past login.
+  if (
+    !isAllowed(slackId) &&
+    !(await getAdmin(slackId)) &&
+    !(await listModeratorIds()).includes(slackId) &&
+    !(await listReportViewerIds()).includes(slackId)
+  )
+    return fail("denied");
 
   await setSessionCookie(slackId, name);
   return NextResponse.redirect(`${process.env.BASE_URL}/`);

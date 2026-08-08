@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePagePerm, canView } from "@/lib/guard";
-import { listProjects } from "@/lib/db";
+import { listProjects, collaboratorsByProject } from "@/lib/db";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
 import { Badge } from "@/components/ui/badge";
 import { slackHandles } from "@/lib/slack";
@@ -34,6 +34,7 @@ export default async function ProjectsPage({
     includeArchived: !archived && isAdmin,
   });
   const handles = await slackHandles(projects.map((p) => p.users?.slack_id));
+  const collaborators = await collaboratorsByProject(projects.map((p) => p.id));
 
   return (
     <div>
@@ -106,6 +107,12 @@ export default async function ProjectsPage({
                     </Link>
                   ) : (
                     <span className="text-muted-foreground">{p.user_id}</span>
+                  )}
+                  {(collaborators.get(p.id)?.length ?? 0) > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      +{collaborators.get(p.id)!.length} collaborator
+                      {collaborators.get(p.id)!.length === 1 ? "" : "s"}
+                    </div>
                   )}
                 </TableCell>
                 <TableCell className="p-3">

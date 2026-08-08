@@ -57,10 +57,12 @@ router.get("/api/explore/players", async (req, res) => {
 
   res.json({
     ok: true,
-    players: (users ?? []).map((u) => ({
-      ...u,
-      project_count: counts.get(u.id as string) ?? 0,
-    })),
+    players: (users ?? [])
+      .map((u) => ({
+        ...u,
+        project_count: counts.get(u.id as string) ?? 0,
+      }))
+      .filter((u) => u.project_count > 0),
   });
 });
 
@@ -380,19 +382,26 @@ router.get("/api/explore/projects", async (req, res) => {
     for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
   }
 
-  // Upvote count per project + whether this viewer already upvoted each one.
+  // Upvote/downvote count per project + whether this viewer already voted each one.
   const pids = (projects ?? []).map((p) => p.id as number);
   const upCounts = new Map<number, number>();
   const myUp = new Set<number>();
+  const downCounts = new Map<number, number>();
+  const myDown = new Set<number>();
   if (pids.length > 0) {
-    const { data: ups } = await supabase
-      .from("project_upvotes")
-      .select("project_id, voter_id")
-      .in("project_id", pids);
+    const [{ data: ups }, { data: downs }] = await Promise.all([
+      supabase.from("project_upvotes").select("project_id, voter_id").in("project_id", pids),
+      supabase.from("project_downvotes").select("project_id, voter_id").in("project_id", pids),
+    ]);
     for (const u of ups ?? []) {
       const pid = u.project_id as number;
       upCounts.set(pid, (upCounts.get(pid) ?? 0) + 1);
       if (u.voter_id === session.userId) myUp.add(pid);
+    }
+    for (const d of downs ?? []) {
+      const pid = d.project_id as number;
+      downCounts.set(pid, (downCounts.get(pid) ?? 0) + 1);
+      if (d.voter_id === session.userId) myDown.add(pid);
     }
   }
 
@@ -403,6 +412,8 @@ router.get("/api/explore/projects", async (req, res) => {
       owner_name: names.get(p.user_id as string) ?? "?",
       upvotes: upCounts.get(p.id as number) ?? 0,
       has_upvoted: myUp.has(p.id as number),
+      downvotes: downCounts.get(p.id as number) ?? 0,
+      has_downvoted: myDown.has(p.id as number),
     })),
   });
 });
@@ -426,7 +437,7 @@ router.get("/api/explore/projects/:id", async (req, res) => {
     .maybeSingle();
   if (error || !project) return res.status(404).json({ ok: false });
 
-  const [owner, entries, ups] = await Promise.all([
+  const [owner, entries, ups, downs] = await Promise.all([
     supabase
       .from("users")
       .select("id, display_name")
@@ -441,9 +452,14 @@ router.get("/api/explore/projects/:id", async (req, res) => {
       .from("project_upvotes")
       .select("voter_id")
       .eq("project_id", id),
+    supabase
+      .from("project_downvotes")
+      .select("voter_id")
+      .eq("project_id", id),
   ]);
 
   const upvoters = ups.data ?? [];
+  const downvoters = downs.data ?? [];
   res.json({
     ok: true,
     project,
@@ -451,6 +467,8 @@ router.get("/api/explore/projects/:id", async (req, res) => {
     entries: entries.data ?? [],
     upvotes: upvoters.length,
     has_upvoted: upvoters.some((u) => u.voter_id === session.userId),
+    downvotes: downvoters.length,
+    has_downvoted: downvoters.some((u) => u.voter_id === session.userId),
   });
 });
 

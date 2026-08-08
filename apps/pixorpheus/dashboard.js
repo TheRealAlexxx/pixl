@@ -516,6 +516,63 @@ app.post('/api/external/tickets/:ts/reply', requireApiKey, async (req, res) => {
   }
 });
 
+// Mirrors the session-based /api/tickets/:ts/resolve above, but for the Pixl
+// HQ dashboard (which has its own, more narrowly-scoped Slack bot that isn't
+// reliably a member of the help channel). Takes the acting user's slackId in
+// the body instead of reading it off req.session.user.
+app.post('/api/external/tickets/:ts/resolve', requireApiKey, async (req, res) => {
+  const { ts } = req.params;
+  const { slackId, username } = req.body;
+  if (!slackId?.trim()) return res.status(400).json({ error: 'Missing slackId' });
+  const userId = slackId.trim();
+
+  try {
+    const check = await db.query(
+      'SELECT status, ticket_msg_ts FROM tickets WHERE msg_ts = $1', [ts]
+    );
+    if (!check.rows[0]) return res.status(404).json({ error: 'Ticket not found' });
+    if (check.rows[0].status === 'closed') return res.status(400).json({ error: 'Already resolved' });
+
+    await db.query(
+      `UPDATE tickets SET status = 'closed', closed_at = NOW(), closed_by_slack_id = $1 WHERE msg_ts = $2`,
+      [userId, ts]
+    );
+
+    let name = username?.trim() || userId;
+    try { const info = await getSlackUser(userId); name = info.name; } catch (_) {}
+
+    await slack.chat.postMessage({
+      channel: process.env.SLACK_HELP_CHANNEL,
+      thread_ts: ts,
+      text: ` Resolved by <@${userId}>!`,
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn', text: ` Resolved by <@${userId}>! If you have more questions, feel free to open a new thread.` } },
+        { type: 'actions', elements: [{ type: 'button', action_id: 'reopen_ticket', text: { type: 'plain_text', text: ' Reopen' }, value: ts }] },
+      ],
+    });
+
+    logEvent(slack, `✅ ticket resolved by <@${userId}> (via Pixl HQ dashboard)`);
+
+    try { await slack.reactions.add({ channel: process.env.SLACK_HELP_CHANNEL, name: 'white_check_mark', timestamp: ts }); } catch (_) {}
+    try { await slack.reactions.remove({ channel: process.env.SLACK_HELP_CHANNEL, name: 'thinking_face', timestamp: ts }); } catch (_) {}
+
+    if (check.rows[0].ticket_msg_ts) {
+      try {
+        await slack.chat.update({
+          channel: process.env.SLACK_TICKET_CHANNEL,
+          ts: check.rows[0].ticket_msg_ts,
+          text: ` Resolved by ${name} via dashboard`,
+          blocks: [{ type: 'section', text: { type: 'mrkdwn', text: ` *Resolved by ${name} via dashboard*` } }],
+        });
+      } catch (_) {}
+    }
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/external/tickets/activity', requireApiKey, async (req, res) => {
   try {
     const [created, resolved] = await Promise.all([

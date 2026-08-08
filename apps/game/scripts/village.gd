@@ -161,11 +161,9 @@ func _process(delta: float) -> void:
 		if global.active_door_target == "shop":
 			WebPages.open("shop")
 			return
-		if global.active_door_target == "open_world":
-			can_transition = false
+		if global.active_door_target == "lobbies":
 			_save_npcs()
-			global.request_transition("open_world", "PlayerSpawn")
-			Loader.change_scene("res://scenes/open_world.tscn", "Entering the Open World")
+			get_tree().change_scene_to_file("res://scenes/lobby_menu.tscn")
 			return
 		can_transition = false
 		_save_npcs()

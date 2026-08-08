@@ -18,7 +18,10 @@ import vaultRouter from "./routes/vault.js";
 import storyRouter from "./routes/story.js";
 import villageRouter from "./routes/village.js";
 import upvotesRouter from "./routes/upvotes.js";
+import ideasRouter from "./routes/ideas.js";
 import referralRouter from "./routes/referral.js";
+import collaboratorsRouter from "./routes/collaborators.js";
+import yswsRouter from "./ysws/routes.js";
 import { rateLimit } from "./rateLimit.js";
 import { attachWebSocketServer } from "./ws/gameServer.js";
 
@@ -63,7 +66,10 @@ app.use(vaultRouter);
 app.use(storyRouter);
 app.use(villageRouter);
 app.use(upvotesRouter);
+app.use(ideasRouter);
 app.use(referralRouter);
+app.use(collaboratorsRouter);
+app.use(yswsRouter);
 
 app.get("/", (_req, res) => res.json({ name: "pixl-server", status: "ok" }));
 app.get("/health", (_req, res) => res.json({ ok: true }));
