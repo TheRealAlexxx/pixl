@@ -580,9 +580,11 @@
         optionPick = {};
         renderOptions();
         $("note-row").hidden = false;
-        $("detail-limited").innerHTML = selected.limited
-          ? `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`
-          : "";
+        $("detail-limited").innerHTML =
+          (selected.limited ? `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>` : "") +
+          (selected.stock && selected.stock.length
+            ? `<span class="chip teal">${selected.stock[0].total} ONLY PER PERSON</span>`
+            : "");
         $("qty-row").hidden = false;
         $("qty-input").value = quantity;
         $("qty-minus").disabled = quantity <= 1;
@@ -754,7 +756,10 @@
       setInterval(() => {
         if (selected && selected.limited && selected.limited_until && !isTrophy(selected))
           $("detail-limited").innerHTML =
-            `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`;
+            `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>` +
+            (selected.stock && selected.stock.length
+              ? `<span class="chip teal">${selected.stock[0].total} ONLY PER PERSON</span>`
+              : "");
       }, 1000);
 
       // Live stock refresh — so "12/15 left" updates while someone's looking

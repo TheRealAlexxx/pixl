@@ -185,6 +185,18 @@
         animation: limited-blink 1s steps(2) infinite;
       }
       @keyframes limited-blink { 50% { background: var(--gold-soft); } }
+      .stock-corner-tag {
+        position: absolute;
+        top: -9px;
+        left: 9px;
+        background: var(--teal);
+        color: var(--btn-ink);
+        border-radius: 3px;
+        font-family: var(--pixel);
+        font-size: 10px;
+        letter-spacing: 1px;
+        padding: 3px 7px;
+      }
 
       /* ── trophies / restoration rewards ── */
       .trophy-card {
@@ -464,6 +476,7 @@
             (item, idx) => `
     <div class="card panel item-card ${item.limited ? "limited" : ""}" data-id="${item.id}" style="animation: toast-in .2s ease both; animation-delay:${Math.min(idx * 30, 400)}ms">
       ${item.limited ? `<div class="limited-tag">LIMITED</div>` : ""}
+      ${item.stock && item.stock.length ? `<div class="stock-corner-tag">${item.stock[0].total} ONLY</div>` : ""}
       <div class="item-img">${imgHtml(item)}</div>
       <div class="item-name">${Pixl.esc(item.name)}</div>
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
