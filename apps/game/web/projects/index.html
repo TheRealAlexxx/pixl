@@ -981,16 +981,65 @@
       // may not be saved yet), so ship-readiness reflects what the player sees.
       // Uses secondsSinceCutoff when the server has computed it so this matches
       // what actually counts toward shipping (only time after Aug 10).
-      function checkedHtSeconds() {
-        if (!stats || !stats.connected) return 0;
-        const checked = new Set(
-          [...document.querySelectorAll('input[name="ht"]:checked')].map(
-            (c) => c.value,
+      // Mirrors HACKATIME_CUTOFF in apps/server/src/hackatime/api.ts. Only
+      // coding time tracked from this date onward counts toward shipping;
+      // kept here so the UI can explain *why* a linked project reads as 0h
+      // instead of just insisting you link one.
+      const HT_CUTOFF_MS = Date.UTC(2026, 7, 10);
+      const HT_CUTOFF_LABEL = "Aug 10";
+
+      function checkedHtBoxes() {
+        return [...document.querySelectorAll('input[name="ht"]:checked')];
+      }
+
+      // `counted` is what the server will actually credit (time after the
+      // cutoff); `total` is the projects' whole tracked time. They diverge
+      // whenever someone's hours predate the cutoff — the usual reason a
+      // player links projects and still can't ship.
+      function checkedHtTotals() {
+        if (!stats || !stats.connected) return { counted: 0, total: 0 };
+        const checked = new Set(checkedHtBoxes().map((c) => c.value));
+        const picked = stats.projects.filter((h) => checked.has(h.name));
+        return {
+          counted: picked.reduce(
+            (s, h) => s + (h.secondsSinceCutoff ?? h.seconds),
+            0,
           ),
-        );
-        return stats.projects
-          .filter((h) => checked.has(h.name))
-          .reduce((s, h) => s + (h.secondsSinceCutoff ?? h.seconds), 0);
+          total: picked.reduce((s, h) => s + h.seconds, 0),
+        };
+      }
+
+      function checkedHtSeconds() {
+        return checkedHtTotals().counted;
+      }
+
+      // The blocker used to always read "link a Hackatime project with >= 1h",
+      // which is baffling when you've linked ten of them — the hours are real,
+      // they just fall before the cutoff (or the cutoff hasn't arrived yet).
+      function htBlockerText() {
+        const { counted, total } = checkedHtTotals();
+        if (!stats || !stats.connected)
+          return "connect Hackatime so your hours can count";
+        if (total === 0) return "link a Hackatime project with ≥ 1h";
+        // Only claim "all of it predates the cutoff" when none of it counts —
+        // otherwise some time did land after the cutoff, just not enough yet.
+        if (counted === 0)
+          return Date.now() < HT_CUTOFF_MS
+            ? `wait for ${HT_CUTOFF_LABEL} — only hours tracked from then on count, and your ${Pixl.hours(total)} is all logged before it`
+            : `track time from ${HT_CUTOFF_LABEL} onward — your ${Pixl.hours(total)} was all logged before then`;
+        return `≥ 1h tracked from ${HT_CUTOFF_LABEL} onward (you have ${Pixl.hours(counted)} of ${Pixl.hours(total)})`;
+      }
+
+      // Shared by the initial checklist render and the live refresh as boxes
+      // are ticked, so the two can't drift apart.
+      function shipHtLine() {
+        const { counted, total } = checkedHtTotals();
+        const ok = counted >= 3600;
+        const detail =
+          counted === total
+            ? Pixl.hours(counted)
+            : `${Pixl.hours(counted)} counts, ${Pixl.hours(total)} linked`;
+        return `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked from ${HT_CUTOFF_LABEL} onward <span class="teal">(${detail})</span>`;
       }
 
       // Sum of the currently-ticked Hackatime boxes, shown right next to the
@@ -999,8 +1048,12 @@
       function updateHtTotal() {
         const el = $("f-ht-total");
         if (!el) return;
-        const n = document.querySelectorAll('input[name="ht"]:checked').length;
-        el.textContent = n ? `${Pixl.hours(checkedHtSeconds())} selected` : "";
+        if (!checkedHtBoxes().length) return void (el.textContent = "");
+        const { counted, total } = checkedHtTotals();
+        el.textContent =
+          counted === total
+            ? `${Pixl.hours(counted)} selected`
+            : `${Pixl.hours(counted)} counts (of ${Pixl.hours(total)} — rest predates ${HT_CUTOFF_LABEL})`;
       }
 
       // Wires the Hackatime picker in whichever form it's rendered in (new
@@ -1385,7 +1438,6 @@
         // page instead of the owner's full editor.
         if (p.is_owner === false) return renderCollabProjectView(p);
         const [label, cls] = statusInfo(p);
-        const secs = linkedSeconds(p);
         const inReview = p.status === "shipped" || p.status === "second_review";
         const canShip =
           !inReview &&
@@ -1416,7 +1468,7 @@
           <div class="ship-item"><span class="${p.repo_url ? "ok" : "no"}">${p.repo_url ? "+" : "-"}</span> GitHub repo linked</div>
           <div class="ship-item"><span class="${p.demo_url ? "ok" : "no"}">${p.demo_url ? "+" : "-"}</span> Demo link added</div>
           <div class="ship-item"><span class="${p.image_url ? "ok" : "no"}">${p.image_url ? "+" : "-"}</span> Thumbnail uploaded</div>
-          <div class="ship-item" id="ship-ht"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
+          <div class="ship-item" id="ship-ht">${shipHtLine()}</div>
         </div>
         ${inReview ? "" : trialPickerHtml(p)}
         ${
@@ -1509,9 +1561,7 @@
         wireHtPicker(() => {
           const el = $("ship-ht");
           if (!el) return;
-          const secs = checkedHtSeconds();
-          const ok = secs >= 3600;
-          el.innerHTML = `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span>`;
+          el.innerHTML = shipHtLine();
         });
         if ($("s-unship"))
           $("s-unship").addEventListener("click", () => unship(p));
@@ -2026,8 +2076,7 @@
         if (!p.repo_url) b.push("add a GitHub repo");
         if (!p.demo_url) b.push("add a demo / playable link");
         if (!p.image_url) b.push("upload a thumbnail");
-        if (checkedHtSeconds() < 3600)
-          b.push("link a Hackatime project with ≥ 1h");
+        if (checkedHtSeconds() < 3600) b.push(htBlockerText());
         if (!$("s-eligible") || !$("s-eligible").checked)
           b.push("confirm this isn't a school assignment or paid Hack Club work");
         if (isUpdate) {

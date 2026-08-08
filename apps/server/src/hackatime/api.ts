@@ -22,9 +22,12 @@ export interface HackatimeStats {
 
 const DISCONNECTED: HackatimeStats = { connected: false, projects: [], totalSeconds: 0 };
 
-// The event itself doesn't start until Aug 18 — hours logged before this date
-// predate the challenge and shouldn't count toward ship eligibility, even for
-// Hackatime projects/accounts that existed long before someone joined Pixl.
+// Hours logged before this date predate the challenge and don't count toward
+// ship eligibility, even for Hackatime projects/accounts that existed long
+// before someone joined Pixl. Until this date passes, *everyone* reads as 0h
+// countable and nothing can be shipped — that's intended, but it means the
+// client copy has to explain it (see htBlockerText in web/projects/index.html,
+// which mirrors this date; change both together).
 export const HACKATIME_CUTOFF = Math.floor(Date.UTC(2026, 7, 10) / 1000);
 
 interface HackatimeSpan {
