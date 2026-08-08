@@ -25,12 +25,15 @@ const ITEM_COLUMNS_FALLBACK = "id, name, description, price, image_url, options"
 // Items are scoped to the player's own region (fulfillment/shipping differ a
 // lot by where they live) — pass `region` to filter, or omit it to get every
 // region (not currently used, but keeps this function generally useful).
+// Restoration reward trophies (unlock_xp > 0) are the exception: they're
+// earned, not shipped, so every player sees the same trophies at the same
+// XP requirement regardless of region — never scope them to a region.
 async function fetchItems(filterIds?: number[], region?: string) {
   const build = (cols: string, withRegion: boolean) => {
     let q = supabase.from("shop_items").select(cols);
     if (filterIds) q = q.in("id", filterIds);
     else q = q.eq("active", true);
-    if (withRegion && region) q = q.eq("region", region);
+    if (withRegion && region) q = q.or(`region.eq.${region},unlock_xp.gt.0`);
     return q.order("position", { ascending: true }).order("id", { ascending: true });
   };
   const first = await build(ITEM_COLUMNS, true);
