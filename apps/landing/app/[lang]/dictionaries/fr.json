@@ -1,24 +1,24 @@
 {
   "menu": {
     "testTheGame": "Teste le jeu !",
-    "stillInDev": "encore en dev !"
+    "stillInDev": "encore en developpement !"
   },
   "hero": {
-    "youShip": "Tu livres",
+    "youShip": "Tu crées",
     "projectsInside": "des projets dans un jeu narratif,",
     "weShip": "on t'envoie",
-    "realPrizes": "de vrais prix à ta porte.",
+    "realPrizes": "des cadeaux chez toi.",
     "placeholder": "ton@email.com",
     "rsvp": "RSVP",
     "alreadyIn": "tu es déjà inscrit",
     "viewYourRsvp": "voir ton RSVP",
-    "errorNoEmail": "eh, mets ton email d'abord 👀",
-    "errorInvalidEmail": "ça ne ressemble pas à un vrai email mdr",
+    "errorNoEmail": "eh, mets ton email d'abord",
+    "errorInvalidEmail": "ça ressemble pas à un vrai email mdr",
     "scrollHint": "continue de scroller"
   },
   "description": {
     "title": "C'est quoi Pixl ?",
-    "body": "Il y a des siècles, Origin était la plus grande civilisation numérique jamais construite, jusqu'à ce que le Grand Static la brise en îles perdues dans le Néant. Son peuple a traversé les univers et a trouvé les Hack Clubbers, qui l'ont aidé à la reconstruire sous un nouveau nom : Pixl. Un YSWS sur le thème du pixel où chaque vrai projet que tu livres répare le monde et débloque de vraies récompenses.",
+    "body": "Il y a des siècles, Origin était la plus grande civilisation numérique jamais construite, jusqu'à ce que le Grand Static la brise en îles perdues dans le Néant. Son peuple a traversé les univers et a trouvé les Hack Clubbers, qui l'ont aidé à la reconstruire sous un nouveau nom : Pixl. Un YSWS sur le thème du pixel où chaque vrai projet que tu crée répare le monde et débloque des récompenses réeles.",
     "steps": [
       {
         "title": "Rejoins le monde",
@@ -29,12 +29,12 @@
         "description": "Découvre des villes cyberpunk, des zones sous-marines et plus encore"
       },
       {
-        "title": "Accepte des épreuves",
-        "description": "Crée des apps, des sites et du hardware pour les personnages du jeu"
+        "title": "Commence des épreuves",
+        "description": "Crée des apps, sites web ou n'importe quel software/hardware pour les personnages du jeu"
       },
       {
         "title": "Sois récompensé",
-        "description": "Les PNJ te récompensent pour ton travail avec de vrais prix et des pixels, la monnaie du jeu que tu peux dépenser en boutique"
+        "description": "Les PNJ te récompensent pour ton travail avec de vraies récompenses et des pixels, la monnaie du jeu que tu peux dépenser dans le shop."
       },
       {
         "title": "Dépense tes pixels",
@@ -42,9 +42,9 @@
       }
     ],
     "youRepair": "Tu répares",
-    "youRepairDesc": "Livre de vraies épreuves hardware et software pour les PNJ. Chaque projet devient de l'Énergie de Restauration qui reconstruit un morceau brisé de Pixl",
-    "theCorePays": "Le Cœur paie",
-    "theCorePaysDesc": "Le Cœur est un coffre de vieille technologie pixelienne. À mesure que tu le répares, il rend ses trésors : de vrais prix et des bourses adaptés à ce que tu as construit",
+    "youRepairDesc": "Crée des projets hardware et software pour les PNJ. Chaque projet devient de l'Énergie de Restauration qui reconstruit un morceau brisé de Pixl",
+    "theCorePays": "Le Core paie",
+    "theCorePaysDesc": "Le Core est un coffre de vieille technologie pixelienne. À mesure que tu le répares, il rend ses trésors : de vrais prix et des crédits adaptés à ce que tu as construit",
     "comingSoon": "Bientôt disponible"
   },
   "story": {
@@ -54,40 +54,40 @@
     "paths": [
       {
         "title": "Prends une épreuve",
-        "text": "Le Cœur les connaît déjà : des problèmes que les PNJ des régions débloquées ont besoin de résoudre. Choisis-en une et livre-la."
+        "text": "Le Core les connaît déjà : des problèmes que les PNJ des régions débloquées ont besoin de résoudre. Choisis-en une et fais la."
       },
       {
-        "title": "Crée ton propre truc",
-        "text": "Le Cœur ne peut pas prévoir chaque invention. Livre quelque chose d'original qu'il n'a jamais demandé, et ça compte quand même comme de l'Énergie de Restauration."
+        "title": "Crée ton propre idée",
+        "text": "Le Core ne peut pas prévoir chaque invention. Crée quelque chose d'original qu'il n'a jamais demandé, et ça compte quand même comme de l'Énergie de Restauration."
       }
     ],
     "andOr": "et/ou",
     "rhythm": [
       {
         "title": "Chapitres (~3 semaines)",
-        "text": "L'histoire avance par chapitres. Chaque chapitre est un effort pour réparer une partie du monde : tu prends des épreuves dans les régions déjà débloquées, tu livres de vrais projets, et ton travail compte pour l'objectif de restauration du chapitre. Quand la communauté l'atteint, l'histoire progresse : une nouvelle région s'ouvre, de nouveaux PNJ reviennent, de nouvelles épreuves apparaissent."
+        "text": "L'histoire avance par chapitres. Chaque chapitre est un effort pour réparer une partie du monde : tu prends des épreuves dans les régions déjà débloquées, tu crées de vrais projets, et ton travail compte pour l'objectif de restauration du chapitre. Quand la communauté l'atteint, l'histoire progresse : une nouvelle région s'ouvre, de nouveaux PNJ reviennent, de nouvelles épreuves apparaissent."
       },
       {
         "title": "Opérations (~1 semaine)",
-        "text": "Entre les chapitres, de courts événements à thème : une game jam, un hackathon, une semaine de création d'outils. Une semaine, un thème, un morceau du monde remis en ligne. Parfait si tu veux quelque chose d'intense avec une échéance claire."
+        "text": "Entre les chapitres, de courts événements à thème : une game jam, un hackathon, une semaine de création thématique. Une semaine, un thème, un morceau du monde remis en ligne. Parfait si tu veux quelque chose d'intense avec une échéance claire."
       },
       {
         "title": "Tu arrives en retard ? Pas de souci",
-        "text": "Les régions débloquées ne ferment jamais. Quand tu arrives, tu peux choisir n'importe quelle épreuve disponible, la livrer et gagner tes prix et pixels comme tout le monde. Les chapitres décident seulement de ce qui se débloque ensuite, jamais de ce que tu as le droit de construire."
+        "text": "Les régions débloquées ne ferment jamais. Quand tu arrives, tu peux choisir n'importe quelle épreuve disponible, la faire et gagner tes prix et pixels comme tout le monde. Les chapitres décident seulement de ce qui se débloque ensuite, jamais de ce que tu as le droit de construire."
       }
     ],
     "mechanics": [
       {
         "title": "Tu gagnes toujours",
-        "text": "Chaque projet livré te rapporte son prix et ses pixels, peu importe ce que fait le reste de la communauté."
+        "text": "Chaque projet crée te rapporte sa récompense et ses pixels, peu importe ce que fait le reste de la communauté."
       },
       {
         "title": "Énergie de Restauration",
-        "text": "Les heures de travail livré se convertissent en Énergie de Restauration. Continue de livrer et elle s'accumule en multiplicateurs sur ce que tu gagnes."
+        "text": "Les heures de travail livré se convertissent en Énergie de Restauration. Continue de créer et elle s'accumule en multiplicateurs sur ce que tu gagnes."
       },
       {
         "title": "Objectifs communautaires",
-        "text": "Toute l'Énergie de Restauration répare aussi le monde lui-même. Aux grandes étapes, de nouvelles régions se débloquent, les PNJ reviennent et le Cœur rend davantage de ce qu'il détient."
+        "text": "Toute l'Énergie de Restauration répare aussi le monde lui-même. Aux grandes étapes, de nouvelles régions se débloquent, les PNJ reviennent et le Core rend davantage de ce qu'il détient."
       }
     ],
     "ctaTitle": "Envie d'en savoir plus sur l'histoire ?",
@@ -103,7 +103,7 @@
     "title": "Épreuves et récompenses",
     "description": "Ce ne sont que des exemples qui peuvent changer au fil des semaines.",
     "howRewardsWork": "Comment fonctionnent les récompenses",
-    "howRewardsWorkDesc": "Tu reçois le prix de base pour chaque épreuve que tu termines. Plus tu y passes d'heures, plus tu gagnes de monnaie à dépenser en boutique. Tu ne veux pas le prix indiqué ou tu l'as déjà ? Pas de problème, échange-le contre n'importe quoi de valeur équivalente.",
+    "howRewardsWorkDesc": "Tu reçois le prix de base pour chaque épreuve que tu termines. Plus tu y passes d'heures, plus tu gagnes de monnaie à dépenser dans le shop. Tu ne veux pas le prix indiqué ou tu l'as déjà ? Pas de problème, échange-le contre n'importe quoi de valeur équivalente.",
     "seeFullExample": "Voir un exemple complet de soumission",
     "seeFullExampleDesc": "Tu ne sais pas à quoi ressemble une soumission complète ? Regarde cet exemple qui respecte chaque échéance.",
     "sidequestLabel": "Épreuve",
@@ -154,7 +154,7 @@
         },
         "prize": {
           "title": "2000 Robux",
-          "description": "Une bourse de 2000 Robux à dépenser sur la plateforme Roblox : objets, améliorations d'avatar ou ce que tu veux."
+          "description": "Un crédit de 2000 Robux à dépenser sur la plateforme Roblox : objets, améliorations d'avatar ou ce que tu veux."
         }
       },
       {
@@ -215,12 +215,12 @@
   },
   "shop": {
     "badge": "Dépense tes pixels",
-    "title": "La boutique",
+    "title": "Le Shop",
     "description": "1 heure de travail = 50 pixels.",
     "moreComing": "...et encore plus à venir !",
     "items": [
       {
-        "name": "Photo signée de l'orga",
+        "name": "Photo signée des organisateurs",
         "description": "Une photo signée d'un membre de l'orga, livrée à ta porte."
       },
       {
@@ -228,8 +228,8 @@
         "description": "5 memes aléatoires faits par la community team, imprimés sur vrai papier photo et livrés chez toi."
       },
       {
-        "name": "Bourse assets de jeu",
-        "description": "Une bourse cumulable de 10 $ pour acheter des tilesets, sprites, musiques et sons pour ton jeu."
+        "name": "Crédit assets de jeu",
+        "description": "Un crédit cumulable de 10 $ pour acheter des tilesets, sprites, musiques et sons pour ton jeu."
       },
       {
         "name": "Pack de stickers Hack Club",
@@ -237,35 +237,35 @@
       },
       {
         "name": "Crédits IA",
-        "description": "Une bourse de 10 $ de crédits IA chez le fournisseur de ton choix."
+        "description": "Un crédit de 10 $ pour des crédits IA chez le fournisseur de ton choix."
       },
       {
-        "name": "Bourse musique",
-        "description": "Une bourse cumulable de 10 $ à dépenser en instruments, plugins, samples ou tout matériel musical. À ne pas utiliser pour un abonnement Spotify/Apple Music etc."
+        "name": "Crédit musique",
+        "description": "Un crédit cumulable de 10 $ à dépenser en instruments, plugins, samples ou tout matériel musical. À ne pas utiliser pour un abonnement Spotify/Apple Music etc."
       },
       {
-        "name": "Bourse outils de soudure",
-        "description": "Une bourse cumulable de 10$ pour des outils et fournitures de soudure."
+        "name": "Crédit outils de soudure",
+        "description": "Un crédit cumulable de 10$ pour des outils et fournitures de soudure."
       },
       {
-        "name": "Bourse matériel",
-        "description": "Une bourse cumulable de 10$ à dépenser sur du matériel pour vos projets."
+        "name": "Crédit matériel",
+        "description": "Un crédit cumulable de 10$ à dépenser sur du matériel pour vos projets."
       },
       {
-        "name": "Bourse nom de domaine",
-        "description": "Une bourse cumulable de 12$ pour réserver un nom de domaine pour votre projet."
+        "name": "Crédit nom de domaine",
+        "description": "Un crédit cumulable de 12$ pour réserver un nom de domaine pour votre projet."
       },
       {
-        "name": "Bourse hébergement",
-        "description": "Une bourse cumulable de 10$ pour de l'hébergement, comme Railway ou toute autre plateforme cloud."
+        "name": "Crédit hébergement",
+        "description": "Un crédit cumulable de 10$ pour de l'hébergement, comme Railway ou toute autre plateforme cloud."
       },
       {
         "name": "Objet de bureau aléatoire",
         "description": "Un objet au hasard de nos bureaux : un PCB, une réserve de stickers, n'importe quoi. Livré avec une lettre signée. Quelques exemplaires seulement !"
       },
       {
-        "name": "Bourse fournitures d'art",
-        "description": "Une bourse cumulable de 10 $ à dépenser en peintures, stylos, toiles ou toutes fournitures d'art."
+        "name": "Crédit fournitures d'art",
+        "description": "Un crédit cumulable de 10 $ à dépenser en peintures, stylos, toiles ou toutes fournitures d'art."
       },
       {
         "name": "Emporte-pièce PIXL",
@@ -276,8 +276,8 @@
         "description": "Un kit de fer à souder avec des pointes neuves et du flux — utile pour le kit Tamagotchi et d'autres montages hardware."
       },
       {
-        "name": "Bourse nourriture",
-        "description": "Une bourse cumulable de 10$ pour de la nourriture et des snacks pendant que vous codez."
+        "name": "Crédit nourriture",
+        "description": "Un crédit cumulable de 10$ pour de la nourriture et des snacks pendant que vous codez."
       },
       {
         "name": "Licence Pixel Composer",
@@ -289,7 +289,7 @@
       },
       {
         "name": "Poster PIXL",
-        "description": "Une bourse d'impression de 20 $ pour le poster PIXL ou n'importe quel poster. Tout le monde adore les posters."
+        "description": "Un crédit d'impression de 20 $ pour le poster PIXL ou n'importe quel poster. Tout le monde adore les posters."
       },
       {
         "name": "Licence Aseprite",
@@ -297,7 +297,7 @@
       },
       {
         "name": "Licence développeur Google Play",
-        "description": "Une bourse de 25$ pour votre licence développeur Google Play."
+        "description": "Un crédit de 25$ pour votre licence développeur Google Play."
       },
       {
         "name": "Kit DIY Tamagotchi Pixl",
@@ -332,16 +332,16 @@
         "description": "Une peluche requin Blahaj livrée chez toi."
       },
       {
-        "name": "Bourse CPU",
-        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de CPU."
+        "name": "Crédit CPU",
+        "description": "Un crédit cumulable de 50$ réservé aux mises à niveau de CPU."
       },
       {
-        "name": "Bourse GPU",
-        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de GPU."
+        "name": "Crédit GPU",
+        "description": "Un crédit cumulable de 50$ réservé aux mises à niveau de GPU."
       },
       {
-        "name": "Bourse RAM",
-        "description": "Une bourse cumulable de 50$ réservée aux mises à niveau de RAM."
+        "name": "Crédit RAM",
+        "description": "Un crédit cumulable de 50$ réservé aux mises à niveau de RAM."
       },
       {
         "name": "Wacom Intuos (Small)",
@@ -361,15 +361,15 @@
       },
       {
         "name": "Licence Steam",
-        "description": "Une bourse pour publier ton jeu sur Steam."
+        "description": "Un crédit pour publier ton jeu sur Steam."
       },
       {
         "name": "Licence développeur Apple",
-        "description": "Une bourse de 100$ pour votre abonnement au programme développeur Apple."
+        "description": "Un crédit de 100$ pour votre abonnement au programme développeur Apple."
       },
       {
-        "name": "Bourse écran (cumulable)",
-        "description": "Une bourse cumulable de 100 $ pour l'écran de ton choix. Tes pixels méritent plus de pixels."
+        "name": "Crédit écran (cumulable)",
+        "description": "Un crédit cumulable de 100 $ pour l'écran de ton choix. Tes pixels méritent plus de pixels."
       },
       {
         "name": "Apple Pencil Pro",
@@ -515,7 +515,7 @@
   "footer": {
     "aProjectBy": "Un projet de",
     "teens": "Teens",
-    "hackClubDesc1": "Hack Club est une association à but non lucratif 501(c)(3) et un réseau de plus de 60 000 lycéens techos. On croit qu'on apprend mieux en construisant, alors on crée une communauté et on offre des bourses pour que tu puisses réaliser des projets géniaux. Ces dernières années, on a",
+    "hackClubDesc1": "Hack Club est une association à but non lucratif 501(c)(3) et un réseau de plus de 60 000 lycéens techos. On croit qu'on apprend mieux en construisant, alors on crée une communauté et on offre des crédits pour que tu puisses réaliser des projets géniaux. Ces dernières années, on a",
     "partneredWithGithub": "collaboré avec GitHub pour organiser Summer of Making",
     "hostedWorldsLongest": "organisé le plus long hackathon du monde sur terre",
     "ranCanadasLargest": "mené le plus grand hackathon lycéen du Canada",
