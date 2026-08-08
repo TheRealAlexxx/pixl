@@ -48,6 +48,8 @@ INSERT INTO shop_items (name, description, price, image_url, options, active, po
 VALUES ('Godot Plush (Limited Edition)', 'The official Godot robot plushie. Emotional support for game jams.', 650, 'https://pixl.rsvp/shop/godot-plush.png', '[]'::jsonb, true, 16, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
 VALUES ('PIXL Hoodie', 'Limited PIXL hoodie with the logo on the chest.', 700, 'https://pixl.rsvp/shop/hoodie.png', '[]'::jsonb, true, 17, 'landing-sync', 0);
+-- NOTE: this row was later swept into a trophy by 0077 (unlock_xp = 500) and
+-- then deleted by 0092. Re-running this file would resurrect it.
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
 VALUES ('Blahaj Plush', 'A plush Blahaj shark shipped to your door.', 700, 'https://pixl.rsvp/shop/blahaj.png', '[]'::jsonb, true, 18, 'landing-sync', 0);
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp)
