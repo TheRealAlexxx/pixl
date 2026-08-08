@@ -6,16 +6,22 @@ const COLOR_DIM := Color(0.788235, 0.694118, 0.54902)
 const COLOR_MARKER := Color(1, 0.85, 0.1)
 
 # Hand-authored hotspots: region name (must match sidequests.region in the
-# dashboard) -> fractional position on the map panel. No in-game map art
-# exists yet, so this renders as a labeled placeholder until real art lands -
-# swap MAP_BG's color fill for a TextureRect once it does.
+# dashboard) -> fractional position on the map panel. These were placed against
+# the old flat placeholder, so they need re-tuning once the terrain bake exists -
+# the regions are real places on the image now, not evenly spaced guesses.
 const REGIONS := {
 	"The Hub": Vector2(0.28, 0.62),
 	"Dustline": Vector2(0.68, 0.32),
 }
 
+# The overworld is the map: village/interiors are rooms inside it, and both
+# canon regions live in open_world's tilemaps.
+const WORLD_MAP_KEY := "open_world"
+const COLOR_SELF := Color(1, 0.819608, 0.4)
+
 var _root: Control
 var _map_panel: Control
+var _map_art: Control
 var _detail_panel: PanelContainer
 var _detail_title: Label
 var _detail_body: RichTextLabel
@@ -59,6 +65,9 @@ func open() -> void:
 	global.push_ui_blocker()
 	_root.visible = true
 	_detail_panel.visible = false
+	# The map is modal and blocks movement, so one redraw on open is enough to
+	# keep the "you are here" dot honest.
+	_map_art.queue_redraw()
 	_refresh_markers()
 
 func close() -> void:
@@ -108,6 +117,13 @@ func _build_ui() -> void:
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_map_panel.add_child(bg)
 
+	# Terrain + "you are here", under the hotspot buttons added below.
+	_map_art = Control.new()
+	_map_art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_map_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_art.draw.connect(_draw_art)
+	_map_panel.add_child(_map_art)
+
 	var hint := Label.new()
 	hint.text = "Press M to close"
 	hint.theme_type_variation = &"InfoText"
@@ -118,6 +134,35 @@ func _build_ui() -> void:
 		_add_hotspot(region_name, REGIONS[region_name])
 
 	_build_detail_panel()
+
+# Draws the terrain baked by scripts/tools/bake_world_map.gd, letterboxed to keep
+# the world's aspect ratio, plus the player's position on it. Silently draws
+# nothing until that bake has been run, leaving the plain dark panel behind it.
+func _draw_art() -> void:
+	var tex := MapData.texture(WORLD_MAP_KEY)
+	if tex == null:
+		return
+	var art := _fit(Vector2(tex.get_size()), _map_art.size)
+	_map_art.draw_texture_rect(tex, art, false)
+
+	var world := get_tree().current_scene
+	if world == null or MapData.scene_key(world) != WORLD_MAP_KEY:
+		return
+	var me = world.get("_local_player")
+	if me == null or not is_instance_valid(me):
+		return
+	var frac := MapData.world_to_image(WORLD_MAP_KEY, me.global_position) / Vector2(tex.get_size())
+	var at := art.position + frac * art.size
+	_map_art.draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), COLOR_SELF)
+	_map_art.draw_rect(Rect2(at - Vector2(4, 4), Vector2(8, 8)), Color.BLACK, false, 1.0)
+
+# Largest centred rect of the given aspect that fits inside the panel.
+func _fit(tex_size: Vector2, panel: Vector2) -> Rect2:
+	if tex_size.x <= 0.0 or tex_size.y <= 0.0:
+		return Rect2(Vector2.ZERO, panel)
+	var scale := minf(panel.x / tex_size.x, panel.y / tex_size.y)
+	var size := tex_size * scale
+	return Rect2((panel - size) * 0.5, size)
 
 func _add_hotspot(region_name: String, frac: Vector2) -> void:
 	var hotspot := Button.new()
