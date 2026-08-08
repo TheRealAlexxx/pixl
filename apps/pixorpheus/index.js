@@ -3306,7 +3306,11 @@ app.message(async ({ message, client }) => {
     });
   }
   const pending = pendingReplies.get(threadKey);
-  pending.messages.push(text);
+  // Keep each message tagged with its own sender — this batch window can
+  // span multiple people talking in the same thread, and collapsing them
+  // all under one name (or losing the attribution entirely) is exactly
+  // what made pixo seem like it forgot who said what.
+  pending.messages.push({ user: message.user, text });
   pending.userId = message.user;
   pending.lastMsgTs = message.ts;
   if (mentionsBot || isPixlQuestion || isBotStartedThread)
@@ -3326,7 +3330,8 @@ app.message(async ({ message, client }) => {
       if (!entry) return;
       pendingReplies.delete(threadKey);
 
-      const combinedText = entry.messages.join("\n").toLowerCase();
+      const entryTexts = entry.messages.map((m) => m.text);
+      const combinedText = entryTexts.join("\n").toLowerCase();
       const isSummaryRequest =
         combinedText.includes("résume") ||
         combinedText.includes("summarize") ||
@@ -3360,15 +3365,18 @@ app.message(async ({ message, client }) => {
             content: `summarize this thread in a few sentences:\n${msgs}`,
           });
         } catch (e) {
-          history.push({ role: "user", content: entry.messages.join("\n") });
+          history.push({ role: "user", content: entryTexts.join("\n") });
         }
       } else {
-        const senderName =
-          getDisplayName(entry.userId) || entry.userId || "someone";
-        history.push({
-          role: "user",
-          content: `[${senderName}]: ${resolveUserMentions(entry.messages.join("\n"))}`,
-        });
+        // Attribute each message to its own sender — a batch window can
+        // span multiple people talking in the thread, not just entry.userId.
+        const content = entry.messages
+          .map((m) => {
+            const name = getDisplayName(m.user) || m.user || "someone";
+            return `[${name}]: ${resolveUserMentions(m.text)}`;
+          })
+          .join("\n");
+        history.push({ role: "user", content });
       }
 
       if (mutedThreads.has(threadKey)) return;
@@ -3377,7 +3385,7 @@ app.message(async ({ message, client }) => {
       if (!entry.isMention) {
         const tmCurrent = threadMemory.get(threadKey);
         if (!tmCurrent?.botInvited) {
-          const vibe = await shouldChimeIn(entry.messages);
+          const vibe = await shouldChimeIn(entryTexts);
           if (vibe === "skip") return;
           if (vibe === "chime") {
             if (Math.random() < 0.55) return;
@@ -3388,11 +3396,11 @@ app.message(async ({ message, client }) => {
 
       let searchResults = null;
       if (!chimeMode) {
-        const combined = entry.messages.join(" ").toLowerCase();
+        const combined = entryTexts.join(" ").toLowerCase();
         if (/\b(heure|time|quelle heure|what time|clock)\b/.test(combined)) {
           searchResults = `Current time: ${new Date().toISOString().replace("T", " ").slice(0, 16)} UTC`;
         } else {
-          const query = await extractSearchQuery(entry.messages);
+          const query = await extractSearchQuery(entryTexts);
           if (query) searchResults = await braveSearch(query);
         }
       }
@@ -3429,9 +3437,14 @@ app.message(async ({ message, client }) => {
       if (reply) {
         botStats.aiReplies++;
         history.push({ role: "assistant", content: reply });
-        extractMemory(entry.userId, entry.messages).catch(() => {});
+        // Only the target user's own words go into their memory/personality
+        // profile — a batch can include other people's messages too.
+        const ownTexts = entry.messages
+          .filter((m) => m.user === entry.userId)
+          .map((m) => m.text);
+        extractMemory(entry.userId, ownTexts).catch(() => {});
         if (Math.random() < 0.2)
-          extractPersonality(entry.userId, entry.messages).catch(() => {});
+          extractPersonality(entry.userId, ownTexts).catch(() => {});
         const tmAfter = threadMemory.get(threadKey);
         if (tmAfter) tmAfter.lastBotReply = reply;
         maybeUpdateThreadSummary(threadKey).catch(() => {});
