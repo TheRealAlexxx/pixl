@@ -638,7 +638,7 @@
         let elig = null;
         try { elig = await Pixl.api("/api/profile/eligibility"); } catch {}
         if (!elig || !elig.ok || !elig.hasAddress) {
-          location.href = `/account?return=shop&itemId=${id}`;
+          location.href = "/account?return=shop";
           return;
         }
         const summary = [
@@ -654,7 +654,7 @@
           cancelText: "Change address",
         });
         if (!ok) {
-          location.href = `/account?return=shop&itemId=${id}`;
+          location.href = "/account?return=shop";
           return;
         }
         buyItem(id);

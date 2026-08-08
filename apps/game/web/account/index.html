@@ -83,9 +83,7 @@ Pixl.mountTopbar("account");
 Pixl.loadWallet();
 
 const $ = (id) => document.getElementById(id);
-const returnParams = new URLSearchParams(location.search);
-const returnTo = returnParams.get("return");
-const returnItemId = returnParams.get("itemId");
+const returnTo = new URLSearchParams(location.search).get("return");
 
 async function load() {
   let data = null;
@@ -126,8 +124,7 @@ $("save-address").addEventListener("click", async () => {
   if (r.ok) {
     Pixl.toast("Address saved.");
     $("address-status").textContent = "Saved.";
-    if (returnTo === "shop")
-      location.href = returnItemId ? `/shop/item?id=${encodeURIComponent(returnItemId)}` : "/shop";
+    if (returnTo === "shop") location.href = "/shop";
   } else {
     Pixl.toast(r.reason || "Couldn't save that address.", true);
   }
