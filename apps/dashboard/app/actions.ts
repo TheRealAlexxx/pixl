@@ -1263,10 +1263,6 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     redirect(`/pixels?error=${encodeURIComponent("Pick a player and a whole number of pixels.")}`);
   if (!reason)
     redirect(`/pixels?error=${encodeURIComponent("A reason is required for manual pixel changes.")}`);
-  const { data: target } = await db.from("users").select("slack_id").eq("id", userId).single();
-  if (!deduct && target?.slack_id && target.slack_id === access.session.slackId)
-    redirect(`/pixels?error=${encodeURIComponent("You can't grant pixels to yourself.")}`);
-
   const delta = deduct ? -amount : amount;
   const { error } = await db.rpc("adjust_user_pixels", {
     p_user_id: userId,
