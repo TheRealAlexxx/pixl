@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { activeEvents } from "../events.js";
-import { approvedHoursFor } from "../xp.js";
+import { levelFor } from "../xp.js";
 import { addNotification } from "./notifications.js";
 
 const router = Router();
@@ -108,16 +108,18 @@ router.get("/api/shop/items", async (req, res) => {
 
   await attachStock(items);
 
-  // The player's own trophy progress: current XP and which trophies they've claimed.
+  // The player's own trophy progress. Trophies gate on the player's level
+  // (1-100, derived from lifetime RE), not raw hours - `unlock_xp` holds the
+  // level required. The field name predates levels and isn't worth a migration.
   const hasTrophies = items.some((i) => Number(i.unlock_xp) > 0);
   let xp = 0;
   let claimed: number[] = [];
   if (hasTrophies) {
-    const [hours, { data: claims }] = await Promise.all([
-      approvedHoursFor(session.userId),
+    const [level, { data: claims }] = await Promise.all([
+      levelFor(session.userId),
       supabase.from("shop_claims").select("item_id").eq("user_id", session.userId),
     ]);
-    xp = hours;
+    xp = level;
     claimed = ((claims ?? []) as { item_id: number }[]).map((c) => c.item_id);
   }
 
@@ -184,7 +186,7 @@ router.post("/api/shop/claim/:id", async (req, res) => {
   if (!item || !item.active || unlockXp <= 0)
     return res.status(404).json({ ok: false, error: "not_a_trophy" });
 
-  const xp = await approvedHoursFor(session.userId);
+  const xp = await levelFor(session.userId);
   if (xp < unlockXp)
     return res.status(400).json({ ok: false, error: "not_eligible", xp, need: unlockXp });
 

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { activeEvents } from "../events.js";
-import { approvedHoursFor, levelFor } from "../xp.js";
+import { approvedHoursFor, lifetimeRe, levelForRe } from "../xp.js";
 
 const router = Router();
 
@@ -340,10 +340,10 @@ router.get("/api/explore/players/:id", async (req, res) => {
     .map((r) => (r as { collectibles: unknown }).collectibles)
     .filter(Boolean);
 
-  const xp = await approvedHoursFor(id);
+  const [xp, re] = await Promise.all([approvedHoursFor(id), lifetimeRe(id)]);
   res.json({
     ok: true,
-    player: { ...data, xp_hours: xp, level: levelFor(xp) },
+    player: { ...data, xp_hours: xp, re, level: levelForRe(re) },
     projects: projects.data ?? [],
     collectibles,
   });

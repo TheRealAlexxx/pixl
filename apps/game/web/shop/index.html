@@ -430,7 +430,7 @@
         const foot =
           state === "locked"
             ? `<div class="trophy-progress"><div style="width:${pct}%"></div></div>
-       <div class="trophy-need">${Math.floor(xp)} / ${need} XP · keep shipping!</div>`
+       <div class="trophy-need">LEVEL ${Math.floor(xp)} / ${need} · keep shipping!</div>`
             : state === "claimable"
               ? `<button class="btn teal trophy-claim" data-claim="${item.id}">CLAIM</button>`
               : `<div class="trophy-need earned">Yours forever.</div>`;

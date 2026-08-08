@@ -13,8 +13,31 @@ const Pixl = (() => {
       "repo": "https://github.com/ridit-jangra/pixl"
     },
     "economy": {
-      "pixelsPerHour": 50,
-      "pixelValueUsd": 0.07
+      "pixelValueUsd": 0.07,
+      "sponsorRateUsd": 8.5,
+      "basePayoutUsd": 3.5,
+      "maxPayoutUsd": 6,
+      "reForMaxPayout": 5000,
+      "tierRePerHour": [
+        5,
+        10,
+        15,
+        25
+      ],
+      "levelBands": [
+        {
+          "throughLevel": 10,
+          "rePerLevel": 10
+        },
+        {
+          "throughLevel": 50,
+          "rePerLevel": 35
+        },
+        {
+          "throughLevel": 100,
+          "rePerLevel": 70
+        }
+      ]
     },
     "team": [
       "Gabin",
@@ -309,7 +332,10 @@ const Pixl = (() => {
       const w = await api("/api/profile/wallet");
       if (!w.ok) return null;
       el.querySelector(".px").textContent = Math.round(w.pixels).toLocaleString();
-      el.querySelector(".lv").textContent = `LVL ${w.level} · ${w.pxPerHour} px/h`;
+      // pxPerHour is a continuous ramp off RE now, not a step table, so it
+      // arrives fractional - round it for display.
+      el.querySelector(".lv").textContent =
+        `LVL ${w.level} · ${Math.round(w.re ?? 0).toLocaleString()} RE · ${Math.round(w.pxPerHour)} px/h`;
       return w;
     } catch {
       return null;

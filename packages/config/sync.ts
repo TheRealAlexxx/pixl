@@ -65,6 +65,71 @@ const ts = `// ${NOTE}
 /* eslint-disable */
 export const config = ${pretty} as const;
 
+const E = config.economy;
+
+/** Max player level - the top of the last level band. */
+export const MAX_LEVEL = E.levelBands[E.levelBands.length - 1].throughLevel;
+
+/** Restoration Energy earned per hour at a given project tier (1-4). */
+export function rePerHour(tier: number): number {
+  const t = Math.min(Math.max(Math.trunc(tier) || 1, 1), E.tierRePerHour.length);
+  return E.tierRePerHour[t - 1];
+}
+
+/** RE a project is worth: its hours at its tier's rate. */
+export function reForHours(hours: number, tier: number): number {
+  const h = Number.isFinite(hours) ? Math.max(hours, 0) : 0;
+  return h * rePerHour(tier);
+}
+
+/**
+ * Player level from lifetime RE. Levels are cosmetic - they never feed the
+ * payout, which comes straight off RE. Early bands are cheap so a beginner on a
+ * tier-1 project levels up within a couple of hours; later bands cost more.
+ * Caps at MAX_LEVEL, though RE itself keeps accruing past it.
+ */
+export function levelForRe(re: number): number {
+  let remaining = Number.isFinite(re) ? Math.max(re, 0) : 0;
+  let level = 0;
+  let prevTop = 0;
+  for (const band of E.levelBands) {
+    const span = band.throughLevel - prevTop;
+    const cost = span * band.rePerLevel;
+    if (remaining < cost) return level + Math.floor(remaining / band.rePerLevel);
+    remaining -= cost;
+    level = band.throughLevel;
+    prevTop = band.throughLevel;
+  }
+  return level;
+}
+
+/** Total RE needed to reach a given level - the inverse of levelForRe. */
+export function reForLevel(level: number): number {
+  let re = 0;
+  let prevTop = 0;
+  for (const band of E.levelBands) {
+    const top = Math.min(level, band.throughLevel);
+    if (top > prevTop) re += (top - prevTop) * band.rePerLevel;
+    prevTop = band.throughLevel;
+    if (level <= band.throughLevel) break;
+  }
+  return re;
+}
+
+/**
+ * Dollars per hour for a player holding this much lifetime RE. Ramps linearly
+ * from basePayoutUsd to maxPayoutUsd, hitting the ceiling at reForMaxPayout.
+ */
+export function payoutUsdPerHour(re: number): number {
+  const progress = Math.min(Math.max(re, 0) / E.reForMaxPayout, 1);
+  return E.basePayoutUsd + progress * (E.maxPayoutUsd - E.basePayoutUsd);
+}
+
+/** Same rate expressed in pixels, which is what payouts are actually credited in. */
+export function pxPerHourFor(re: number): number {
+  return payoutUsdPerHour(re) / E.pixelValueUsd;
+}
+
 export const launchDate = new Date(config.launchDate);
 export const hackatimeCutoff = new Date(config.hackatimeCutoff);
 
@@ -101,6 +166,7 @@ for (const target of [
   "apps/server/src/config.generated.ts",
   "apps/pixorpheus/src/config.generated.ts",
   "apps/landing/app/_generated/config.ts",
+  "apps/dashboard/app/_generated/config.ts",
 ]) {
   await write(`${ROOT}${target}`, ts);
 }

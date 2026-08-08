@@ -238,16 +238,16 @@ export default async function ReviewDetail({
             {!isOwn && (
               <form action={setProjectLevel} className="flex items-center gap-2 mb-3 text-sm">
                 <input type="hidden" name="projectId" value={p.id} />
-                <label className="text-muted-foreground">Re-grade level</label>
+                <label className="text-muted-foreground">Re-grade tier</label>
                 <select
                   name="level"
                   defaultValue={p.level ?? 1}
                   className="rounded-md border border-border bg-background px-2 py-1 text-sm"
                 >
-                  <option value={1}>L1 · Greenhorn</option>
-                  <option value={2}>L2 · Deputy</option>
-                  <option value={3}>L3 · Outlaw</option>
-                  <option value={4}>L4 · Legend</option>
+                  <option value={1}>T1 · Spark</option>
+                  <option value={2}>T2 · Signal</option>
+                  <option value={3}>T3 · Grid</option>
+                  <option value={4}>T4 · Beacon</option>
                 </select>
                 <PendingButton variant="secondary" size="sm" pendingText="Saving…">
                   Set

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { pxPerHourFor, reForHours } from "./_generated/config";
 import {
   db,
   getAdmin,
@@ -91,32 +92,19 @@ async function nextReviewPath(
   }
 }
 
-// XP = 1 per lifetime approved hour. Payout steps up at named hour milestones
-// (flat between tiers, not a smooth ramp) - 1px = $0.07. A player's rate for
-// a ship comes from their XP before that ship. Keep in sync with server
-// src/xp.ts's RATE_TIERS (this used to drift from it — 40/60 vs the real
-// 50/79 — fixed 2026-08-01; extended into tiers 2026-08-03).
-const RATE_TIERS: { hours: number; pxPerHour: number }[] = [
-  { hours: 0, pxPerHour: 50 }, // $3.50/hr - base
-  { hours: 25, pxPerHour: 57 }, // $4.00/hr
-  { hours: 75, pxPerHour: 64 }, // $4.50/hr
-  { hours: 175, pxPerHour: 71 }, // $5.00/hr
-  { hours: 350, pxPerHour: 79 }, // $5.50/hr - old ceiling, now mid-tier
-  { hours: 500, pxPerHour: 86 }, // $6.00/hr - rare top tier, pairs with the Blahaj trophy
-];
-
-function pxPerHourFor(xp: number): number {
-  let rate = RATE_TIERS[0].pxPerHour;
-  for (const tier of RATE_TIERS) {
-    if (xp >= tier.hours) rate = tier.pxPerHour;
-  }
-  return rate;
-}
-
-async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
+// A project's tier (1-4) sets how much Restoration Energy each of its hours is
+// worth; lifetime RE sets the player's hourly rate, ramping from basePayoutUsd
+// to maxPayoutUsd. A player's rate for a ship comes from their RE *before* that
+// ship. All of it is generated from packages/config/pixl.json - this file used
+// to carry its own copy of the rate table and drifted from the server's (40/60
+// vs the real 50/79, fixed 2026-08-01), which is exactly why it no longer does.
+//
+// Note: the DB column is `projects.level` but holds the tier (1-4). It predates
+// the player-facing 1-100 level and isn't worth a migration to rename.
+async function lifetimeRe(userId: string, excludeProjectId: number): Promise<number> {
   const { data } = await db
     .from("projects")
-    .select("id, approved_hours, hackatime_seconds")
+    .select("id, approved_hours, hackatime_seconds, level")
     .eq("user_id", userId)
     .eq("status", "approved")
     .is("banned_at", null)
@@ -128,7 +116,7 @@ async function lifetimeApprovedHours(userId: string, excludeProjectId: number): 
           p.approved_hours != null
             ? Number(p.approved_hours)
             : (Number(p.hackatime_seconds) || 0) / 3600;
-        return s + (Number.isFinite(h) ? h : 0);
+        return s + (Number.isFinite(h) ? reForHours(h, Number(p.level) || 1) : 0);
       }, 0) * 10,
     ) / 10
   );
@@ -468,7 +456,9 @@ async function creditBeneficiary(
     }
   }
 
-  const xpBefore = await lifetimeApprovedHours(userId, projectId);
+  // Rate is set by the RE the player held *before* this ship, so a project can
+  // never raise its own payout rate.
+  const xpBefore = await lifetimeRe(userId, projectId);
   let pxRate = pxPerHourFor(xpBefore);
   const alreadyPx = await projectPixelTotal(projectId, userId);
   // A project only counts as a "new ship" for referral purposes the first

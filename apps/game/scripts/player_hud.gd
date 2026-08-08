@@ -533,7 +533,15 @@ func _fetch_wallet() -> void:
 		var json = JSON.parse_string(data.get_string_from_utf8()) if data.size() > 0 else null
 		if typeof(json) != TYPE_DICTIONARY or not json.get("ok", false):
 			return
-		_set_wallet(float(json.get("pixels", 0)), float(json.get("approvedHours", 0)), int(json.get("level", 0)), int(json.get("pxPerHour", 0)))
+		# pxPerHour ramps continuously off RE, so it arrives fractional - round
+		# rather than let int() truncate 65.7 down to 65.
+		_set_wallet(
+			float(json.get("pixels", 0)),
+			float(json.get("approvedHours", 0)),
+			int(json.get("level", 0)),
+			int(round(float(json.get("pxPerHour", 0)))),
+			float(json.get("re", 0)),
+		)
 	)
 	req.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
 
@@ -575,12 +583,14 @@ func _set_events(events: Array) -> void:
 	_event_label.text = "EVENT  " + "  ·  ".join(parts)
 	_event_card.visible = true
 
-func _set_wallet(pixels: float, hours: float, level: int = 0, px_rate: int = 0) -> void:
+func _set_wallet(pixels: float, hours: float, level: int = 0, px_rate: int = 0, re: float = 0.0) -> void:
 	if _pixels_label == null:
 		return
 	_pixels_label.text = "%s pixels" % _fmt_amount(pixels)
 	if px_rate > 0:
-		_hours_label.text = "%sh · LVL %d · %d px/h" % [_fmt_amount(hours), level, px_rate]
+		_hours_label.text = "%sh · LVL %d · %s RE · %d px/h" % [
+			_fmt_amount(hours), level, _fmt_amount(re), px_rate,
+		]
 	else:
 		_hours_label.text = "%sh approved" % _fmt_amount(hours)
 
