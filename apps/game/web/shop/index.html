@@ -398,6 +398,12 @@
         return wallet && wallet.pixels >= basePrice(item);
       }
 
+      // Newly-stocked-region items whose price research came back empty for
+      // that region — still shown in the catalog, just not buyable yet.
+      function isPending(item) {
+        return !item.config_options && Number(item.price) <= 0;
+      }
+
       function tierMatch(item) {
         if (activeTier === "afford") return canAfford(item);
         if (activeTier === "under") return basePrice(item) < 500;
@@ -481,11 +487,15 @@
       <div class="item-name">${Pixl.esc(item.name)}</div>
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
       <div class="item-foot">
-        <div class="price-wrap">
+        ${
+          isPending(item)
+            ? `<div class="price-wrap"><span class="price cant">PRICE TBD</span><span class="price-hours">Coming soon to this region</span></div>`
+            : `<div class="price-wrap">
           <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${item.config_options ? `FROM ${basePrice(item).toLocaleString()}` : basePrice(item).toLocaleString()} PX</span>
           <span class="price-hours">${hoursOf(basePrice(item))}</span>
         </div>
-        <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
+        <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>`
+        }
       </div>
     </div>`,
           )

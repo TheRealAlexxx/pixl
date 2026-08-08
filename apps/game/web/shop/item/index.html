@@ -597,6 +597,15 @@
       // item — pulled out of renderDetail() so the stock-poll refresh and the
       // qty stepper can update it without resetting the picked option/note.
       function updatePlainPriceUI() {
+        if (Number(selected.price) <= 0) {
+          $("detail-price").innerHTML = "PRICE TBD";
+          $("detail-price").classList.add("cant");
+          $("buy-btn").textContent = "NOT AVAILABLE YET";
+          $("buy-btn").disabled = true;
+          $("afford-fill").style.width = "0%";
+          $("afford-label").textContent = "Coming soon to this region.";
+          return;
+        }
         const total = Number(selected.price) * quantity;
         const afford = wallet && wallet.pixels >= total;
         const inStock = stockOk();
