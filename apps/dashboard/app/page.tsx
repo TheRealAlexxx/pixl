@@ -130,7 +130,9 @@ export default async function Overview({
             { label: "This month", value: stats.playersMonth },
           ].map((c) => (
             <Card key={c.label} className="p-5 gap-0">
-              <div className="text-sm font-medium text-muted-foreground">{c.label}</div>
+              <div className="text-sm font-medium text-muted-foreground">
+                {c.label}
+              </div>
               <div className="text-3xl font-semibold text-foreground tabular-nums mt-2">
                 +{c.value.toLocaleString()}
               </div>
@@ -151,7 +153,11 @@ export default async function Overview({
                 asChild
                 variant="ghost"
                 size="sm"
-                className={r === days ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : ""}
+                className={
+                  r === days
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
+                    : ""
+                }
               >
                 <Link href={r === 30 ? "/" : `/?range=${r}`}>{r}d</Link>
               </Button>
