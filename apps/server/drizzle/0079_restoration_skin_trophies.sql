@@ -1,3 +1,8 @@
+-- SUPERSEDED by 0091_drop_intermediate_trophies.sql - do not re-run. The four
+-- items below were deleted again; the trophy track is just the two Blahaj
+-- items at 500. Re-running this file would recreate them (the NOT EXISTS guard
+-- only stops duplicates, not resurrection).
+--
 -- Trophy items for the restoration-energy rate tiers that don't already have
 -- one (25/75/175/350 lifetime approved hours from src/xp.ts's RATE_TIERS -
 -- the 500h top tier already has the Blahaj trophies). Same pattern as
