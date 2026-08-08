@@ -448,7 +448,7 @@
               .map((c) => {
                 const s = isStockGroup ? stock.get(c) : null;
                 const soldOut = !!s && s.remaining <= 0;
-                const tag = s ? ` <span class="stock-tag">${soldOut ? "SOLD OUT" : `${s.remaining}/${s.total} LEFT`}</span>` : "";
+                const tag = s ? ` <span class="stock-tag">${soldOut ? "SOLD OUT" : `${s.remaining} LEFT`}</span>` : "";
                 return `<span class="chip opt-choice ${c === pick ? "on" : ""} ${soldOut ? "sold-out" : ""}" data-g="${gi}" data-c="${Pixl.esc(c)}">${Pixl.esc(c.toUpperCase())}${tag}</span>`;
               })
               .join("");
