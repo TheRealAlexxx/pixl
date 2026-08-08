@@ -47,7 +47,7 @@ func _is_outdoor() -> bool:
 # night outside their window: 0.0 = local midnight, 0.5 = local noon.
 func _phase() -> float:
 	var t := Time.get_time_dict_from_system()
-	var seconds_into_day := t.hour * 3600 + t.minute * 60 + t.second
+	var seconds_into_day: int = int(t.hour) * 3600 + int(t.minute) * 60 + int(t.second)
 	return seconds_into_day / 86400.0
 
 # 0.0 in broad daylight -> 1.0 at deep night, following the same phase as the
