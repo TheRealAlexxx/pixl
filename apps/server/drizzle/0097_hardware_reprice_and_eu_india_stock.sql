@@ -81,7 +81,7 @@ WHERE NOT EXISTS (SELECT 1 FROM shop_items WHERE name = 'MacBook Pro M5 (16GB/51
 
 -- ── 3. EUROPE rows for the 29 researched items (0 = no price shown yet) ──
 INSERT INTO shop_items (name, description, price, image_url, options, active, position, created_by, unlock_xp, config_options, region)
-SELECT name, description, v.price, image_url, options, active, position, created_by, unlock_xp, config_options, 'EUROPE'
+SELECT s.name, s.description, v.price, s.image_url, s.options, s.active, s.position, s.created_by, s.unlock_xp, s.config_options, 'EUROPE'
 FROM shop_items s
 JOIN (VALUES
   ('Soldering Iron', 0),
