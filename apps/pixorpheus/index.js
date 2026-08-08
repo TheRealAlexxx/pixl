@@ -20,20 +20,70 @@ const supabase = createClient(
 
 function db() { return supabase; }
 
-async function aiCall(body) {
+// onDelta(accumulatedText) is called as tokens stream in from OpenRouter.
+// Omit it to get the old buffered behavior (single response once it's all
+// in). Either way the return shape is the same: res.data.choices[0].message.content.
+async function aiCall(body, onDelta) {
   const openrouterKey = process.env.OPENROUTER_API_KEY;
   if (!openrouterKey) { const err = new Error('no credits'); err.code = NO_CREDITS; throw err; }
   // Persona chat / roasts / classification model. Gemini 3.1 Flash Lite by
   // default, cheap and fast for this high-volume bot.
   // Bump to "anthropic/claude-sonnet-4.6" via PIXO_MODEL if you want more punch.
   const orBody = { ...body, model: process.env.PIXO_MODEL || 'google/gemini-3.1-flash-lite' };
+  if (!onDelta) {
+    try {
+      const res = await axios.post(OPENROUTER_URL, orBody, {
+        headers: { Authorization: `Bearer ${openrouterKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pixorpheus.app', 'X-Title': 'Pixorpheus' },
+        timeout: 25000,
+      });
+      console.log('[openrouter] ok — content:', JSON.stringify(res.data?.choices?.[0]?.message?.content)?.slice(0, 80));
+      return res;
+    } catch (e) {
+      if (e.response?.status === 429) {
+        console.warn('[openrouter] rate limited (429) — staying silent');
+        const err = new Error('rate limited'); err.code = RATE_LIMITED; throw err;
+      }
+      if (e.response?.status === 402) {
+        console.error('[openrouter] no credits (402)');
+        const err = new Error('no credits'); err.code = NO_CREDITS; throw err;
+      }
+      console.error('[openrouter] failed (status', e.response?.status, '):', e.response?.data?.error?.message || e.message);
+      const err = new Error('transient error'); err.code = RATE_LIMITED; throw err;
+    }
+  }
+
+  // Streaming path: OpenRouter forwards an SSE stream of
+  // "data: {...}\n\n" chunks, each with a choices[0].delta.content
+  // fragment, terminated by "data: [DONE]".
   try {
-    const res = await axios.post(OPENROUTER_URL, orBody, {
+    const res = await axios.post(OPENROUTER_URL, { ...orBody, stream: true }, {
       headers: { Authorization: `Bearer ${openrouterKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://pixorpheus.app', 'X-Title': 'Pixorpheus' },
-      timeout: 25000,
+      timeout: 45000,
+      responseType: 'stream',
     });
-    console.log('[openrouter] ok — content:', JSON.stringify(res.data?.choices?.[0]?.message?.content)?.slice(0, 80));
-    return res;
+    let full = '';
+    let buf = '';
+    await new Promise((resolve, reject) => {
+      res.data.on('data', (chunk) => {
+        buf += chunk.toString('utf8');
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const raw = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 2);
+          if (!raw.startsWith('data:')) continue;
+          const payload = raw.slice(5).trim();
+          if (!payload || payload === '[DONE]') continue;
+          try {
+            const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
+            if (delta) { full += delta; onDelta(full); }
+          } catch (e) {}
+        }
+      });
+      res.data.on('end', resolve);
+      res.data.on('error', reject);
+    });
+    console.log('[openrouter] ok (stream) — content:', JSON.stringify(full).slice(0, 80));
+    return { data: { choices: [{ message: { content: full } }] } };
   } catch (e) {
     if (e.response?.status === 429) {
       console.warn('[openrouter] rate limited (429) — staying silent');
@@ -43,12 +93,89 @@ async function aiCall(body) {
       console.error('[openrouter] no credits (402)');
       const err = new Error('no credits'); err.code = NO_CREDITS; throw err;
     }
-    console.error('[openrouter] failed (status', e.response?.status, '):', e.response?.data?.error?.message || e.message);
+    console.error('[openrouter] stream failed (status', e.response?.status, '):', e.message);
     const err = new Error('transient error'); err.code = RATE_LIMITED; throw err;
   }
 }
 
 const aiPost = aiCall;
+
+// Applied to the accumulated buffer on every throttled preview update (not
+// just the final text) so a live-streaming reply never flashes something it
+// shouldn't: an in-progress <think> reasoning block, a not-yet-complete
+// REACT: directive line, or (for the SKIP protocol some prompts use) the
+// word "skip" itself.
+function safeDisplayText(raw, { stripSkip = false } = {}) {
+  let t = raw.replace(/<think>[\s\S]*?<\/think>/gi, '');
+  const openIdx = t.search(/<think>/i);
+  if (openIdx !== -1) t = t.slice(0, openIdx);
+  const reactIdx = t.search(/\n\s*REACT\s*:/i);
+  if (reactIdx !== -1) t = t.slice(0, reactIdx);
+  if (stripSkip) t = t.replace(/^skip\b\s*\n?/i, '');
+  return t.trim();
+}
+
+const STREAM_UPDATE_INTERVAL_MS = 900;
+
+// Posts a placeholder message immediately, then live-edits it as the model
+// streams in (throttled to respect Slack's chat.update rate limit — Slack
+// will start 429ing well before "every token" territory). Callers get back
+// the raw completion text to run their own leak-detection/cleanup on
+// exactly as they did before streaming existed, then call finalize(text)
+// with the real final text (does the closing edit) or discard() if there's
+// nothing worth keeping (empty reply, detected prompt leak, etc).
+//
+// `format` wraps both the live preview and is available for the caller's
+// own final text too — e.g. roast prefixes every update with "<@user> ".
+// Ephemeral responses (respond()/chat.postEphemeral) can't use this: Slack
+// has no way to edit an ephemeral message after the fact.
+async function streamedAICall(client, postParams, aiBody, { format, stripSkip } = {}) {
+  const fmt = format || ((t) => t);
+  let ts = null;
+  try {
+    const placeholder = await client.chat.postMessage({ ...postParams, text: fmt('…') });
+    ts = placeholder.ts;
+  } catch (e) {}
+
+  let lastUpdate = 0;
+  let lastShown = null;
+  const onDelta = ts
+    ? (full) => {
+        const display = safeDisplayText(full, { stripSkip });
+        if (!display || display === lastShown) return;
+        const now = Date.now();
+        if (now - lastUpdate < STREAM_UPDATE_INTERVAL_MS) return;
+        lastUpdate = now;
+        lastShown = display;
+        client.chat.update({ channel: postParams.channel, ts, text: fmt(display) }).catch(() => {});
+      }
+    : undefined;
+
+  let res;
+  try {
+    res = await aiCall(aiBody, onDelta);
+  } catch (e) {
+    if (ts) client.chat.delete({ channel: postParams.channel, ts }).catch(() => {});
+    throw e;
+  }
+
+  const rawContent = res.data.choices?.[0]?.message?.content || '';
+  return {
+    rawContent,
+    async finalize(finalText) {
+      if (!ts) {
+        if (finalText) await client.chat.postMessage({ ...postParams, text: finalText });
+        return;
+      }
+      if (!finalText) { await client.chat.delete({ channel: postParams.channel, ts }).catch(() => {}); return; }
+      await client.chat.update({ channel: postParams.channel, ts, text: finalText }).catch(() => {});
+    },
+    async discard() {
+      if (ts) await client.chat.delete({ channel: postParams.channel, ts }).catch(() => {});
+    },
+  };
+}
+
 const aiClassify = aiCall;
 
 const { App, ExpressReceiver } = require("@slack/bolt");
@@ -1029,9 +1156,12 @@ app.command("/pixl-roast", async ({ command, ack, client }) => {
 
   const memoryFacts = parseFacts(userMemory.get(targetId));
   const memoryHint = memoryFacts?.length ? ` known facts: ${memoryFacts.join(', ')}.` : '';
-  const roast = extractReaction(await getAIReply([{ role: 'user', content: `write a single brutal, creative, funny roast sentence about "${nameForAI}".${memoryHint} do NOT start with "i don't know", "i've never met", or any disclaimer. just go straight in with the roast. be specific and unhinged.` }])).text;
   botStats.roasts++;
-  await client.chat.postMessage({ channel: command.channel_id, text: `<@${targetId}> ${roast}` });
+  await getAIReply(
+    [{ role: 'user', content: `write a single brutal, creative, funny roast sentence about "${nameForAI}".${memoryHint} do NOT start with "i don't know", "i've never met", or any disclaimer. just go straight in with the roast. be specific and unhinged.` }],
+    null, null, false, null,
+    { client, postParams: { channel: command.channel_id }, format: (t) => `<@${targetId}> ${t}` },
+  );
 });
 
 
@@ -1759,7 +1889,12 @@ When in doubt between DIRECT and CHIME, pick DIRECT. When in doubt between CHIME
   }
 }
 
-async function getAIReply(history, userId = null, threadCtx = null, chimeMode = false, searchResults = null) {
+// streamTarget (optional): { client, postParams, format } — when given,
+// the reply is posted as a placeholder immediately and live-edited as it
+// streams in, instead of appearing all at once. Returns { text, emoji } on
+// success (already REACT-extracted — don't re-run extractReaction on it),
+// NO_CREDITS on a credits error, or null if there's nothing to say.
+async function getAIReply(history, userId = null, threadCtx = null, chimeMode = false, searchResults = null, streamTarget = null) {
   const creatorLine = userId === GABIN_ID ? `\nYou are talking to Gabin, your creator. You know it's really him. You can still be sarcastic but acknowledge he built you — maybe give him a tiny bit more respect, or roast him for the things he made you do.` : '';
   let threadLine = '';
   if (threadCtx) {
@@ -1837,19 +1972,30 @@ FINAL LENGTH CHECK: before sending, ask yourself — is this shorter than 2 sent
     ? [{ role: 'user', content: memoryBlock }, { role: 'assistant', content: 'k' }, ...history]
     : history;
 
+  const aiBody = {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messagesWithMemory,
+    ],
+    max_tokens: 120,
+  };
+
+  let stream = null;
   try {
-    const res = await aiPost({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messagesWithMemory,
-        ],
-        max_tokens: 120,
+    let rawContent;
+    if (streamTarget) {
+      stream = await streamedAICall(streamTarget.client, streamTarget.postParams, aiBody, {
+        format: streamTarget.format,
+        stripSkip: true,
       });
-    const msg = res.data.choices?.[0]?.message;
-    const rawContent = msg?.content || '';
+      rawContent = stream.rawContent;
+    } else {
+      const res = await aiPost(aiBody);
+      rawContent = res.data.choices?.[0]?.message?.content || '';
+    }
     const content = rawContent
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
-      .replace(/^skip\s*\n?/i, '')
+      .replace(/^skip\b\s*\n?/i, '')
       .trim();
     if (content) {
       // Detect system prompt leak or internal reasoning bleed-through
@@ -1860,13 +2006,18 @@ FINAL LENGTH CHECK: before sending, ask yourself — is this shorter than 2 sent
         /^\d+\.\s/m.test(content.slice(0, 80));  // starts with numbered list = reasoning
       if (isLeak) {
         console.warn('[getAIReply] reasoning/prompt leak detected — discarding:', content.slice(0, 60));
+        if (stream) await stream.discard();
       } else {
-        return content;
+        const result = extractReaction(content);
+        if (stream) await stream.finalize(result.text);
+        return result;
       }
     } else {
-      console.warn('[getAIReply] empty content from model — raw:', JSON.stringify(msg)?.slice(0, 120));
+      console.warn('[getAIReply] empty content from model — raw:', JSON.stringify(rawContent)?.slice(0, 120));
+      if (stream) await stream.discard();
     }
   } catch (e) {
+    if (stream) await stream.discard();
     if (e.code === NO_CREDITS) return NO_CREDITS;
     if (e.code === RATE_LIMITED) return null;
     console.error('AI error:', e.response?.data || e.message);
@@ -2212,27 +2363,30 @@ app.message(async ({ message, client }) => {
         ? [{ role: 'user', content: dmMemoryBlock }, { role: 'assistant', content: 'got it' }, ...hist.slice(-10)]
         : hist.slice(-10);
 
-      const response = await aiPost({
+      const dmStream = await streamedAICall(client, { channel: message.channel }, {
         messages: [{ role: 'system', content: dmSystemPrompt }, ...dmHistoryWithMemory],
         max_tokens: 300,
         plugins: [{ id: 'web' }],
       });
 
-      const reply = (response.data.choices?.[0]?.message?.content || '')
+      const reply = dmStream.rawContent
         .replace(/<think>[\s\S]*?<\/think>/gi, '')
         .trim();
 
       if (reply) {
         hist.push({ role: 'assistant', content: reply });
         botStats.aiReplies++;
-        await client.chat.postMessage({ channel: message.channel, text: reply });
+        await dmStream.finalize(reply);
         extractMemory(message.user, [text]).catch(() => {});
         if (Math.random() < 0.2) extractPersonality(message.user, [text]).catch(() => {});
+      } else {
+        await dmStream.discard();
       }
     } catch (e) {
       console.error('DM AI error:', e.message);
-      const fallback = extractReaction(await getAIReply([{ role: 'user', content: text }], message.user)).text;
-      if (fallback && fallback !== NO_CREDITS) await client.chat.postMessage({ channel: message.channel, text: fallback });
+      await getAIReply([{ role: 'user', content: text }], message.user, null, false, null, {
+        client, postParams: { channel: message.channel },
+      });
     }
     return;
   }
@@ -2328,15 +2482,17 @@ app.message(async ({ message, client }) => {
           if (query) searchResults = await braveSearch(query);
         }
       }
-      const rawReply = await getAIReply(history.slice(-12), entry.userId, threadMemory.get(threadKey), chimeMode, searchResults);
-      if (rawReply === NO_CREDITS) {
-        const postParams = { channel: entry.channel, text: 'sorry, no more ai credits rn 💀 someone needs to top up' };
-        if (!isDM) postParams.thread_ts = threadKey;
-        await client.chat.postMessage(postParams);
+      const replyPostParams = { channel: entry.channel };
+      if (!isDM) replyPostParams.thread_ts = threadKey;
+      const result = await getAIReply(history.slice(-12), entry.userId, threadMemory.get(threadKey), chimeMode, searchResults, {
+        client, postParams: replyPostParams,
+      });
+      if (result === NO_CREDITS) {
+        await client.chat.postMessage({ ...replyPostParams, text: 'sorry, no more ai credits rn 💀 someone needs to top up' });
         return;
       }
 
-      const { text: reply, emoji: reactionEmoji } = extractReaction(rawReply);
+      const { text: reply, emoji: reactionEmoji } = result || {};
 
       if (reactionEmoji && entry.lastMsgTs) {
         try {
@@ -2347,9 +2503,6 @@ app.message(async ({ message, client }) => {
       if (reply) {
         botStats.aiReplies++;
         history.push({ role: 'assistant', content: reply });
-        const postParams = { channel: entry.channel, text: reply };
-        if (!isDM) postParams.thread_ts = threadKey;
-        await client.chat.postMessage(postParams);
         extractMemory(entry.userId, entry.messages).catch(() => {});
         if (Math.random() < 0.2) extractPersonality(entry.userId, entry.messages).catch(() => {});
         const tmAfter = threadMemory.get(threadKey);
@@ -2368,15 +2521,15 @@ app.command("/pixl-ask", async ({ command, ack, client }) => {
   const question = command.text?.trim();
   if (!question) { await client.chat.postEphemeral({ channel: command.channel_id, user: command.user_id, text: "Usage: `/pixl-ask what is the meaning of life`" }); return; }
   try {
-    const res = await aiPost({
+    const stream = await streamedAICall(client, { channel: command.channel_id }, {
       messages: [
         { role: 'system', content: 'You are Pixorpheus, a sarcastic Slack bot. Answer in 1-2 sentences max, lowercase, gen Z energy.' },
         { role: 'user', content: question },
       ],
       max_tokens: 150,
-    });
-    const reply = res.data.choices?.[0]?.message?.content?.trim() || 'idk tbh';
-    await client.chat.postMessage({ channel: command.channel_id, text: `<@${command.user_id}> asked: _${question}_\n> ${reply}` });
+    }, { format: (t) => `<@${command.user_id}> asked: _${question}_\n> ${t}` });
+    const reply = stream.rawContent.trim() || 'idk tbh';
+    await stream.finalize(`<@${command.user_id}> asked: _${question}_\n> ${reply}`);
   } catch (e) { await client.chat.postEphemeral({ channel: command.channel_id, user: command.user_id, text: "failed lol" }); }
 });
 
@@ -2460,24 +2613,29 @@ app.command("/pixl-mymemory", async ({ command, ack, respond, client }) => {
       traitList.length ? `personality: ${traitList.join(', ')}` : null,
     ].filter(Boolean).join('\n');
 
-    const res = await aiPost({
-      messages: [
-        { role: 'system', content: isSelf
-          ? `You are Pixorpheus, a sarcastic Slack bot. The person asking is the subject — speak DIRECTLY to them using "you". Write 1-2 casual sentences summarizing what you know about them. Lowercase, conversational, gen Z energy. No lists. Only mention real concrete things — skip anything vague.`
-          : `You are Pixorpheus, a sarcastic Slack bot. Write 1-2 casual sentences summarizing who ${displayName} is. Use their name or "they". Lowercase, conversational, gen Z energy. No lists. Only mention real concrete things — skip anything vague.` },
-        { role: 'user', content: input },
-      ],
-      max_tokens: 120,
-    });
-
-    const summary = res.data.choices?.[0]?.message?.content?.trim();
-    if (summary) {
-      if (isSelf) {
-        await respond({ text: `here's what i got on you:\n${summary}`, response_type: 'ephemeral' });
-      } else {
-        await client.chat.postMessage({ channel: command.channel_id, text: `here's what i know about ${displayName}:\n${summary}` });
-      }
-      return;
+    if (isSelf) {
+      // respond() is an ephemeral webhook reply — Slack has no way to edit
+      // it after the fact, so this one stays a plain blocking call.
+      const res = await aiPost({
+        messages: [
+          { role: 'system', content: `You are Pixorpheus, a sarcastic Slack bot. The person asking is the subject — speak DIRECTLY to them using "you". Write 1-2 casual sentences summarizing what you know about them. Lowercase, conversational, gen Z energy. No lists. Only mention real concrete things — skip anything vague.` },
+          { role: 'user', content: input },
+        ],
+        max_tokens: 120,
+      });
+      const summary = res.data.choices?.[0]?.message?.content?.trim();
+      if (summary) { await respond({ text: `here's what i got on you:\n${summary}`, response_type: 'ephemeral' }); return; }
+    } else {
+      const stream = await streamedAICall(client, { channel: command.channel_id }, {
+        messages: [
+          { role: 'system', content: `You are Pixorpheus, a sarcastic Slack bot. Write 1-2 casual sentences summarizing who ${displayName} is. Use their name or "they". Lowercase, conversational, gen Z energy. No lists. Only mention real concrete things — skip anything vague.` },
+          { role: 'user', content: input },
+        ],
+        max_tokens: 120,
+      }, { format: (t) => `here's what i know about ${displayName}:\n${t}` });
+      const summary = stream.rawContent.trim();
+      if (summary) { await stream.finalize(`here's what i know about ${displayName}:\n${summary}`); return; }
+      await stream.discard();
     }
   } catch (e) {}
 
@@ -2544,15 +2702,15 @@ app.command("/pixl-leaderboard", async ({ command, ack, client }) => {
 app.command("/pixl-fact", async ({ command, ack, client }) => {
   await ack();
   try {
-    const res = await aiPost({
+    const stream = await streamedAICall(client, { channel: command.channel_id }, {
       messages: [
         { role: 'system', content: 'Give one genuinely surprising or weird fact. 1 sentence, lowercase, no intro like "did you know". Just the fact.' },
         { role: 'user', content: 'give me a fact' },
       ],
       max_tokens: 80,
-    });
-    const fact = res.data.choices?.[0]?.message?.content?.trim() || 'facts are hard';
-    await client.chat.postMessage({ channel: command.channel_id, text: ` ${fact}` });
+    }, { format: (t) => ` ${t}` });
+    const fact = stream.rawContent.trim() || 'facts are hard';
+    await stream.finalize(` ${fact}`);
   } catch (e) { await client.chat.postEphemeral({ channel: command.channel_id, user: command.user_id, text: "failed" }); }
 });
 
