@@ -34,7 +34,7 @@ async function aiCall(body) {
   // Bump to "anthropic/claude-sonnet-4.6" via PIXO_MODEL if you want more punch.
   const orBody = {
     ...body,
-    model: process.env.PIXO_MODEL || "google/gemini-3.1-flash-lite",
+    model: process.env.PIXO_MODEL || "google/gemini-3.1-flash-lite:nitro",
   };
   try {
     const res = await axios.post(OPENROUTER_URL, orBody, {
