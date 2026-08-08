@@ -1,7 +1,18 @@
 {
+  "meta": {
+    "title": "Pixl",
+    "description": "¡Un YSWS pixelado!"
+  },
   "menu": {
     "testTheGame": "¡Prueba el juego!",
-    "stillInDev": "¡aún en desarrollo!"
+    "stillInDev": "¡aún en desarrollo!",
+    "language": "Idioma"
+  },
+  "easterEgg": {
+    "title": "PIXLIFY — conversor de texto secreto",
+    "hint": "encontraste el secreto — convierte tu texto en emojis pixl para Slack",
+    "close": "Cerrar",
+    "dialogLabel": "Conversor Pixlify"
   },
   "hero": {
     "youShip": "Tú entregas",
@@ -44,7 +55,7 @@
     "youRepair": "Tú reparas",
     "youRepairDesc": "Entrega pruebas reales de hardware y software para los NPC. Cada proyecto se convierte en Energía de Restauración que reconstruye una pieza rota de Pixl",
     "theCorePays": "El Núcleo paga",
-    "theCorePaysDesc": "El Núcleo es una bóveda de vieja tecnología pixeliana. A medida que lo reparas, devuelve sus tesoros: premios reales y becas acordes a lo que construiste",
+    "theCorePaysDesc": "El Núcleo es una bóveda de vieja tecnología pixeliana. A medida que lo reparas, devuelve sus tesoros: premios reales y subvenciones acordes a lo que construiste",
     "comingSoon": "Muy pronto"
   },
   "story": {
@@ -111,7 +122,7 @@
     "levels": [
       {
         "level": "Principiante",
-        "hours": "mín. 7h de trabajo",
+        "hours": "mín. 7 h de trabajo",
         "quest": {
           "title": "Crea la tienda de una mercadera",
           "description": "Zara, la mercadera de telas, necesita una web sencilla para mostrar sus artículos. Construye una página de inicio limpia con lista de artículos y un formulario de contacto."
@@ -123,7 +134,7 @@
       },
       {
         "level": "Intermedio",
-        "hours": "mín. 30h de trabajo",
+        "hours": "mín. 30 h de trabajo",
         "quest": {
           "title": "Entrega una app móvil para el Viajero",
           "description": "Marco, el mercader ambulante, necesita una app móvil para seguir sus rutas, registrar su inventario sobre la marcha y enviar notificaciones cuando llega a una nueva región."
@@ -135,7 +146,7 @@
       },
       {
         "level": "Experto",
-        "hours": "mín. 55h de trabajo",
+        "hours": "mín. 55 h de trabajo",
         "quest": {
           "title": "Asegura la red de la Ciudad Cyberpunk",
           "description": "GHOST, un NPC hacker rebelde, necesita un sistema de detección de intrusiones que monitorice el tráfico, señale anomalías y envíe alertas en tiempo real a un panel."
@@ -147,19 +158,19 @@
       },
       {
         "level": "Principiante",
-        "hours": "mín. 7h de trabajo",
+        "hours": "mín. 7 h de trabajo",
         "quest": {
           "title": "¡¡Hazme un juego de Roblox!!",
           "description": "Tim, un NPC de 9 años del pueblo, quiere de verdad un juego de Roblox donde se recolectan monedas. Constrúyelo en Roblox Studio y publícalo para que pueda jugar con sus amigos."
         },
         "prize": {
           "title": "2000 Robux",
-          "description": "Una beca de 2000 Robux para gastar en la plataforma de Roblox: objetos, mejoras de avatar o lo que quieras."
+          "description": "Un crédito de 2000 Robux para gastar en la plataforma de Roblox: objetos, mejoras de avatar o lo que quieras."
         }
       },
       {
         "level": "Intermedio",
-        "hours": "mín. 20h de trabajo",
+        "hours": "mín. 20 h de trabajo",
         "quest": {
           "title": "Diseña tu propia región",
           "description": "Crea una nueva región para el mundo de Pixl: mapa, NPC, assets y pruebas. Luego prográmala en una demo jugable, no es solo una prueba de arte. Si está bien pulida, se añade al juego real."
@@ -171,7 +182,7 @@
       },
       {
         "level": "Principiante",
-        "hours": "mín. 8.5h de trabajo",
+        "hours": "mín. 8,5 h de trabajo",
         "quest": {
           "title": "Dibuja sprites para la tienda de objetos",
           "description": "Loot, el NPC de la tienda de objetos, necesita un pack de iconos en pixel art: pociones, armas, herramientas y coleccionables. Construye una web para mostrarlos; el arte puede ser como máximo el 50 % del tiempo entregado. Los mejores se añaden al juego real."
@@ -183,7 +194,7 @@
       },
       {
         "level": "Experto",
-        "hours": "~65h de trabajo",
+        "hours": "~65 h de trabajo",
         "quest": {
           "title": "Construye un brazo robótico para la Fábrica",
           "description": "ARIA, el NPC de automatización del Distrito Industrial, necesita un brazo robótico de 3 ejes funcional, controlado mediante una interfaz web personalizada, con retroalimentación de posición en vivo y secuencias programables."
@@ -218,18 +229,19 @@
     "title": "La tienda",
     "description": "1 hora de trabajo = 50 píxeles.",
     "moreComing": "...¡y aún más por venir!",
+    "hoursRate": "{lo} h a 3,50 $/h → {hi} h a 6 $/h",
     "items": [
       {
-        "name": "Foto firmada de la orga",
-        "description": "Una foto firmada de un miembro de la orga, enviada a tu puerta."
+        "name": "Foto firmada del equipo",
+        "description": "Una foto firmada de un miembro del equipo, enviada a tu puerta."
       },
       {
-        "name": "Pack de Memes de la Comunidad (5 uds)",
+        "name": "Pack de memes de la comunidad (5 uds.)",
         "description": "5 memes aleatorios hechos por el equipo de la comunidad, impresos en papel fotográfico real y enviados a tu puerta."
       },
       {
-        "name": "Beca de assets de juego",
-        "description": "Una beca acumulable de 10 $ para comprar tilesets, sprites, música y sonidos para tu juego."
+        "name": "Crédito de assets de juego",
+        "description": "Un crédito acumulable de 10 $ para comprar tilesets, sprites, música y sonidos para tu juego."
       },
       {
         "name": "Pack de pegatinas de Hack Club",
@@ -237,47 +249,47 @@
       },
       {
         "name": "Créditos de IA",
-        "description": "Una beca de 10 $ en créditos de IA para el proveedor de tu elección."
+        "description": "Un crédito de 10 $ para IA con el proveedor de tu elección."
       },
       {
-        "name": "Beca de música",
-        "description": "Una beca acumulable de 10 $ para gastar en instrumentos, plugins, samples o cualquier equipo musical. No la uses para suscripciones a Spotify/Apple Music etc."
+        "name": "Crédito de música",
+        "description": "Un crédito acumulable de 10 $ para gastar en instrumentos, plugins, samples o cualquier equipo musical. No lo uses para suscripciones a Spotify/Apple Music etc."
       },
       {
-        "name": "Beca de herramientas de soldadura",
-        "description": "Una beca acumulable de $10 para herramientas y suministros de soldadura."
+        "name": "Crédito de herramientas de soldadura",
+        "description": "Un crédito acumulable de 10 $ para herramientas y suministros de soldadura."
       },
       {
-        "name": "Beca de hardware",
-        "description": "Una beca acumulable de $10 para gastar en hardware para tus proyectos."
+        "name": "Crédito de hardware",
+        "description": "Un crédito acumulable de 10 $ para gastar en hardware para tus proyectos."
       },
       {
-        "name": "Beca de dominio",
-        "description": "Una beca acumulable de $12 para registrar un dominio para tu proyecto."
+        "name": "Crédito de dominio",
+        "description": "Un crédito acumulable de 12 $ para registrar un dominio para tu proyecto."
       },
       {
-        "name": "Beca de hosting",
-        "description": "Una beca acumulable de $10 para hosting, como Railway o cualquier plataforma en la nube."
+        "name": "Crédito de hosting",
+        "description": "Un crédito acumulable de 10 $ para hosting, como Railway o cualquier plataforma en la nube."
       },
       {
         "name": "Objeto de escritorio aleatorio",
-        "description": "Un objeto al azar de nuestros escritorios: un PCB, un alijo de pegatinas, lo que sea. Viene con una carta firmada. ¡Solo quedan unos pocos!"
+        "description": "Un objeto al azar de nuestros escritorios: un PCB, un montón de pegatinas, lo que sea. Viene con una carta firmada. ¡Solo quedan unos pocos!"
       },
       {
-        "name": "Beca de material de arte",
-        "description": "Una beca acumulable de 10 $ para gastar en pinturas, bolígrafos, lienzos o cualquier material de arte."
+        "name": "Crédito de material de arte",
+        "description": "Un crédito acumulable de 10 $ para gastar en pinturas, bolígrafos, lienzos o cualquier material de arte."
       },
       {
-        "name": "Cortador de Galletas PIXL",
+        "name": "Cortador de galletas PIXL",
         "description": "Enormes cortadores de galletas con las letras pixeladas de PIXL, diseñados por Ricky. Hornea una tanda para Barnav, nuestro devorador de galletas oficial."
       },
       {
-        "name": "Cautín de soldadura",
-        "description": "Un kit de cautín con puntas nuevas y flux — útil para el kit Tamagotchi y otros proyectos de hardware."
+        "name": "Soldador",
+        "description": "Un kit de soldador con puntas nuevas y flux — útil para el kit Tamagotchi y otros proyectos de hardware."
       },
       {
-        "name": "Beca de comida",
-        "description": "Una beca acumulable de $10 para comida y snacks mientras construyes."
+        "name": "Crédito de comida",
+        "description": "Un crédito acumulable de 10 $ para comida y snacks mientras construyes."
       },
       {
         "name": "Licencia de Pixel Composer",
@@ -285,11 +297,11 @@
       },
       {
         "name": "Licencia de PICO-8",
-        "description": "La consola de fantasía. Programa, dibuja y compón pequeños juegos en una sola herramienta."
+        "description": "La consola fantasy. Programa, dibuja y compón pequeños juegos en una sola herramienta."
       },
       {
         "name": "Póster PIXL",
-        "description": "Una beca de impresión de 20 $ para el póster PIXL o cualquier póster que quieras. A todos les encantan los pósters."
+        "description": "Un crédito de impresión de 20 $ para el póster PIXL o cualquier póster que quieras. A todos les encantan los pósteres."
       },
       {
         "name": "Licencia de Aseprite",
@@ -297,7 +309,7 @@
       },
       {
         "name": "Licencia de desarrollador de Google Play",
-        "description": "Una beca de $25 para tu licencia de desarrollador de Google Play."
+        "description": "Un crédito de 25 $ para tu licencia de desarrollador de Google Play."
       },
       {
         "name": "Kit DIY Tamagotchi Pixl",
@@ -332,23 +344,23 @@
         "description": "Un peluche tiburón Blahaj enviado a tu casa."
       },
       {
-        "name": "Beca de CPU",
-        "description": "Una beca acumulable de $50 exclusiva para mejoras de CPU."
+        "name": "Crédito de CPU",
+        "description": "Un crédito acumulable de 50 $ exclusivo para mejoras de CPU."
       },
       {
-        "name": "Beca de GPU",
-        "description": "Una beca acumulable de $50 exclusiva para mejoras de GPU."
+        "name": "Crédito de GPU",
+        "description": "Un crédito acumulable de 50 $ exclusivo para mejoras de GPU."
       },
       {
-        "name": "Beca de RAM",
-        "description": "Una beca acumulable de $50 exclusiva para mejoras de RAM."
+        "name": "Crédito de RAM",
+        "description": "Un crédito acumulable de 50 $ exclusivo para mejoras de RAM."
       },
       {
         "name": "Wacom Intuos (Small)",
         "description": "Una tableta de dibujo Wacom, la clásica del arte digital."
       },
       {
-        "name": "Portátil retro (Miyoo Mini+ / RG35XX)",
+        "name": "Consola retro portátil (Miyoo Mini+ / RG35XX)",
         "description": "Una consola portátil retro para jugar a tus creaciones y a los clásicos donde vayas."
       },
       {
@@ -361,15 +373,15 @@
       },
       {
         "name": "Licencia de Steam",
-        "description": "Una beca para publicar tu juego en Steam."
+        "description": "Un crédito para publicar tu juego en Steam."
       },
       {
         "name": "Licencia de desarrollador de Apple",
-        "description": "Una beca de $100 para tu membresía del programa de desarrolladores de Apple."
+        "description": "Un crédito de 100 $ para tu membresía del programa de desarrolladores de Apple."
       },
       {
-        "name": "Beca de monitor (acumulable)",
-        "description": "Una beca acumulable de 100 $ para el monitor de tu elección. Tus píxeles se merecen más píxeles."
+        "name": "Crédito de monitor (acumulable)",
+        "description": "Un crédito acumulable de 100 $ para el monitor de tu elección. Tus píxeles se merecen más píxeles."
       },
       {
         "name": "Apple Pencil Pro",
@@ -377,11 +389,11 @@
       },
       {
         "name": "Raspberry Pi 5",
-        "description": "Una Raspberry Pi 5 (4GB) para tus servidores, emuladores y experimentos. Versión de 8GB por 3150 px."
+        "description": "Una Raspberry Pi 5 (4 GB) para tus servidores, emuladores y experimentos. Versión de 8 GB por 3150 px."
       },
       {
         "name": "Sony WH-CH720N",
-        "description": "Auriculares ligeros con cancelación de ruido, fáciles para el bolsillo."
+        "description": "Auriculares ligeros con cancelación de ruido, amables con el bolsillo."
       },
       {
         "name": "Creality Ender 3 V3",
@@ -396,7 +408,7 @@
         "description": "Una impresora 3D rápida y silenciosa. Imprime tus propios props y carcasas de juego."
       },
       {
-        "name": "SSD externo Samsung T7 (1TB)",
+        "name": "SSD externo Samsung T7 (1 TB)",
         "description": "Un SSD portátil rápido para copias de seguridad, builds y archivos pesados."
       },
       {
@@ -416,7 +428,7 @@
         "description": "Una impresora 3D rápida y cerrada, hecha para filamentos más resistentes y de alta temperatura."
       },
       {
-        "name": "iPad (11.ª gen)",
+        "name": "iPad (11.ª generación)",
         "description": "Un iPad compatible con lápiz para dibujar y probar tus juegos."
       },
       {
@@ -437,15 +449,15 @@
       },
       {
         "name": "MacBook Neo",
-        "description": "Un MacBook ligero y portátil para código, arte y todo lo demás. Se muestra 256GB; añade una nota para elegir 512GB por 11425 px."
+        "description": "Un MacBook ligero y portátil para código, arte y todo lo demás. Se muestra 256 GB; añade una nota para elegir 512 GB por 11425 px."
       },
       {
-        "name": "iPad Air (M4, 128GB)",
-        "description": "Un iPad más rápido y con más espacio con el chip M4. Compatible con lápiz para dibujar y probar tu juego."
+        "name": "iPad Air (M4, 128 GB)",
+        "description": "Un iPad más rápido y con más espacio con el chip M4. Compatible con lápiz para dibujar y probar tus juegos."
       },
       {
         "name": "MacBook Air M5",
-        "description": "El portátil Air de Apple, se muestra 16GB/512GB; añade una nota para elegir 24GB/1TB por 24275 px."
+        "description": "El portátil Air de Apple, se muestra 16 GB/512 GB; añade una nota para elegir 24 GB/1 TB por 24275 px."
       },
       {
         "name": "Framework 13 DIY",
@@ -456,7 +468,7 @@
         "description": "El hermano mayor de 16 pulgadas del Framework, para ensamblar tú mismo."
       },
       {
-        "name": "Mac Mini (24GB/512GB)",
+        "name": "Mac Mini (24 GB/512 GB)",
         "description": "Un Mac de escritorio compacto para programar, hacer streaming y proyectos diarios."
       },
       {
@@ -495,11 +507,11 @@
       },
       {
         "question": "¿Cuánto puedo ganar?",
-        "answer": "Ganas píxeles por cada hora de trabajo entregado , 1 hora = 50 píxeles, unos 3,50 $ para empezar. A medida que sube de nivel tu Energía de Restauración, tu tasa aumenta, hasta unos 6 $/h. Gasta tus píxeles en la tienda en premios reales, desde pegatinas hasta un MacBook Air."
+        "answer": "Ganas píxeles por cada hora de trabajo entregado: 1 hora = 50 píxeles, unos 3,50 $ para empezar. A medida que sube de nivel tu Energía de Restauración, tu tasa aumenta, hasta unos 6 $/h. Gasta tus píxeles en la tienda en premios reales, desde pegatinas hasta un MacBook Air."
       },
       {
         "question": "¿Qué es la Energía de Restauración?",
-        "answer": "Es tu XP. Cada entrega gana Energía de Restauración según cuántas horas dedicas Y lo complejo que sea el proyecto , así que los proyectos más grandes y difíciles ganan más. Cada 10 niveles sube tu multiplicador de píxeles (empezando en unos 50 px/h y subiendo hacia ~79 px/h, tasas exactas por definir). La Energía de Restauración de toda la comunidad también desbloquea objetivos comunitarios, como nuevas skins para tu casa en el juego."
+        "answer": "Es tu XP. Cada entrega gana Energía de Restauración según cuántas horas dedicas Y lo complejo que sea el proyecto, así que los proyectos más grandes y difíciles ganan más. Cada 10 niveles sube tu multiplicador de píxeles (empezando en unos 50 px/h y subiendo hacia ~79 px/h, tasas exactas por definir). La Energía de Restauración de toda la comunidad también desbloquea objetivos comunitarios, como nuevas skins para tu casa en el juego."
       },
       {
         "question": "¿Quién dirige Pixl?",
@@ -515,11 +527,12 @@
   "footer": {
     "aProjectBy": "Un proyecto de",
     "teens": "Teens",
-    "hackClubDesc1": "Hack Club es una organización sin fines de lucro 501(c)(3) y una red de más de 60 000 estudiantes técnicos de secundaria. Creemos que se aprende mejor construyendo, así que creamos comunidad y ofrecemos becas para que hagas proyectos increíbles. En los últimos años, hemos",
+    "hackClubDesc1": "Hack Club es una organización sin fines de lucro 501(c)(3) y una red de más de 60 000 estudiantes técnicos de secundaria. Creemos que se aprende mejor construyendo, así que creamos comunidad y ofrecemos subvenciones para que hagas proyectos increíbles. En los últimos años, hemos",
     "partneredWithGithub": "colaborado con GitHub para organizar Summer of Making",
     "hostedWorldsLongest": "organizado el hackathon más largo del mundo en tierra",
     "ranCanadasLargest": "dirigido el mayor hackathon de secundaria de Canadá",
-    "hackClubMotto": "En Hack Club, los estudiantes no solo aprenden, entregan.",
+    "and": "y",
+    "hackClubMotto": "En Hack Club, los estudiantes no solo aprenden: entregan.",
     "pixl": "Pixl",
     "whatIsPixl": "Qué es Pixl",
     "howItWorks": "Cómo funciona",

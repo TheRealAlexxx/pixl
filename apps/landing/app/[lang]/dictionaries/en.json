@@ -1,7 +1,18 @@
 {
+  "meta": {
+    "title": "Pixl",
+    "description": "A pixelated YSWS!"
+  },
   "menu": {
     "testTheGame": "Test the game!",
-    "stillInDev": "still in dev!"
+    "stillInDev": "still in dev!",
+    "language": "Language"
+  },
+  "easterEgg": {
+    "title": "PIXLIFY — secret text converter",
+    "hint": "you found the secret — turn your text into pixl emojis for Slack",
+    "close": "Close",
+    "dialogLabel": "Pixlify converter"
   },
   "hero": {
     "youShip": "You ship",
@@ -218,6 +229,7 @@
     "title": "The Shop",
     "description": "1 hour of work = 50 pixels.",
     "moreComing": "...and even more coming!",
+    "hoursRate": "{lo}h at $3.5/h → {hi}h at $6/h",
     "items": [
       {
         "name": "Signed Org Photo",
@@ -519,6 +531,7 @@
     "partneredWithGithub": "partnered with GitHub to run Summer of Making",
     "hostedWorldsLongest": "hosted the world’s longest hackathon on land",
     "ranCanadasLargest": "ran Canada’s largest high school hackathon",
+    "and": "and",
     "hackClubMotto": "At Hack Club, students aren’t just learning, they’re shipping.",
     "pixl": "Pixl",
     "whatIsPixl": "What is Pixl",

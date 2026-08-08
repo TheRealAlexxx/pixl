@@ -77,27 +77,33 @@ const ITEM_PRICES = [
 
 const NICHE_INDICES = new Set([0, 1, 10, 12, 18]);
 
-function fmtHours(h: number) {
-  const r = Math.round(h * 10) / 10;
-  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+function fmtHours(h: number, lang: string) {
+  return new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(h);
 }
 
 // Spells out both rates every time (not just two bare numbers) so it's
 // clear why there are two: hours needed at the shop's $3.5/h floor rate,
 // then hours needed at its $6/h rate (reachable with a Restoration Energy
-// multiplier).
-function hoursRange(price: number) {
+// multiplier). Each locale keeps its own rate/currency formatting in the
+// hoursRate template, so only the two hour counts get substituted in.
+function hoursRange(price: number, template: string, lang: string) {
   const lo = price / 50;
   const hi = (lo * 3.5) / 6;
-  return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
+  return template
+    .replace("{lo}", fmtHours(lo, lang))
+    .replace("{hi}", fmtHours(hi, lang));
 }
 
 function ShopCard({
   item,
   index,
+  rateTemplate,
+  lang,
 }: {
   item: { name: string; description: string };
   index: number;
+  rateTemplate: string;
+  lang: string;
 }) {
   const accent = NICHE_INDICES.has(index) ? "#ec3750" : "#ff8c37";
   const price = ITEM_PRICES[index];
@@ -133,7 +139,9 @@ function ShopCard({
           >
             {price} px
           </span>
-          <span className="text-black/40 text-[9px] leading-snug font-sans">{hoursRange(price)}</span>
+          <span className="text-black/40 text-[9px] leading-snug font-sans">
+            {hoursRange(price, rateTemplate, lang)}
+          </span>
         </div>
       </div>
     </div>
@@ -222,7 +230,7 @@ function Marquee({ children }: { children: React.ReactNode }) {
 }
 
 export function Shop() {
-  const { dict } = useLocale();
+  const { dict, lang } = useLocale();
   const t = dict.shop;
 
   return (
@@ -260,7 +268,13 @@ export function Shop() {
       <Marquee>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {[...(t.items as any[]), ...(t.items as any[])].map((item: any, i: number) => (
-          <ShopCard key={i} item={item} index={i % t.items.length} />
+          <ShopCard
+            key={i}
+            item={item}
+            index={i % t.items.length}
+            rateTemplate={t.hoursRate}
+            lang={lang}
+          />
         ))}
       </Marquee>
 
