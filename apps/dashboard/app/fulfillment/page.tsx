@@ -302,6 +302,11 @@ function OrderCard({
               Tracking: <span className="text-foreground font-mono">{o.tracking}</span> · DM&apos;d to buyer
             </div>
           )}
+          {o.buyer_note && (
+            <div className="text-xs mt-1 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+              <span className="font-semibold">Note from buyer:</span> {o.buyer_note}
+            </div>
+          )}
           {o.status === "cancelled" && o.note && (
             <div className="text-xs text-muted-foreground mt-1">{o.note}</div>
           )}

@@ -1703,6 +1703,31 @@ export interface ShopItemRow {
   unlock_xp: number;
 }
 
+export interface ShopOptionStockRow {
+  choice: string;
+  total: number;
+  remaining: number;
+}
+
+// Per-item, per-choice stock pools (e.g. 15 "Ridit" Signed Org Photos),
+// keyed by item id. Items with no pool just aren't in the returned map.
+// Reads gracefully as empty before migration 0093 is applied.
+export async function listShopOptionStock(itemIds: number[]): Promise<Map<number, ShopOptionStockRow[]>> {
+  const map = new Map<number, ShopOptionStockRow[]>();
+  if (!itemIds.length) return map;
+  const { data, error } = await db
+    .from("shop_option_stock")
+    .select("item_id, choice, total, remaining")
+    .in("item_id", itemIds);
+  if (error || !data) return map;
+  for (const row of data as { item_id: number; choice: string; total: number; remaining: number }[]) {
+    const list = map.get(row.item_id) ?? [];
+    list.push({ choice: row.choice, total: row.total, remaining: row.remaining });
+    map.set(row.item_id, list);
+  }
+  return map;
+}
+
 // Omit `region` to get every item across all regions (used by the events
 // merchant picker, which isn't region-scoped).
 export async function listShopItems(region?: ShopRegion): Promise<ShopItemRow[]> {
@@ -1739,6 +1764,8 @@ export interface ShopOrderRow {
   quantity: number;
   status: OrderStatus;
   note: string;
+  buyer_note: string;
+  stock_choice: string;
   created_at: string;
   fulfilled_at: string | null;
   fulfilled_by: string;

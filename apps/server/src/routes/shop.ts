@@ -52,6 +52,30 @@ async function fetchItems(filterIds?: number[], region?: string) {
   return { error: null, data: (first.data ?? []) as unknown as Record<string, unknown>[] };
 }
 
+// Per-choice stock pools (e.g. 15 "Ridit" Signed Org Photos) for whichever of
+// the given item ids have any — attached to the item as `stock: [{choice,
+// remaining, total}]` so the client can show live counts and grey out
+// sold-out choices. Items with no pool just don't get a `stock` key.
+async function attachStock(items: Record<string, unknown>[]): Promise<void> {
+  const ids = items.map((i) => Number(i.id)).filter((id) => Number.isFinite(id));
+  if (!ids.length) return;
+  const { data } = await supabase
+    .from("shop_option_stock")
+    .select("item_id, choice, total, remaining")
+    .in("item_id", ids);
+  if (!data?.length) return;
+  const byItem = new Map<number, { choice: string; total: number; remaining: number }[]>();
+  for (const row of data as { item_id: number; choice: string; total: number; remaining: number }[]) {
+    const list = byItem.get(row.item_id) ?? [];
+    list.push({ choice: row.choice, total: row.total, remaining: row.remaining });
+    byItem.set(row.item_id, list);
+  }
+  for (const item of items) {
+    const stock = byItem.get(Number(item.id));
+    if (stock) item.stock = stock;
+  }
+}
+
 // Active catalog, plus mystery-merchant items while their event runs — those
 // stay inactive in the dashboard so they vanish the moment the event ends.
 // Trophy items (unlock_xp > 0) come back flagged with the player's own progress.
@@ -81,6 +105,8 @@ router.get("/api/shop/items", async (req, res) => {
     const endsAt = merchants.map((m) => m.ends_at).sort()[0];
     for (const i of limited ?? []) items.unshift({ ...i, limited: true, limited_until: endsAt });
   }
+
+  await attachStock(items);
 
   // The player's own trophy progress: current XP and which trophies they've claimed.
   const hasTrophies = items.some((i) => Number(i.unlock_xp) > 0);
@@ -114,6 +140,28 @@ router.post("/api/shop/region", async (req, res) => {
     return res.status(500).json({ ok: false });
   }
   res.json({ ok: true, region });
+});
+
+// Live remaining counts for a stock-limited item's choices (e.g. how many
+// "Ridit" Signed Org Photos are left) — polled from the item detail page so
+// counts stay current as other players buy without a full page reload.
+router.get("/api/shop/stock/:id", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("shop_option_stock")
+    .select("choice, total, remaining")
+    .eq("item_id", id);
+  if (error) {
+    console.error("[shop] stock failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, stock: data ?? [] });
 });
 
 // Claim a trophy the player has earned. Server-authoritative: it re-checks the
@@ -162,7 +210,7 @@ router.post("/api/shop/claim/:id", async (req, res) => {
 // the fulfillment-pipeline columns (status/tracking/stage stamps) but falls back
 // to the base columns so it keeps working before migration 0052 is applied.
 const ORDER_COLUMNS =
-  "id, item_name, option, price, quantity, status, note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
+  "id, item_name, option, price, quantity, status, note, buyer_note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
 const ORDER_COLUMNS_FALLBACK =
   "id, item_name, option, price, status, note, created_at, fulfilled_at";
 
@@ -224,14 +272,32 @@ router.post("/api/shop/buy/:id", async (req, res) => {
   // inside buy_shop_item — this is just so a garbage value doesn't even reach it.
   const rawQty = Number(req.body?.quantity);
   const quantity = Number.isFinite(rawQty) ? Math.max(1, Math.min(999, Math.round(rawQty))) : 1;
+  // Free-text note to whoever fulfils the order, and (for items with a
+  // per-choice stock pool, e.g. Signed Org Photo) the raw picked choice.
+  const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 300) : "";
+  const stockChoice =
+    typeof req.body?.stockChoice === "string" ? req.body.stockChoice.slice(0, 80) : "";
 
-  const { data, error } = await supabase.rpc("buy_shop_item", {
+  let { data, error } = await supabase.rpc("buy_shop_item", {
     p_user_id: session.userId,
     p_item_id: id,
     p_option: option,
     p_config: config,
     p_quantity: quantity,
+    p_note: note,
+    p_stock_choice: stockChoice,
   });
+  if (error) {
+    // Migration 0093 (note + stock choice) may not be applied yet — retry
+    // against the older 5-arg signature so purchases keep working either way.
+    ({ data, error } = await supabase.rpc("buy_shop_item", {
+      p_user_id: session.userId,
+      p_item_id: id,
+      p_option: option,
+      p_config: config,
+      p_quantity: quantity,
+    }));
+  }
   if (error) {
     console.error("[shop] buy failed", error);
     return res.status(500).json({ ok: false });
