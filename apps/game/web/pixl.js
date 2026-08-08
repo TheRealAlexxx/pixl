@@ -189,17 +189,35 @@ const Pixl = (() => {
   ];
 
   // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
+  //
+  // All ten are whole-pixel <rect>s on a 16x16 grid, so they stay crisp at the
+  // sidebar's small size and match the blocky HELP/SUN/MOON glyphs below.
+  // Everything reads from the silhouette and the gaps between rects — never
+  // paint "detail" on top of a filled shape, since it's all one currentColor
+  // and the detail just disappears into the fill.
   const ICONS = {
-    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 3h5c.6 0 1 .3 1 .6V14c0-.3-.4-.6-1-.6H2zM14 3H9c-.6 0-1 .3-1 .6V14c0-.3.4-.6 1-.6h5z"/></svg>`,
-    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 5h10l-1 9H4z"/><path d="M6 3h4v1H6z"/><rect x="6" y="4" width="1" height="1.6"/><rect x="9" y="4" width="1" height="1.6"/></svg>`,
-    orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2h9l3 3v9H2z"/><rect x="4" y="6" width="8" height="1.4"/><rect x="4" y="9" width="8" height="1.4"/><rect x="4" y="12" width="5" height="1.4"/></svg>`,
-    refers: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="3" width="5" height="5" rx="1"/><rect x="10" y="8" width="5" height="5" rx="1"/><rect x="6" y="5" width="3" height="1.5"/><rect x="7.5" y="6" width="1.5" height="3"/></svg>`,
-    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l2 4 4 .5-3 3 .8 4L8 14.5 4.2 12.5 5 8.5 2 5.5 6 5z"/></svg>`,
-    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
-    ideas: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M6 1h4v2H6z"/><path d="M5 4h6l-1 6H6z"/><rect x="6" y="11" width="4" height="1.6"/><rect x="6.6" y="13" width="2.8" height="1.6"/></svg>`,
-    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
-    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,
-    account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5v.5H2z"/></svg>`,
+    // open book: two pages split by a full-height gutter, bound at the bottom
+    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="5" height="8"/><rect x="9" y="4" width="5" height="8"/><rect x="2" y="12" width="12" height="2"/></svg>`,
+    // shopping bag: square body under an arched handle (the old one tapered,
+    // which read as a trash can)
+    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="1" width="6" height="2"/><rect x="5" y="3" width="2" height="2"/><rect x="9" y="3" width="2" height="2"/><rect x="3" y="5" width="10" height="9"/></svg>`,
+    // receipt: hollow frame so the two ruled lines inside actually show
+    orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="10" height="2"/><rect x="3" y="12" width="10" height="2"/><rect x="3" y="2" width="2" height="12"/><rect x="11" y="2" width="2" height="12"/><rect x="6" y="6" width="4" height="2"/><rect x="6" y="9" width="4" height="2"/></svg>`,
+    // person + plus: "bring a friend"
+    refers: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="4" height="4"/><rect x="1" y="8" width="8" height="6"/><rect x="9" y="4" width="6" height="2"/><rect x="11" y="2" width="2" height="6"/></svg>`,
+    // gem, stepped down to a point
+    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="8" height="2"/><rect x="2" y="5" width="12" height="2"/><rect x="4" y="7" width="8" height="2"/><rect x="6" y="9" width="4" height="2"/><rect x="7" y="11" width="2" height="2"/></svg>`,
+    // compass: octagon ring around a hub (a diagonal needle just collided with
+    // the ring and turned to mush at this size)
+    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="11" y="4" width="2" height="2"/><rect x="2" y="6" width="2" height="4"/><rect x="12" y="6" width="2" height="4"/><rect x="3" y="10" width="2" height="2"/><rect x="11" y="10" width="2" height="2"/><rect x="5" y="12" width="6" height="2"/><rect x="7" y="7" width="2" height="2"/></svg>`,
+    // lightbulb, bulb on top and screw base below (the old one was upside down)
+    ideas: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="1" width="6" height="1"/><rect x="4" y="2" width="8" height="6"/><rect x="5" y="8" width="6" height="1"/><rect x="6" y="10" width="4" height="2"/><rect x="6" y="13" width="4" height="2"/></svg>`,
+    // app window with a title bar, hollow inside
+    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="3" width="12" height="2"/><rect x="2" y="5" width="2" height="8"/><rect x="12" y="5" width="2" height="8"/><rect x="2" y="11" width="12" height="2"/></svg>`,
+    // flag on a pole
+    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="2" height="12"/><rect x="5" y="3" width="8" height="6"/></svg>`,
+    // head and shoulders
+    account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="5"/><rect x="3" y="9" width="10" height="5"/></svg>`,
   };
   // Teal energy shard — the Restoration Energy motif, reused in the top rail.
   const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
