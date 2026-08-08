@@ -1,0 +1,45 @@
+import crypto from "crypto";
+import express from "express";
+import { app, receiver } from "../slack/app.js";
+
+async function handleGitHubEvent(event: string, payload: any): Promise<void> {
+  const channel = process.env.GITHUB_NOTIFY_CHANNEL;
+  if (!channel) return;
+
+  if (event === "push" && payload.ref === "refs/heads/main" && payload.commits?.length) {
+    const repo = payload.repository.full_name;
+    const commits = payload.commits.map((c: any) => `> ${c.message.split("\n")[0]} (\`${c.id.slice(0, 7)}\`)`).join("\n");
+    const more = "";
+    await app.client.chat.postMessage({
+      channel,
+      text: `*${payload.pusher.name}* pushed ${payload.commits.length} commit${payload.commits.length > 1 ? "s" : ""} to \`main\` on *${repo}*\n${commits}${more}`,
+    });
+  }
+
+  if (event === "pull_request" && payload.action === "closed" && payload.pull_request?.merged && payload.pull_request.base.ref === "main") {
+    const repo = payload.repository.full_name;
+    const pr = payload.pull_request;
+    await app.client.chat.postMessage({
+      channel,
+      text: `*${pr.user.login}* merged PR #${pr.number} *"${pr.title}"* into \`main\` on *${repo}*`,
+    });
+  }
+}
+
+receiver.app.post("/webhooks/github", express.raw({ type: "application/json" }), (req, res) => {
+  const secret = process.env.GITHUB_WEBHOOK_SECRET;
+  if (secret) {
+    const sig = req.headers["x-hub-signature-256"] as string | undefined;
+    if (!sig) return res.status(401).send("Missing signature");
+    const expected = "sha256=" + crypto.createHmac("sha256", secret).update(req.body).digest("hex");
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return res.status(401).send("Invalid signature");
+  }
+  let payload;
+  try {
+    payload = JSON.parse(req.body);
+  } catch {
+    return res.status(400).send("Bad JSON");
+  }
+  res.status(200).send("ok");
+  handleGitHubEvent(req.headers["x-github-event"] as string, payload).catch((e: any) => console.error("[github-webhook]", e.message));
+});

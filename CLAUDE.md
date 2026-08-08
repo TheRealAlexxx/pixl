@@ -12,7 +12,7 @@ Pixl is a Bun/Turborepo monorepo (`bun` workspaces: `apps/*`, `packages/*`) for 
 | `apps/game` | Godot 4 | The 2D multiplayer game client (not TypeScript — GDScript/Godot project) |
 | `apps/landing` | Next.js 16, React 19, Tailwind 4 | Marketing site (pixl.rsvp) |
 | `apps/dashboard` | Next.js 16, React 19, Tailwind 4, shadcn/radix, Supabase | Admin/review dashboard — moderation, tickets, review queue, stats |
-| `apps/pixorpheus` | Node.js (CommonJS), Slack Bolt v4, Express, Supabase/Postgres, Anthropic SDK | Slack bot — tickets, AI chat, moderation DMs, slash commands |
+| `apps/pixorpheus` | Bun, TypeScript, Slack Bolt v4, Express, Supabase | Slack bot — tickets, AI chat, moderation DMs, slash commands |
 | `packages/*` (`types`, `ui`, `utils`, `config`) | — | Currently scaffolded but empty; intended for shared code across apps |
 
 Each app has its own `package.json`/scripts and is largely independent; they share only Supabase as a common data layer (each app talks to Supabase directly rather than through a shared internal API), plus Hack Club Auth/Slack OAuth for identity.
@@ -41,15 +41,16 @@ bun run --cwd apps/landing dev               # next dev
 bun run --cwd apps/dashboard dev    # next dev -p 4900
 bun run --cwd apps/dashboard typecheck  # tsc --noEmit
 
-bun run --cwd apps/pixorpheus start          # Slack bot (index.js)
-bun run --cwd apps/pixorpheus dashboard      # helper dashboard (dashboard.js), separate process
+bun run --cwd apps/pixorpheus start          # Slack bot (src/index.ts), Bun-native, no build step
+bun run --cwd apps/pixorpheus dev            # same, with --watch
+bun run --cwd apps/pixorpheus typecheck      # tsc --noEmit
 ```
 
 There is no root-level test suite; `apps/pixorpheus`'s `test` script is a placeholder. Check an individual app's `package.json` before assuming a script (lint/typecheck/test) exists there.
 
 ### Environment
 
-Each app has its own `.env` (see `.env.example` where present, e.g. `apps/server/.env.example`). Bun auto-loads `.env` files — don't add `dotenv` to Bun-run apps (note `apps/server` and `apps/pixorpheus` still import `dotenv/config` themselves in some files; follow existing conventions in that file rather than changing it unprompted). Common vars: `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` (shared across apps), `JWT_SECRET`, Hack Club Auth (`HCA_CLIENT_ID`/`SECRET`/`REDIRECT_URI`), Slack tokens for `pixorpheus`/`dashboard`.
+Each app has its own `.env` (see `.env.example` where present, e.g. `apps/server/.env.example`). Bun auto-loads `.env` files — don't add `dotenv` to Bun-run apps (note `apps/server` still imports `dotenv/config` itself in some files; follow existing conventions in that file rather than changing it unprompted — `apps/pixorpheus` relies on Bun's auto-load and has no `dotenv` dependency). Common vars: `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` (shared across apps), `JWT_SECRET`, Hack Club Auth (`HCA_CLIENT_ID`/`SECRET`/`REDIRECT_URI`), Slack tokens for `pixorpheus`/`dashboard`.
 
 ## Architecture notes
 
@@ -70,7 +71,7 @@ Each app has its own `.env` (see `.env.example` where present, e.g. `apps/server
 - Page routes follow Next App Router conventions (`app/<route>/page.tsx`); shared page-local components live in `app/_components/`.
 
 ### `apps/pixorpheus` (Slack bot)
-- Plain Node.js (CommonJS, not a Bun/TS app) — `index.js` is the main Bolt v4 bot process (commands, events, AI chat, ticket workflow), `dashboard.js` is a separate Express process serving `public/` (helper dashboard with Slack OAuth). They share one Postgres database but run as independent processes.
+- Bun-native TypeScript, no build step (`bun run src/index.ts`) — a single Bolt v4 process, organized by feature under `src/` (`tickets/`, `chat/`, `ai/`, `memory/`, `commands/`, `pixelate/`, `github/`, `external/`, `slack/`). There is no separate dashboard process anymore — helper/admin ticket moderation lives in `apps/dashboard` (the Next.js app), which resolves tickets through `src/external/ticketApi.ts` on this bot.
 - `models.json` lists OpenRouter models available to the AI chat/roast/fact features.
 - See `apps/pixorpheus/README.md` for the full slash-command reference and architecture table before modifying bot behavior.
 
