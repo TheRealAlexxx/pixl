@@ -94,21 +94,6 @@ body{
   font-family:var(--sans);line-height:1.5;overflow-y:scroll;
   transition:color .15s ease;
 }
-/* faint grid texture over the wood — fixed, cheap, no image */
-body::before{
-  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
-  background-size:30px 30px;
-  opacity:.5;
-}
-:root[data-theme="light"] body::before{
-  background-image:
-    linear-gradient(rgba(70,45,20,.05) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(70,45,20,.05) 1px,transparent 1px);
-  opacity:.6;
-}
 a{color:var(--gold);text-decoration:none}
 a:hover{color:var(--gold-soft)}
 img{display:block}
