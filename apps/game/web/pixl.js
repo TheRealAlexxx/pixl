@@ -212,6 +212,7 @@ const Pixl = (() => {
     {
       label: "PLAY",
       items: [
+        ["home", "OVERVIEW"],
         ["docs", "DOCS"],
         ["explore", "EXPLORE"],
         ["ideas", "IDEAS"],
@@ -244,6 +245,10 @@ const Pixl = (() => {
     },
   ];
 
+  // What the mobile dock shows without opening the MORE sheet. Four items plus
+  // MORE fits a phone row at a readable size; the full ten did not.
+  const MOBILE_PRIMARY = ["home", "projects", "shop", "explore"];
+
   // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
   //
   // All ten are whole-pixel <rect>s on a 16x16 grid, so they stay crisp at the
@@ -252,6 +257,8 @@ const Pixl = (() => {
   // paint "detail" on top of a filled shape, since it's all one currentColor
   // and the detail just disappears into the fill.
   const ICONS = {
+    // house: roof over a body with a doorway punched out of the bottom
+    home: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="7" y="1" width="2" height="2"/><rect x="5" y="3" width="6" height="2"/><rect x="3" y="5" width="10" height="2"/><rect x="3" y="7" width="3" height="7"/><rect x="10" y="7" width="3" height="7"/><rect x="6" y="7" width="4" height="2"/></svg>`,
     // open book: two pages split by a full-height gutter, bound at the bottom
     docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="5" height="8"/><rect x="9" y="4" width="5" height="8"/><rect x="2" y="12" width="12" height="2"/></svg>`,
     // shopping bag: square body under an arched handle (the old one tapered,
@@ -275,6 +282,8 @@ const Pixl = (() => {
     // head and shoulders
     account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="5"/><rect x="3" y="9" width="10" height="5"/></svg>`,
   };
+  // Three-by-three grid, the "more" affordance on the mobile dock.
+  const MORE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="3" height="3"/><rect x="7" y="2" width="3" height="3"/><rect x="12" y="2" width="2" height="3"/><rect x="2" y="7" width="3" height="3"/><rect x="7" y="7" width="3" height="3"/><rect x="12" y="7" width="2" height="3"/><rect x="2" y="12" width="3" height="2"/><rect x="7" y="12" width="3" height="2"/><rect x="12" y="12" width="2" height="2"/></svg>`;
   // Teal energy shard — the Restoration Energy motif, reused in the top rail.
   const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
   // Blocky pixel-art glyphs for the top-rail controls (help + theme toggle),
@@ -284,18 +293,35 @@ const Pixl = (() => {
   const MOON_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="3" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="2" y="6" width="5" height="1"/><rect x="2" y="7" width="5" height="1"/><rect x="2" y="8" width="5" height="1"/><rect x="2" y="9" width="6" height="1"/><rect x="2" y="10" width="8" height="1"/><rect x="3" y="11" width="10" height="1"/><rect x="4" y="12" width="8" height="1"/><rect x="5" y="13" width="6" height="1"/></svg>`;
 
   function mountTopbar(active) {
+    const navLink = (slug, label, extra) =>
+      `<a href="/${slug}/" class="${slug === active ? "active" : ""}${extra ? " " + extra : ""}"><span class="ic">${ICONS[slug] || ""}</span><span>${label}</span></a>`;
     const nav = NAV_GROUPS.map(
       (group) => `
         <div class="nav-group">
           <div class="nav-label">${group.label}</div>
           ${group.items
-            .map(
-              ([slug, label]) =>
-                `<a href="/${slug}/" class="${slug === active ? "active" : ""}"><span class="ic">${ICONS[slug] || ""}</span><span>${label}</span></a>`,
+            .map(([slug, label]) =>
+              navLink(slug, label, MOBILE_PRIMARY.includes(slug) ? "" : "secondary"),
             )
             .join("")}
         </div>`,
     ).join("");
+    // The mobile dock is one 60px row, so it only carries MOBILE_PRIMARY plus a
+    // MORE button; everything else lives in a sheet that slides up from it.
+    // These are a second copy of the same links rather than the same nodes
+    // moved around, since the dock and the sheet are visible at once.
+    const overflow = NAV_GROUPS.flatMap((g) =>
+      g.items.filter(([slug]) => !MOBILE_PRIMARY.includes(slug)),
+    );
+    const sheet = `
+      <button class="nav-more" id="pixl-more" type="button" aria-expanded="false" aria-controls="pixl-sheet">
+        <span class="ic">${MORE_ICON}</span><span>MORE</span>
+      </button>
+      <div class="nav-sheet" id="pixl-sheet" hidden>
+        <div class="nav-sheet-grid">
+          ${overflow.map(([slug, label]) => navLink(slug, label)).join("")}
+        </div>
+      </div>`;
     // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
     // rail: no wallet, no tour replay, and the CTA invites them into the game.
     const themeBtn = `<button class="theme-toggle" id="pixl-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>`;
@@ -320,12 +346,33 @@ const Pixl = (() => {
     document.body.insertAdjacentHTML("afterbegin", `
       <aside class="sidebar">
         <a class="sb-logo" href="${GAME}" title="Back to the game"><span class="sb-logo-glow"></span><img src="/index.icon.png" alt=""><span>PI<span>XL</span></span></a>
-        <nav class="nav">${nav}</nav>
+        <nav class="nav">${nav}${sheet}</nav>
         <div class="sb-foot">${foot}</div>
       </aside>
       <div class="toprail">${rail}</div>`);
     const help = document.getElementById("pixl-help-btn");
     if (help) help.onclick = () => runTour();
+    const more = document.getElementById("pixl-more");
+    const sheetEl = document.getElementById("pixl-sheet");
+    if (more && sheetEl) {
+      const setOpen = (open) => {
+        sheetEl.hidden = !open;
+        more.classList.toggle("open", open);
+        more.setAttribute("aria-expanded", String(open));
+      };
+      more.onclick = (e) => {
+        e.stopPropagation();
+        setOpen(sheetEl.hidden);
+      };
+      // Any tap outside the sheet closes it, including on a link inside it
+      // (which navigates anyway).
+      document.addEventListener("click", (e) => {
+        if (!sheetEl.hidden && !sheetEl.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !sheetEl.hidden) setOpen(false);
+      });
+    }
     syncThemeToggles();
     // Auto-run the walkthrough once, on whichever dash page a newcomer lands on.
     maybeOnboard();
