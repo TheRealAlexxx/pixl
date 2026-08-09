@@ -212,10 +212,86 @@
       <section class="doc-page" id="get">
         <div class="eyebrow">Start here</div>
         <h1>What do you actually get</h1>
-        <p>Every hour of shipped work pays out in pixels. It starts at <b class="cfg-base-px"></b> an hour and climbs as you ship more and more ambitious things, up to <b class="cfg-max-px"></b> an hour — <a href="/docs/energy">Restoration Energy and levels</a> explains exactly how. On top of that, most trials have their own prize attached, things like a custom domain, an Apple Developer account, a Flipper Zero, robux, PCB manufacturing budget, whatever fits the quest. If the listed prize isn't your thing and you already have it, you can usually swap it for something else of similar value.</p>
+        <p>Every hour of shipped work pays out in pixels. It starts at <b class="cfg-base-px"></b> an hour and climbs as you ship more and more ambitious things, up to <b class="cfg-max-px"></b> an hour. <a href="/docs/energy">Restoration Energy and levels</a> explains exactly how. On top of that, most trials have their own prize attached, things like a custom domain, an Apple Developer account, a Flipper Zero, robux, PCB manufacturing budget, whatever fits the quest. If the listed prize isn't your thing and you already have it, you can usually swap it for something else of similar value.</p>
         <p>Pixels themselves go into the in game shop, where you can spend them on stickers all the way up to bigger stuff like a MacBook Air. The shop catalog and prices show up once you're in game.</p>
         <p>Outside of pixels and prizes you also get access to free hosting, free domains, AI credits, a CDN, and starter guides to get you going, more on all of that below.</p>
         <p>If you get stuck at any point, search for it first. Someone in #pixl has almost definitely run into the same wall you're stuck on. If you really can't find an answer, just ask.</p>
+      </section>
+
+      <section class="doc-page" id="eligibility">
+        <div class="eyebrow">Rules</div>
+        <h1>Who can join</h1>
+        <p class="lead">Pixl runs under Hack Club, so it inherits Hack Club's YSWS rules about who's eligible and what counts as a project. Worth reading once before you sink hours into something.</p>
+
+        <h2>Age</h2>
+        <p>You need to be <b>18 or under</b> when you ship. That's the Hack Club YSWS rule, not ours, and it's checked against the birthday on your account.</p>
+        <p>If your 19th birthday lands between shipping a project and a reviewer getting to it, the project gets flagged rather than dropped, and a reviewer has to write down a justification before deciding either way. So if you're close to the line, ship early rather than sitting on a finished project.</p>
+
+        <h2>What we need from you</h2>
+        <p>Two things, filled in once from your account page:</p>
+        <ul>
+          <li><b>Your birthday</b>, for the age check above</li>
+          <li><b>A mailing address</b>, because prizes and shop orders are real objects that get posted to you</li>
+        </ul>
+        <p>Both go to Hack Club's YSWS Unified Database, which is how the program tracks who shipped what. You can't check out of the shop until an address is on file, the checkout will just refuse. Update either any time from the account page if you move.</p>
+
+        <h2>Projects that don't count</h2>
+        <p>Two hard exclusions, both from Hack Club's YSWS project exceptions:</p>
+        <ul>
+          <li><b>School assignments.</b> If it was set as coursework, it can't be shipped here</li>
+          <li><b>Paid Hack Club work.</b> If you were already paid for it by Hack Club, it can't be shipped here</li>
+        </ul>
+        <p>You confirm both with a checkbox every time you ship. It isn't a formality: shipping without ticking it fails, and misusing it is the kind of thing that gets a project banned rather than sent back.</p>
+        <div class="callout">
+          <span class="k">Shipping a project that already exists</span>
+          <p>Reusing an old project of yours isn't automatically out, but it gets checked against Hack Club's archive of previously shipped projects. If there's a match you didn't mention, the reviewer is told. Say so up front in your writeup and it's a conversation, not a problem.</p>
+        </div>
+
+        <h2>Where you live</h2>
+        <p>Anyone eligible can build and ship. The shop is the part that varies: its catalogue is scoped to your region (US, North America, South America, Europe, Asia, India, Africa) because shipping costs and what we can actually post differ a lot. You'll only see what can reach you.</p>
+      </section>
+
+      <section class="doc-page" id="rules">
+        <div class="eyebrow">Rules</div>
+        <h1>Ship requirements</h1>
+        <p class="lead">Everything below is enforced by the software, not by vibes. If a ship gets refused, it's almost always one of these.</p>
+
+        <h2>What every ship needs</h2>
+        <ul>
+          <li><b>A GitHub repo link.</b> It has to be an actual GitHub repository, and it has to load. Private repos and dead links get rejected</li>
+          <li><b>A demo link.</b> Something a reviewer can open and use: a live site, a playable build, a releases page. It <b>can't</b> be your repo again</li>
+          <li><b>A thumbnail image</b></li>
+          <li><b>The eligibility checkbox</b>, confirming it isn't a school assignment or paid Hack Club work</li>
+          <li><b>Your AI notes</b>, if you used AI (see below)</li>
+        </ul>
+        <p>Re-shipping a project that's already approved is allowed as an update, but you have to write update notes saying what changed.</p>
+
+        <h2>Journals have a length rule</h2>
+        <p>Journal entries that log hours need <b>at least 100 characters per hour</b>, with a 100 character floor. Log 4 hours and the entry needs about 400 characters, a couple of real sentences about what you actually did. Anything shorter is refused outright.</p>
+        <p>This is why journalling as you go beats writing it all up at the end. Log the session while you remember it, one entry per stint, and the writeup is already done by the time you ship.</p>
+
+        <h2>Say how you used AI</h2>
+        <p>If you used AI on a project, you have to describe how. Not a yes or no box, an actual sentence about what it did for you. Using AI isn't a problem and won't cost you anything; hiding it is the problem, and it's the kind of thing reviewers notice in commit history anyway.</p>
+
+        <h2>Hours only count from the cutoff</h2>
+        <p>Hackatime hours logged before <b id="doc-cutoff-date"></b> don't count, no matter how long your Hackatime account has existed. That's what stops old, unrelated coding time getting shipped as new work.</p>
+        <div class="callout warn">
+          <span class="k">Before that date</span>
+          <p>Everyone reads as zero countable hours and nothing can be shipped yet. That's expected, not your setup being broken. Install Hackatime now anyway, so the moment the cutoff passes your time is already tracking.</p>
+        </div>
+
+        <h2>Some trials have a minimum</h2>
+        <p>A trial can carry a minimum number of tracked hours, and you can't ship it below that. It's there so a trial with a real prize attached can't be cleared in twenty minutes. The project page tells you how far off you are.</p>
+
+        <h2>Two deadlines that catch people out</h2>
+        <ul>
+          <li><b>Referral codes</b> only work in your first <b>2 days</b> on Pixl. After that the code is refused, so apply it the day you sign up</li>
+          <li><b>An address before checkout.</b> Not before you earn pixels, but the shop will refuse the order itself if there's no address on file</li>
+        </ul>
+
+        <h2>If a submission gets sent back</h2>
+        <p>It's not one shot. Fix whatever was flagged and ship it again. The usual reasons are a broken link, a demo that doesn't run, Hackatime data that doesn't line up with the size of the build, or a project that's a tutorial with the names changed.</p>
+        <p>Reviewers can also approve you for <b>fewer hours than you logged</b> if the tracked time doesn't match what got built. You keep the project and the approval, it just pays for the hours they credited.</p>
       </section>
 
       <section class="doc-page" id="restoration">
@@ -247,6 +323,24 @@
         </div>
       </section>
 
+      <section class="doc-page" id="vault">
+        <div class="eyebrow">The Restoration</div>
+        <h1>The Core Vault</h1>
+        <p class="lead">The Core is a vault holding the old civilization's technology. Everyone's Restoration Energy pools into it, and when the total crosses a threshold the Core recovers another chamber, and hands what's inside to <b>everyone</b>, not to whoever pushed it over the line.</p>
+        <p>So the RE from your projects gets counted twice, in a good way: once toward your own rate and level, and once toward the community pool. Shipping a tier 4 project moves the Vault five times faster than a tier 1 one, same as it does your own numbers.</p>
+
+        <h2>How chambers unlock</h2>
+        <p>Each chamber has an energy threshold. When the community total passes it, the chamber opens for good. It can't close again, and joining after it opened doesn't lock you out of anything. The Vault page shows the current total, the next threshold, and what's inside each chamber.</p>
+
+        <h2>Community goals are a different thing</h2>
+        <p>Goals are timed events with a target number of ships, sometimes limited to one kind of project. If the community hits the target inside the window, every project shipped during that window gets a percentage bonus on its pixels.</p>
+        <p>The difference worth remembering: the <b>Vault</b> is a permanent, ever growing total that unlocks equipment for everyone. A <b>goal</b> is a short window with a payout bonus attached.</p>
+        <div class="callout">
+          <span class="k">You can't lose by other people shipping</span>
+          <p>Neither of these can take anything away from you. Your rate comes off your own RE, and a missed goal just means no bonus, never less than you'd otherwise have earned. The community side is upside only.</p>
+        </div>
+      </section>
+
       <section class="doc-page" id="building">
         <div class="eyebrow">Build &amp; ship</div>
         <h1>Building</h1>
@@ -268,7 +362,7 @@
         <h2>3. Install Hackatime before you build</h2>
         <p>This is the step people forget. Hackatime tracks the hours you spend coding, and those hours are what turn into pixels. Set it up in your editor <b>first</b>, then start building — time you spend before it's installed doesn't count. Full walkthrough in the <a href="/docs/hackatime">Hackatime setup guide</a>.</p>
         <h2>4. Create the project in your Builder Terminal</h2>
-        <p>Open the projects page, hit <b>+ NEW PROJECT</b>, give it a clear name, and paste your repo (and a live demo link if you have one). Then tick the Hackatime boxes for this project so your tracked time is linked to it. Journal as you go — a line or two about what you did each session makes the writeup easy later.</p>
+        <p>Open the projects page, hit <b>+ NEW PROJECT</b>, give it a clear name, and paste your repo (and a live demo link if you have one). Then tick the Hackatime boxes for this project so your tracked time is linked to it. Journal as you go: entries that log hours need about 100 characters per hour, so write a real couple of sentences about what you did each session and the writeup is done for you.</p>
         <h2>5. Build it</h2>
         <p>Now actually make the thing. Keep it in the same folder so Hackatime keeps tracking, commit to GitHub as you go, and don't worry about it being perfect — finished beats fancy.</p>
         <h2>6. Ship it</h2>
@@ -350,6 +444,7 @@ ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
           <li>pixels and rewards land in your account</li>
         </ul>
         <p>Before you hit submit, look at what a good submission actually looks like. Reviewers care about seeing the real project, a clear explanation of what you built, and something that shows it's actually yours and not a copy.</p>
+        <p><a href="/docs/rules">Ship requirements</a> lists everything the submit button actually checks: repo, demo, thumbnail, AI notes, journal length, the hours cutoff. Worth a read before your first one.</p>
       </section>
 
       <section class="doc-page" id="rewards">
@@ -359,7 +454,7 @@ ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
         <h2>Earning pixels</h2>
         <ul>
           <li><b class="cfg-base-px"></b> for every hour of shipped work, tracked through Hackatime</li>
-          <li>that rate climbs to <b class="cfg-max-px"></b> an hour as you build up Restoration Energy — see <a href="/docs/energy">Energy and levels</a></li>
+          <li>that rate climbs to <b class="cfg-max-px"></b> an hour as you build up Restoration Energy (see <a href="/docs/energy">Energy and levels</a>)</li>
           <li>most trials also come with an extra prize on top of the base pixels</li>
         </ul>
         <h2>Spending pixels</h2>
@@ -382,7 +477,7 @@ ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
         <p>The climb counts for the project that's earning it, not just the next one. Your rate rises <i>while</i> the hours land, so a project gets paid the average rate across the RE it just earned. It also means splitting your work across several projects or bundling it into one pays exactly the same total, so ship however you actually want to build.</p>
         <div class="callout">
           <span class="k">The short version</span>
-          <p>Ship more, and ship more ambitious things, and every hour after that is worth more than the one before it. RE itself has no ceiling — only the rate does.</p>
+          <p>Ship more, and ship more ambitious things, and every hour after that is worth more than the one before it. RE itself has no ceiling, only the rate does.</p>
         </div>
 
         <h2>The tier bonus</h2>
@@ -391,12 +486,38 @@ ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
         <p>After that the bonus stops, because a long high tier project is already earning RE several times faster than a low tier one, and that permanently lifts the rate on everything you ship afterwards.</p>
 
         <h2>Levels</h2>
-        <p>Your level is a display of lifetime RE and nothing more. Levels run 1 to <span id="doc-max-level"></span>, each one costs more RE than the last, and they have <b>no effect on what you get paid</b> — the rate comes straight off RE. Level is just there so the shipping shows up somewhere.</p>
+        <p>Your level is a display of lifetime RE and nothing more. Levels run 1 to <span id="doc-max-level"></span>, each one costs more RE than the last, and they have <b>no effect on what you get paid</b>: the rate comes straight off RE. Level is just there so the shipping shows up somewhere.</p>
         <div class="fact-grid" id="doc-level-grid"></div>
         <p>Early levels are cheap on purpose: a couple of hours on your first project already moves you a level or two. The last level and the top pay rate land on the same amount of RE, so you hit both at once. RE keeps stacking past that, it just runs out of levels to show for it.</p>
 
         <h2>Where to see all this</h2>
         <p>The bar at the top of your Builder Terminal shows your level, your lifetime RE and your current rate in pixels per hour. It updates as soon as a project is approved.</p>
+      </section>
+
+      <section class="doc-page" id="collab">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Building with other people</h1>
+        <p class="lead">You can ship a project with other builders on it. The important part up front: <b>nobody's payout comes out of anyone else's</b>. It isn't one prize pot getting divided.</p>
+
+        <h2>Getting people on the project</h2>
+        <p>The project owner invites players from the project page, or shares a join code. An invite has to be accepted before it counts, and the owner can remove someone who never started. Everyone on the project can see and write journal entries on it.</p>
+
+        <h2>Everyone tracks their own hours</h2>
+        <p>Each collaborator links their <b>own</b> Hackatime projects to the build, so the hours are never one shared number that has to be carved up. What you tracked is your slice. You can't claim more hours than you actually logged, the review caps each person at their own tracked time.</p>
+
+        <h2>Everyone gets paid separately</h2>
+        <p>At review, each accepted collaborator is credited independently:</p>
+        <ul>
+          <li>your own hours on the project</li>
+          <li>your own rate, off your own lifetime RE. A newcomer and someone at the cap can be on the same project and each get their own rate</li>
+          <li>your own tier bonus for the project's tier</li>
+          <li>your own RE, which lifts your rate on everything you ship afterwards</li>
+        </ul>
+        <p>So a three person project doesn't pay a third each. It pays each person fully for the hours they actually put in.</p>
+        <div class="callout warn">
+          <span class="k">The thing that gets projects rejected</span>
+          <p>Adding someone who didn't build anything, so they can collect hours off your project, is fraud and reviewers do look for it. Everyone credited needs their own tracked time and their own journal entries showing what they did.</p>
+        </div>
       </section>
 
       <section class="doc-page" id="free">
@@ -776,7 +897,7 @@ dist/</code></pre>
 
     const TIERS = [
       ["T1 Spark", "A first spark of Restoration: a simple site, script or tiny tool."],
-      ["T2 Signal", "A focused app, CLI or game with real polish — one system back online."],
+      ["T2 Signal", "A focused app, CLI or game with real polish, one system back online."],
       ["T3 Grid", "Several systems working together: backend, state, infrastructure."],
       ["T4 Beacon", "Deep systems work: complex architecture and serious scope."],
     ];
@@ -804,7 +925,19 @@ dist/</code></pre>
     const exUsd = E.tierKickerUsdPerStep * (exTier - 1) * exHours;
     set(
       "doc-kick-example",
-      `So a ${exHours} hour T${exTier} project earns ${usd(exUsd)} — about ${px(exUsd / E.pixelValueUsd)} — on top of whatever its normal rate pays.`,
+      `So a ${exHours} hour T${exTier} project earns ${usd(exUsd)}, about ${px(exUsd / E.pixelValueUsd)}, on top of whatever its normal rate pays.`,
+    );
+
+    // Formatted in UTC on purpose: a naive local-time render puts readers
+    // either side of the date line on different days.
+    set(
+      "doc-cutoff-date",
+      new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(Pixl.config.hackatimeCutoff)),
     );
 
     const maxLevel = E.levelBands[E.levelBands.length - 1].throughLevel;
@@ -828,8 +961,9 @@ dist/</code></pre>
   // Grouped nav → one section per "page", routed by URL hash.
   const GROUPS = [
     { title: "Start here", items: [["welcome", "Welcome"], ["get", "What you get"]] },
-    { title: "The Restoration", items: [["restoration", "How it works"], ["sidequest", "Your trial"]] },
-    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["first-site", "Your first site (code)"], ["shipping", "Shipping"], ["rewards", "Rewards"], ["energy", "Energy & levels"]] },
+    { title: "Rules", items: [["eligibility", "Who can join"], ["rules", "Ship requirements"]] },
+    { title: "The Restoration", items: [["restoration", "How it works"], ["sidequest", "Your trial"], ["vault", "The Core Vault"]] },
+    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["first-site", "Your first site (code)"], ["shipping", "Shipping"], ["rewards", "Rewards"], ["energy", "Energy & levels"], ["collab", "Building with others"]] },
     { title: "Resources", items: [["free", "Free stuff"], ["help", "Need help"]] },
     { title: "Guides", items: [["html", "HTML guide"], ["slack", "Slack app"], ["roblox", "Roblox"], ["react-native", "React Native"], ["pixel-art", "Pixel art"]] },
     { title: "Setup", items: [["hackatime", "Hackatime"], ["submitting", "Submitting"], ["git", "Git & GitHub"]] },

@@ -568,7 +568,7 @@ const Pixl = (() => {
     {
       target: "#ht-connect",
       title: "Track your time with Hackatime",
-      body: `This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour starts at <b>${BASE_PX_PER_HOUR} pixels</b>, climbing as you build up Restoration Energy. Connect it, then tick this project's boxes so your time counts.`,
+      body: `This is the important one. <b>Hackatime</b> logs the hours you spend building, and every shipped hour starts at <b>${BASE_PX_PER_HOUR} pixels</b>, climbing as you build up Restoration Energy. Connect it, then tick this project's boxes so your time counts.`,
       extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
     },
     {
