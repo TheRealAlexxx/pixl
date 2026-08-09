@@ -4,8 +4,7 @@
     "description": "A pixelated YSWS!"
   },
   "menu": {
-    "testTheGame": "Test the game!",
-    "stillInDev": "still in dev!",
+    "playTheGame": "Play the game!",
     "language": "Language"
   },
   "easterEgg": {
@@ -25,7 +24,8 @@
     "viewYourRsvp": "view your RSVP",
     "errorNoEmail": "yo, drop your email first 👀",
     "errorInvalidEmail": "that doesn't look like a real email lol",
-    "scrollHint": "keep scrolling"
+    "scrollHint": "keep scrolling",
+    "openDash": "Open your dash"
   },
   "description": {
     "title": "What is Pixl?",

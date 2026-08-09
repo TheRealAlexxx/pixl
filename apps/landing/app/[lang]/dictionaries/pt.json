@@ -4,8 +4,7 @@
     "description": "Um YSWS pixelado!"
   },
   "menu": {
-    "testTheGame": "Teste o jogo!",
-    "stillInDev": "ainda em dev!",
+    "playTheGame": "Jogue agora!",
     "language": "Idioma"
   },
   "easterEgg": {
@@ -25,7 +24,8 @@
     "viewYourRsvp": "ver seu RSVP",
     "errorNoEmail": "ei, coloca teu email primeiro 👀",
     "errorInvalidEmail": "isso não parece um email de verdade kkk",
-    "scrollHint": "continue rolando"
+    "scrollHint": "continue rolando",
+    "openDash": "Abra seu painel"
   },
   "description": {
     "title": "O que é Pixl?",
@@ -94,7 +94,7 @@
       },
       {
         "title": "Energia de Restauração",
-        "text": "As horas de trabalho entregue se convertem em Energia de Restauração. Continue entregando e ela se acumula em multiplicadores sobre o que você ganha."
+        "text": "As horas de trabalho entregue se convertem em Energia de Restauração. Continue entregando e ela aumenta a taxa paga por cada hora seguinte."
       },
       {
         "title": "Metas da comunidade",
@@ -229,7 +229,7 @@
     "title": "A loja",
     "description": "1 hora de trabalho = 50 pixels.",
     "moreComing": "...e ainda mais por vir!",
-    "hoursRate": "{lo} h a US$ 3,50/h → {hi} h a US$ 6/h",
+    "hoursRate": "{lo} h a {loRate}/h → {hi} h a {hiRate}/h",
     "items": [
       {
         "name": "Foto assinada da equipe",
@@ -511,7 +511,7 @@
       },
       {
         "question": "O que é Energia de Restauração?",
-        "answer": "É o seu XP. Cada entrega ganha Energia de Restauração com base em quantas horas você dedica E em quão complexo é o projeto, então projetos maiores e mais difíceis ganham mais. A cada 10 níveis seu multiplicador de pixels sobe (começando em cerca de 50 px/h e subindo para ~79 px/h, taxas exatas a definir). A Energia de Restauração de toda a comunidade também desbloqueia metas da comunidade, como novas skins para a sua casa no jogo."
+        "answer": "É o número do qual tudo depende. Cada entrega ganha Energia de Restauração com base em quantas horas você dedica E em quão complexo é o projeto (os revisores atribuem um nível de 1 a 4), então projetos maiores e mais difíceis ganham mais. Sua ER define sua taxa de pagamento, que sobe de 50 px/h para cerca de 86 px/h conforme você entrega, e seu nível mostra a ER que você acumulou. A Energia de Restauração de toda a comunidade também desbloqueia metas da comunidade, como novas skins para a sua casa no jogo."
       },
       {
         "question": "Quem organiza o Pixl?",
