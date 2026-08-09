@@ -94,7 +94,7 @@
       },
       {
         "title": "Énergie de Restauration",
-        "text": "Les heures de travail livré se convertissent en Énergie de Restauration. Continue de livrer et elle s'accumule en multiplicateurs sur ce que tu gagnes."
+        "text": "Les heures de travail livré se convertissent en Énergie de Restauration. Continue de livrer et elle fait monter le taux payé pour chaque heure suivante."
       },
       {
         "title": "Objectifs communautaires",
@@ -229,7 +229,7 @@
     "title": "La boutique",
     "description": "1 heure de travail = 50 pixels.",
     "moreComing": "...et encore plus à venir !",
-    "hoursRate": "{lo} h à 3,50 $/h → {hi} h à 6 $/h",
+    "hoursRate": "{lo} h à {loRate}/h → {hi} h à {hiRate}/h",
     "items": [
       {
         "name": "Photo signée de l'orga",
@@ -511,7 +511,7 @@
       },
       {
         "question": "C'est quoi l'Énergie de Restauration ?",
-        "answer": "C'est ton XP. Chaque livraison rapporte de l'Énergie de Restauration selon le nombre d'heures ET la complexité du projet, donc les builds plus gros et plus difficiles en rapportent plus. Tous les 10 niveaux, ton multiplicateur de pixels augmente (à partir d'environ 50 px/h et jusqu'à ~79 px/h, taux exacts à définir). L'Énergie de Restauration de toute la communauté débloque aussi des objectifs communautaires, comme de nouveaux skins pour ta maison en jeu."
+        "answer": "C'est le chiffre sur lequel tout repose. Chaque livraison rapporte de l'Énergie de Restauration selon le nombre d'heures ET la complexité du projet (les relecteurs lui donnent un palier de 1 à 4), donc les builds plus gros et plus difficiles en rapportent plus. Ton ÉR fixe ton taux de paiement — il monte de 50 px/h à environ 86 px/h à mesure que tu livres — et ton niveau affiche l'ÉR que tu as accumulée. L'Énergie de Restauration de toute la communauté débloque aussi des objectifs communautaires, comme de nouveaux skins pour ta maison en jeu."
       },
       {
         "question": "Qui organise Pixl ?",

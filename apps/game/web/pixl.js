@@ -49,6 +49,12 @@ const Pixl = (() => {
   };
   // </pixl-config>
 
+  // Starting pixels-per-hour: the payout floor, before any Restoration Energy.
+  // Quoted in the onboarding copy, which is why it's derived rather than typed
+  // out - the rate has moved once already and the old "50 pixels" was left
+  // stranded in three places.
+  const BASE_PX_PER_HOUR = Math.round(config.economy.basePayoutUsd / config.economy.pixelValueUsd);
+
   // play.pixl.rsvp is the raw game origin; the canonical host is the apex
   // pixl.rsvp (which proxies these same pages). Bounce direct visitors to the
   // apex so every link lives on one host. This is client-side and host-keyed, so
@@ -562,7 +568,7 @@ const Pixl = (() => {
     {
       target: "#ht-connect",
       title: "Track your time with Hackatime",
-      body: "This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so your time counts.",
+      body: `This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour starts at <b>${BASE_PX_PER_HOUR} pixels</b>, climbing as you build up Restoration Energy. Connect it, then tick this project's boxes so your time counts.`,
       extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
     },
     {

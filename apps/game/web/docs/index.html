@@ -90,6 +90,23 @@
   .doc a { color: var(--gold); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
   .doc b, .doc strong { color: var(--ink); font-weight: 600; }
 
+  /* Three-column fact tables (tier rates, level bands). Rows are plain divs so
+     the grid can stay a single flat list built from Pixl.config. */
+  .fact-grid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+    border: 1px solid var(--stroke); border-radius: 10px; overflow: hidden;
+    background: var(--panel); margin: 22px 0; }
+  .fact-grid > div { padding: 11px 16px; border-bottom: 1px solid var(--stroke);
+    font-size: 15px; line-height: 1.5; color: var(--dim); }
+  .fact-grid > div:nth-child(3n+1) { font-family: var(--pixel); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .fact-grid > div:nth-child(3n) { text-align: right; color: var(--gold-soft); white-space: nowrap; }
+  :root[data-theme="light"] .fact-grid > div:nth-child(3n) { color: var(--gold); }
+  .fact-grid > div:nth-last-child(-n+3) { border-bottom: 0; }
+  @media (max-width: 620px) {
+    .fact-grid { grid-template-columns: 1fr auto; }
+    .fact-grid > div:nth-child(3n+2) { grid-column: 1 / -1; padding-top: 0; border-bottom: 0; font-size: 14px; }
+    .fact-grid > div:nth-child(3n+1) { border-bottom: 0; }
+  }
+
   .callout { border: 1px solid var(--stroke); border-left: 3px solid var(--gold); border-radius: 10px;
     background: var(--panel); padding: 14px 18px; margin: 22px 0; }
   .callout.warn { border-left-color: var(--bad); }
@@ -195,7 +212,7 @@
       <section class="doc-page" id="get">
         <div class="eyebrow">Start here</div>
         <h1>What do you actually get</h1>
-        <p>Every hour of shipped work is worth 50 pixels. On top of that, most trials have their own prize attached, things like a custom domain, an Apple Developer account, a Flipper Zero, robux, PCB manufacturing budget, whatever fits the quest. If the listed prize isn't your thing and you already have it, you can usually swap it for something else of similar value.</p>
+        <p>Every hour of shipped work pays out in pixels. It starts at <b class="cfg-base-px"></b> an hour and climbs as you ship more and more ambitious things, up to <b class="cfg-max-px"></b> an hour — <a href="/docs/energy">Restoration Energy and levels</a> explains exactly how. On top of that, most trials have their own prize attached, things like a custom domain, an Apple Developer account, a Flipper Zero, robux, PCB manufacturing budget, whatever fits the quest. If the listed prize isn't your thing and you already have it, you can usually swap it for something else of similar value.</p>
         <p>Pixels themselves go into the in game shop, where you can spend them on stickers all the way up to bigger stuff like a MacBook Air. The shop catalog and prices show up once you're in game.</p>
         <p>Outside of pixels and prizes you also get access to free hosting, free domains, AI credits, a CDN, and starter guides to get you going, more on all of that below.</p>
         <p>If you get stuck at any point, search for it first. Someone in #pixl has almost definitely run into the same wall you're stuck on. If you really can't find an answer, just ask.</p>
@@ -237,7 +254,7 @@
         <p><b>Software</b> covers websites, apps, games, bots, AI tools, browser extensions, whatever. Useful tools to know about: VS Code, GitHub, and Hackatime for tracking time.</p>
         <p><b>Hardware</b> covers PCBs, electronics, robotics, 3D printed stuff, physical builds. You'll want CAD software, a PCB design tool, and whatever hardware guides fit your project.</p>
         <h2>Tracking your time</h2>
-        <p>Hackatime tracks your build time automatically once it's set up in your editor. Every hour it logs from a shipped project turns into 50 pixels, so get it installed early, don't build for hours and then realize none of it got tracked.</p>
+        <p>Hackatime tracks your build time automatically once it's set up in your editor. Every hour it logs from a shipped project turns into pixels, so get it installed early, don't build for hours and then realize none of it got tracked.</p>
       </section>
 
       <section class="doc-page" id="first-project">
@@ -341,11 +358,45 @@ ul { list-style: none; padding: 0; display: flex; gap: 1rem; }</code></pre>
         <p>Pixels are the currency of Pixl. You earn them by shipping.</p>
         <h2>Earning pixels</h2>
         <ul>
-          <li>50 pixels for every hour of shipped work, tracked through Hackatime</li>
+          <li><b class="cfg-base-px"></b> for every hour of shipped work, tracked through Hackatime</li>
+          <li>that rate climbs to <b class="cfg-max-px"></b> an hour as you build up Restoration Energy — see <a href="/docs/energy">Energy and levels</a></li>
           <li>most trials also come with an extra prize on top of the base pixels</li>
         </ul>
         <h2>Spending pixels</h2>
         <p>Head to the in game shop and spend what you've earned. The catalog ranges from stickers and small gear up to bigger prizes like a MacBook Air. The more you ship, the more you can afford, and new stuff gets added to the shop as the Restoration goes on.</p>
+      </section>
+
+      <section class="doc-page" id="energy">
+        <div class="eyebrow">Build &amp; ship</div>
+        <h1>Restoration Energy and levels</h1>
+        <p class="lead">Every hour you ship becomes <b>Restoration Energy</b>, or RE. It's the number the whole economy runs on: RE decides what an hour of your work pays, and your level is a readout of how much of it you've built up.</p>
+        <p>You never spend RE. It only goes up, nothing decays, and nothing anyone else ships takes any of it away from you. Pixels are the thing you spend; RE is the thing that decides how many pixels an hour is worth.</p>
+
+        <h2>Tiers decide what an hour is worth</h2>
+        <p>When a reviewer approves your project they also give it a <b>tier</b>, 1 to 4, based on how ambitious the build actually is. The tier sets how much RE each shipped hour on that project earns.</p>
+        <div class="fact-grid" id="doc-tier-grid"></div>
+        <p>Tier is about the project, not about you. A first timer who ships something genuinely hard gets the high tier for it. Padding a simple site out with hours doesn't move it up either, since reviewers look at the actual repo.</p>
+
+        <h2>RE decides your rate</h2>
+        <p>Your lifetime RE is every approved project's hours weighted by the tier it shipped at, added up. That's what sets your hourly rate. It starts at <b id="doc-base-usd"></b> an hour and climbs in a straight line to <b id="doc-max-usd"></b> an hour once you reach <b id="doc-re-cap"></b> RE. In pixels, that's <b class="cfg-base-px"></b> an hour rising to <b class="cfg-max-px"></b>.</p>
+        <p>The climb counts for the project that's earning it, not just the next one. Your rate rises <i>while</i> the hours land, so a project gets paid the average rate across the RE it just earned. It also means splitting your work across several projects or bundling it into one pays exactly the same total, so ship however you actually want to build.</p>
+        <div class="callout">
+          <span class="k">The short version</span>
+          <p>Ship more, and ship more ambitious things, and every hour after that is worth more than the one before it. RE itself has no ceiling — only the rate does.</p>
+        </div>
+
+        <h2>The tier bonus</h2>
+        <p>That climb is deliberately slow, because <span id="doc-re-cap-2"></span> RE is a lot of shipping. On a short project it would barely register, and a tier 4 weekend build would pay about the same as a tier 1 one. So tier also pays a flat bonus on top: <b id="doc-kick-step"></b> an hour for every tier above T1, on the first <b id="doc-kick-hours"></b> hours of a project.</p>
+        <p id="doc-kick-example"></p>
+        <p>After that the bonus stops, because a long high tier project is already earning RE several times faster than a low tier one, and that permanently lifts the rate on everything you ship afterwards.</p>
+
+        <h2>Levels</h2>
+        <p>Your level is a display of lifetime RE and nothing more. Levels run 1 to <span id="doc-max-level"></span>, each one costs more RE than the last, and they have <b>no effect on what you get paid</b> — the rate comes straight off RE. Level is just there so the shipping shows up somewhere.</p>
+        <div class="fact-grid" id="doc-level-grid"></div>
+        <p>Early levels are cheap on purpose: a couple of hours on your first project already moves you a level or two. The last level and the top pay rate land on the same amount of RE, so you hit both at once. RE keeps stacking past that, it just runs out of levels to show for it.</p>
+
+        <h2>Where to see all this</h2>
+        <p>The bar at the top of your Builder Terminal shows your level, your lifetime RE and your current rate in pixels per hour. It updates as soon as a project is approved.</p>
       </section>
 
       <section class="doc-page" id="free">
@@ -643,6 +694,11 @@ dist/</code></pre>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<!-- Loaded for Pixl.config only: the economy numbers in the "Energy & levels"
+     page have to come from packages/config/pixl.json, not from prose someone
+     forgets to update. PIXL_PUBLIC keeps the sign-in gate off the docs. -->
+<script>window.PIXL_PUBLIC = true;</script>
+<script src="/pixl.js"></script>
 <script>
   // On play.* the game is at the root; under pixl.rsvp it lives at /play.
   const GAME_HREF = location.hostname.startsWith("play.") ? "/" : "/play";
@@ -699,11 +755,81 @@ dist/</code></pre>
   };
   syncThemeBtn();
 
+  /* ── "Energy & levels": every number rendered from Pixl.config ──
+     Tier *names* are copy and live here; every rate, threshold and band comes
+     from packages/config/pixl.json via pixl.js, so editing that file and
+     running `bun run config:sync` is enough to keep this page honest. */
+  (() => {
+    // Guarded: if pixl.js ever fails to load, the numbers go blank but the nav,
+    // routing and every other page still work.
+    if (typeof Pixl === "undefined") return;
+    const E = Pixl.config.economy;
+    const usd = (n) => "$" + n.toFixed(2);
+    const px = (n) => Math.round(n).toLocaleString() + " px";
+    const num = (n) => Math.round(n).toLocaleString();
+    const pxPerHour = (dollars) => dollars / E.pixelValueUsd;
+    const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    // The two headline rates also get quoted on other pages (Rewards, Building,
+    // What you get), so they're filled by class rather than by id.
+    const setAll = (cls, text) =>
+      document.querySelectorAll("." + cls).forEach((el) => { el.textContent = text; });
+
+    const TIERS = [
+      ["T1 Spark", "A first spark of Restoration: a simple site, script or tiny tool."],
+      ["T2 Signal", "A focused app, CLI or game with real polish — one system back online."],
+      ["T3 Grid", "Several systems working together: backend, state, infrastructure."],
+      ["T4 Beacon", "Deep systems work: complex architecture and serious scope."],
+    ];
+    const tierGrid = document.getElementById("doc-tier-grid");
+    if (tierGrid) {
+      tierGrid.innerHTML = TIERS.map(
+        ([name, blurb], i) =>
+          `<div>${name}</div><div>${blurb}</div><div>${E.tierRePerHour[i]} RE / hour</div>`,
+      ).join("");
+    }
+
+    set("doc-base-usd", usd(E.basePayoutUsd));
+    set("doc-max-usd", usd(E.maxPayoutUsd));
+    set("doc-re-cap", num(E.reForMaxPayout));
+    set("doc-re-cap-2", num(E.reForMaxPayout));
+    setAll("cfg-base-px", px(pxPerHour(E.basePayoutUsd)));
+    setAll("cfg-max-px", px(pxPerHour(E.maxPayoutUsd)));
+    set("doc-kick-step", usd(E.tierKickerUsdPerStep));
+    set("doc-kick-hours", E.tierKickerHours + " hours");
+
+    // Worked example, at a project size short enough to sit inside the kicker
+    // window so the arithmetic below stays a straight multiplication.
+    const exHours = 10;
+    const exTier = E.tierRePerHour.length;
+    const exUsd = E.tierKickerUsdPerStep * (exTier - 1) * exHours;
+    set(
+      "doc-kick-example",
+      `So a ${exHours} hour T${exTier} project earns ${usd(exUsd)} — about ${px(exUsd / E.pixelValueUsd)} — on top of whatever its normal rate pays.`,
+    );
+
+    const maxLevel = E.levelBands[E.levelBands.length - 1].throughLevel;
+    set("doc-max-level", String(maxLevel));
+    const levelGrid = document.getElementById("doc-level-grid");
+    if (levelGrid) {
+      let from = 1;
+      let total = 0;
+      levelGrid.innerHTML = E.levelBands
+        .map((band) => {
+          const span = band.throughLevel - from + 1;
+          total += span * band.rePerLevel;
+          const row = `<div>Levels ${from}-${band.throughLevel}</div><div>${band.rePerLevel} RE per level</div><div>${num(total)} RE total</div>`;
+          from = band.throughLevel + 1;
+          return row;
+        })
+        .join("");
+    }
+  })();
+
   // Grouped nav → one section per "page", routed by URL hash.
   const GROUPS = [
     { title: "Start here", items: [["welcome", "Welcome"], ["get", "What you get"]] },
     { title: "The Restoration", items: [["restoration", "How it works"], ["sidequest", "Your trial"]] },
-    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["first-site", "Your first site (code)"], ["shipping", "Shipping"], ["rewards", "Rewards"]] },
+    { title: "Build & ship", items: [["building", "Building"], ["first-project", "Your first project"], ["first-site", "Your first site (code)"], ["shipping", "Shipping"], ["rewards", "Rewards"], ["energy", "Energy & levels"]] },
     { title: "Resources", items: [["free", "Free stuff"], ["help", "Need help"]] },
     { title: "Guides", items: [["html", "HTML guide"], ["slack", "Slack app"], ["roblox", "Roblox"], ["react-native", "React Native"], ["pixel-art", "Pixel art"]] },
     { title: "Setup", items: [["hackatime", "Hackatime"], ["submitting", "Submitting"], ["git", "Git & GitHub"]] },

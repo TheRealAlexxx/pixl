@@ -911,18 +911,14 @@
       Pixl.loadWallet();
 
       const $ = (id) => document.getElementById(id);
+      // Rates come off config so they can't drift from what the server pays.
+      const RE_RATES = Pixl.config.economy.tierRePerHour;
       const LEVELS = [
-        ["T1 Spark", "A first spark of Restoration: a simple site, script, or tiny tool. 5 RE per hour."],
-        ["T2 Signal", "A focused app, CLI, or game with clean polish — one system back online. 10 RE per hour."],
-        [
-          "T3 Grid",
-          "Multiple systems working together: backend, state, infra. 15 RE per hour.",
-        ],
-        [
-          "T4 Beacon",
-          "Deep systems work: complex architecture and serious scope. 25 RE per hour.",
-        ],
-      ];
+        ["T1 Spark", "A first spark of Restoration: a simple site, script, or tiny tool."],
+        ["T2 Signal", "A focused app, CLI, or game with clean polish — one system back online."],
+        ["T3 Grid", "Multiple systems working together: backend, state, infra."],
+        ["T4 Beacon", "Deep systems work: complex architecture and serious scope."],
+      ].map(([name, blurb], i) => [name, `${blurb} ${RE_RATES[i]} RE per hour.`]);
       const ERRORS = {
         name_required: "Give it a name first.",
         repo_not_github: "The repo link must be a GitHub repository.",

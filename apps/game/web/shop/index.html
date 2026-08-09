@@ -363,22 +363,25 @@
         return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
       }
 
-      // Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows
-      // a range: hours needed at that lowest rate, then hours needed at the
-      // shop's highest rate ($6/h) - your Restoration Energy multiplier
-      // puts you somewhere between the two.
+      // Every price is set at the payout floor. Shows a range: hours needed at
+      // that floor rate, then hours needed at the ceiling - your lifetime
+      // Restoration Energy puts you somewhere between the two.
       function fmtHours(h) {
         const r = Math.round(h * 10) / 10;
         return Number.isInteger(r) ? String(r) : r.toFixed(1);
       }
       // Spells out both rates every time (not just two bare numbers) so it's
-      // clear why there are two: hours needed at the shop's $3.5/h floor
-      // rate, then hours needed at its $6/h rate (reachable with a
-      // Restoration Energy multiplier).
+      // clear why there are two: hours needed at the payout floor, then hours
+      // needed at the ceiling you reach once you've built up Restoration
+      // Energy. Both rates come from config so they can't drift from the
+      // server's actual payout maths.
+      const LO_USD = Pixl.config.economy.basePayoutUsd;
+      const HI_USD = Pixl.config.economy.maxPayoutUsd;
+      const fmtRate = (usd) => "$" + (Number.isInteger(usd) ? usd : usd.toFixed(2));
       function hoursOf(px) {
-        const lo = px / 50;
-        const hi = (lo * 3.5) / 6;
-        return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
+        const lo = px / (LO_USD / Pixl.config.economy.pixelValueUsd);
+        const hi = (lo * LO_USD) / HI_USD;
+        return `${fmtHours(lo)}h at ${fmtRate(LO_USD)}/h → ${fmtHours(hi)}h at ${fmtRate(HI_USD)}/h`;
       }
 
       function isTrophy(item) {

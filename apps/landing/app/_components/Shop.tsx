@@ -3,6 +3,7 @@
 import { motion, useMotionValue } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { useLocale } from "./LocaleProvider";
+import { config } from "../_generated/config";
 
 const ITEM_IMAGES = [
   "/shop/signed-photo.png",
@@ -68,9 +69,9 @@ const ITEM_IMAGES = [
   "/shop/nintendo-switch-2.png",
 ];
 
-// Repriced at the base rate of 1h = $3.5 = 50px (hours rounded to the
-// nearest 0.5). $3.5/h is the floor - it only gets better once a shipped
-// project's Restoration Energy multiplier kicks in.
+// Repriced at the payout floor (hours rounded to the nearest 0.5). That floor
+// is the worst rate anyone gets - it only climbs from there as shipped
+// projects build up Restoration Energy.
 const ITEM_PRICES = [
   125, 125, 150, 150, 150, 150, 150, 150, 175, 150, 225, 150, 250, 225, 150, 225, 225, 275, 325, 350, 650, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150,
 ];
@@ -81,17 +82,32 @@ function fmtHours(h: number, lang: string) {
   return new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(h);
 }
 
-// Spells out both rates every time (not just two bare numbers) so it's
-// clear why there are two: hours needed at the shop's $3.5/h floor rate,
-// then hours needed at its $6/h rate (reachable with a Restoration Energy
-// multiplier). Each locale keeps its own rate/currency formatting in the
-// hoursRate template, so only the two hour counts get substituted in.
+// Spells out both rates every time (not just two bare numbers) so it's clear
+// why there are two: hours needed at the payout floor, then hours needed at
+// the ceiling you reach once you've built up Restoration Energy. Each locale
+// keeps its own currency formatting in the hoursRate template; the rates
+// themselves are substituted in from config so they can't drift from the
+// server's payout maths.
 function hoursRange(price: number, template: string, lang: string) {
-  const lo = price / 50;
-  const hi = (lo * 3.5) / 6;
+  const lo = price / (config.economy.basePayoutUsd / config.economy.pixelValueUsd);
+  const hi = (lo * config.economy.basePayoutUsd) / config.economy.maxPayoutUsd;
   return template
     .replace("{lo}", fmtHours(lo, lang))
-    .replace("{hi}", fmtHours(hi, lang));
+    .replace("{hi}", fmtHours(hi, lang))
+    .replace("{loRate}", fmtRate(config.economy.basePayoutUsd, lang))
+    .replace("{hiRate}", fmtRate(config.economy.maxPayoutUsd, lang));
+}
+
+function fmtRate(usd: number, lang: string) {
+  return new Intl.NumberFormat(lang, {
+    style: "currency",
+    currency: "USD",
+    // narrowSymbol keeps the French form as "3,50 $" rather than "3,50 $US",
+    // which is what the hand-written template used to say.
+    currencyDisplay: "narrowSymbol",
+    // Whole dollars stay whole ("$6"), cents keep their cents ("$3.50").
+    minimumFractionDigits: Number.isInteger(usd) ? 0 : 2,
+  }).format(usd);
 }
 
 function ShopCard({
