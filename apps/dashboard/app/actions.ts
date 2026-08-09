@@ -3,12 +3,22 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  config,
+  levelForRe,
+  pxPerHourOver,
+  reForHours,
+  tierKickerUsd,
+} from "./_generated/config";
+import {
   db,
   getAdmin,
+  listAdmins,
+  playerLabel,
   logModAction,
   creditProjectPixels,
   revokeProjectPixels,
   projectPixelTotal,
+  lifetimeRe,
   creditReviewerPixels,
   activeDashEvents,
   communityGoalShipCount,
@@ -16,6 +26,13 @@ import {
   removeReportViewer,
   addHelper,
   removeHelper,
+  addFulfiller,
+  removeFulfiller,
+  addModerator,
+  removeModerator,
+  insertBanProposal,
+  getBanProposal,
+  decideBanProposal,
   nextReviewId,
   EVENT_TYPES,
   REFERRAL_BOOST_PX_PER_HOUR,
@@ -36,6 +53,9 @@ import {
   requirePerm,
   requireSuper,
   requireReportViewer,
+  requireFulfiller,
+  requireModerator,
+  requireWarnAccess,
   ownerSlackIds,
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
@@ -79,48 +99,15 @@ async function nextReviewPath(
   }
 }
 
-// XP = 1 per lifetime approved hour. Payout steps up at named hour milestones
-// (flat between tiers, not a smooth ramp) - 1px = $0.07. A player's rate for
-// a ship comes from their XP before that ship. Keep in sync with server
-// src/xp.ts's RATE_TIERS (this used to drift from it — 40/60 vs the real
-// 50/79 — fixed 2026-08-01; extended into tiers 2026-08-03).
-const RATE_TIERS: { hours: number; pxPerHour: number }[] = [
-  { hours: 0, pxPerHour: 50 }, // $3.50/hr - base
-  { hours: 25, pxPerHour: 57 }, // $4.00/hr
-  { hours: 75, pxPerHour: 64 }, // $4.50/hr
-  { hours: 175, pxPerHour: 71 }, // $5.00/hr
-  { hours: 350, pxPerHour: 79 }, // $5.50/hr - old ceiling, now mid-tier
-  { hours: 500, pxPerHour: 86 }, // $6.00/hr - rare top tier, pairs with the Blahaj trophy
-];
-
-function pxPerHourFor(xp: number): number {
-  let rate = RATE_TIERS[0].pxPerHour;
-  for (const tier of RATE_TIERS) {
-    if (xp >= tier.hours) rate = tier.pxPerHour;
-  }
-  return rate;
-}
-
-async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
-  const { data } = await db
-    .from("projects")
-    .select("id, approved_hours, hackatime_seconds")
-    .eq("user_id", userId)
-    .eq("status", "approved")
-    .is("banned_at", null)
-    .neq("id", excludeProjectId);
-  return (
-    Math.round(
-      (data ?? []).reduce((s, p) => {
-        const h =
-          p.approved_hours != null
-            ? Number(p.approved_hours)
-            : (Number(p.hackatime_seconds) || 0) / 3600;
-        return s + (Number.isFinite(h) ? h : 0);
-      }, 0) * 10,
-    ) / 10
-  );
-}
+// A project's tier (1-4) sets how much Restoration Energy each of its hours is
+// worth; lifetime RE sets the player's hourly rate, ramping from basePayoutUsd
+// to maxPayoutUsd. A player's rate for a ship comes from their RE *before* that
+// ship. All of it is generated from packages/config/pixl.json - this file used
+// to carry its own copy of the rate table and drifted from the server's (40/60
+// vs the real 50/79, fixed 2026-08-01), which is exactly why it no longer does.
+//
+// Note: the DB column is `projects.level` but holds the tier (1-4). It predates
+// the player-facing 1-100 level and isn't worth a migration to rename.
 
 // A reviewer may never act on their own submission (self-review = cheating).
 async function isOwnProject(access: AdminAccess, userId: string): Promise<boolean> {
@@ -129,8 +116,7 @@ async function isOwnProject(access: AdminAccess, userId: string): Promise<boolea
 }
 
 export async function warnPlayer(formData: FormData): Promise<void> {
-  const access = await requirePerm("warn");
-  const by = actorName(access);
+  const by = await requireWarnAccess();
   const userId = String(formData.get("userId") ?? "");
   const message = String(formData.get("message") ?? "").trim() || DEFAULT_WARNING;
   if (!userId) return;
@@ -382,6 +368,195 @@ async function notifyOwner(
   await dmOrEmail(userId, title, body);
 }
 
+// Same "hackatime if tracked, else journal" source as claimedHoursFor(), but
+// scoped to one collaborator's own journal entries and their own tracked
+// Hackatime seconds (project_collaborators.hackatime_seconds), not the
+// project as a whole.
+async function claimedHoursForCollaborator(
+  projectId: number,
+  userId: string,
+  hackatimeSeconds: number | null,
+): Promise<number> {
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("hours")
+    .eq("project_id", projectId)
+    .eq("user_id", userId);
+  const journalHours =
+    Math.round((journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const hackatimeHours = Math.round(((hackatimeSeconds || 0) / 3600) * 10) / 10;
+  return hackatimeHours > 0 ? hackatimeHours : journalHours;
+}
+
+async function acceptedCollaboratorUserIds(projectId: number): Promise<string[]> {
+  const { data } = await db
+    .from("project_collaborators")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("status", "accepted");
+  return (data ?? []).map((r) => r.user_id as string);
+}
+
+interface BeneficiaryPayout {
+  totalPx: number;
+  deltaPx: number;
+  pxRate: number;
+  xpBefore: number;
+  goalNote: string;
+  referralNote: string;
+  alreadyPx: number;
+  /** Flat tier bonus in pixels, on top of the hourly rate. */
+  kickerPx: number;
+  /** RE this ship earned, for the "you're now level N" line. */
+  projectRe: number;
+}
+
+// Credits one beneficiary (the project owner, or an accepted collaborator)
+// at their own rate tier for their own share of credited hours. This is what
+// "split payout" means for a collaborative project — each person is treated
+// like an independent earner (own lifetime-hours rate, own referral boost),
+// just for their own hours slice instead of the whole project.
+async function creditBeneficiary(
+  userId: string,
+  projectId: number,
+  projectType: string,
+  creditHours: number,
+  shippedAt: string | null,
+  by: string,
+  otherBeneficiaryIds: string[] = [],
+  tier = 1,
+): Promise<BeneficiaryPayout> {
+  let goalMult = 1;
+  let goalNote = "";
+  if (shippedAt) {
+    const { data: goals } = await db
+      .from("events")
+      .select("*")
+      .eq("type", "community_goal")
+      .is("stopped_at", null)
+      .lte("starts_at", shippedAt)
+      .gt("ends_at", shippedAt);
+    for (const g of (goals ?? []) as DashEventRow[]) {
+      const target = Number(g.config.target) || 0;
+      const bonusPct = Number(g.config.bonusPct) || 0;
+      const wantType = String(g.config.projectType ?? "");
+      if (wantType && wantType !== projectType) continue;
+      if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
+        goalMult *= 1 + bonusPct / 100;
+        goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
+      }
+    }
+  }
+
+  // Two parts, both in packages/config: the RE-driven rate averaged across the
+  // RE this ship earns (so a project's own tier counts toward its own payout
+  // without letting one long ship jump straight to the cap), plus a flat tier
+  // kicker on its first hours (so tier is felt on short projects, where the RE
+  // ramp alone is worth cents). pxRate below is the *effective* rate including
+  // the kicker, since that is what the player is told.
+  const xpBefore = await lifetimeRe(userId, projectId);
+  const projectRe = reForHours(creditHours, tier);
+  const kickerPx = tierKickerUsd(creditHours, tier) / config.economy.pixelValueUsd;
+  let pxRate = pxPerHourOver(xpBefore, xpBefore + projectRe);
+  const alreadyPx = await projectPixelTotal(projectId, userId);
+  // A project only counts as a "new ship" for referral purposes the first
+  // time it earns any pixels , re-approvals of an already-credited project
+  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
+  const isNewShip = alreadyPx === 0;
+  const { data: referral } = isNewShip
+    ? await db
+        .from("referrals")
+        .select("id, referrer_id, rewarded_at, boosted_ships")
+        .eq("referred_id", userId)
+        .maybeSingle()
+    : { data: null };
+
+  let referralNote = "";
+  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
+    // Conditioned on the boosted_ships value we just read, so two ships for
+    // the same referred player approved at the same instant can't both pass
+    // the check before either write lands , only the update that still
+    // matches the value it read wins the boost.
+    const { data: claimed } = await db
+      .from("referrals")
+      .update({ boosted_ships: referral.boosted_ships + 1, boost_project_id: projectId })
+      .eq("id", referral.id)
+      .eq("boosted_ships", referral.boosted_ships)
+      .select("id")
+      .maybeSingle();
+    if (claimed) {
+      pxRate += REFERRAL_BOOST_PX_PER_HOUR;
+      referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
+    }
+  }
+
+  const totalPx = Math.round((creditHours * pxRate + kickerPx) * goalMult);
+  const deltaPx = totalPx - alreadyPx;
+  await creditProjectPixels(userId, projectId, totalPx, creditHours, by);
+
+  // Referrer payout: pays once per referral, on the first qualifying ship.
+  // Skipped if the referrer is also a credited beneficiary (owner or
+  // collaborator) on this same project , otherwise a referrer could invite
+  // themselves onto the referred user's project (or vice versa) and collect
+  // both their own collaborator pay and the referral bonus off one ship.
+  // Left un-rewarded so the referral still pays out on a genuinely
+  // independent ship later.
+  const referrerRidingAlong = otherBeneficiaryIds.includes(referral?.referrer_id ?? "");
+  if (referral && !referral.rewarded_at && !referrerRidingAlong) {
+    const tier = referralTierFor(creditHours);
+    if (tier) {
+      // Conditioned on rewarded_at still being null, so two qualifying ships
+      // for the same referred player approved at the same instant can't both
+      // pay the referrer , only the update that still finds it unrewarded wins.
+      const { data: claimed } = await db
+        .from("referrals")
+        .update({
+          rewarded_at: new Date().toISOString(),
+          reward_tier: tier.key,
+          reward_pixels: tier.px,
+          reward_project_id: projectId,
+        })
+        .eq("id", referral.id)
+        .is("rewarded_at", null)
+        .select("id")
+        .maybeSingle();
+      if (!claimed) return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx, kickerPx, projectRe };
+      await db.rpc("adjust_user_pixels", {
+        p_user_id: referral.referrer_id,
+        p_amount: tier.px,
+        p_reason: "referral_reward",
+        p_created_by: by,
+      });
+      await db.from("notifications").insert({
+        user_id: referral.referrer_id,
+        title: "Referral reward!",
+        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
+      });
+
+      const { count: rewardedCount } = await db
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_id", referral.referrer_id)
+        .not("rewarded_at", "is", null);
+      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
+        await db.rpc("adjust_user_pixels", {
+          p_user_id: referral.referrer_id,
+          p_amount: REFERRAL_MILESTONE_PX,
+          p_reason: "referral_milestone",
+          p_created_by: by,
+        });
+        await db.from("notifications").insert({
+          user_id: referral.referrer_id,
+          title: "Referral milestone!",
+          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
+        });
+      }
+    }
+  }
+
+  return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx, kickerPx, projectRe };
+}
+
 // Two-pass review. A shipped project always gets a first pass from *some*
 // reviewer , even a final reviewer's first look on a fresh 'shipped' project is
 // only a proposal, same as anyone else's. It moves to 'second_review' and needs
@@ -446,6 +621,35 @@ export async function reviewProject(formData: FormData): Promise<void> {
     if (!Number.isFinite(n) || n < 0)
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
+  }
+
+  // The tier rides along with the verdict so a reviewer sets hours and tier in
+  // one place and sees the resulting RE before submitting, instead of using the
+  // separate re-grade form and guessing. Absent (older form, or a non-approve
+  // verdict) means leave whatever is stored alone.
+  const tierRaw = String(formData.get("tier") ?? "").trim();
+  if (tierRaw !== "") {
+    const t = Number(tierRaw);
+    if (!Number.isInteger(t) || t < 1 || t > 4)
+      redirect(`${back}?error=${encodeURIComponent("Tier must be between 1 and 4.")}`);
+    const { data: cur } = await db
+      .from("projects")
+      .select("user_id, level")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (cur && Number(cur.level) !== t) {
+      if (await isOwnProject(access, cur.user_id as string))
+        redirect(
+          `${back}?error=${encodeURIComponent("You can't change the tier of your own project.")}`,
+        );
+      await db.from("projects").update({ level: t }).eq("id", projectId);
+      await logModAction(
+        cur.user_id as string,
+        "project_level_changed",
+        `tier set to T${t} (was T${cur.level ?? 1}) with the verdict`,
+        by,
+      );
+    }
   }
 
   // Structured internal audit note (Hack Club's YSWS "override hours spent
@@ -562,6 +766,13 @@ export async function reviewProject(formData: FormData): Promise<void> {
       "Changes requested",
       `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
     );
+    for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+      await notifyOwner(
+        collaboratorId,
+        "Changes requested",
+        `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}`,
+      );
+    }
     await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
     const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
@@ -595,6 +806,11 @@ export async function reviewProject(formData: FormData): Promise<void> {
     const banBody = `Your project "${project.name}" was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
     await db.from("notifications").insert({ user_id: project.user_id, title: "Project banned", body: banBody });
     await dmOrEmail(project.user_id, "Project banned", banBody);
+    const collabBanBody = `A project you collaborate on, "${project.name}", was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${note}\n\nIf you think this is a mistake, contact the Pixl team.`;
+    for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+      await db.from("notifications").insert({ user_id: collaboratorId, title: "Project banned", body: collabBanBody });
+      await dmOrEmail(collaboratorId, "Project banned", collabBanBody);
+    }
     await logModAction(project.user_id, "project_banned", `${project.name}: ${note}`, by);
     const nextPath = await nextReviewPath(access, by, stage, projectId);
     revalidatePath("/review");
@@ -642,99 +858,38 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * the player's level rate *
-  // any community-goal bonus); the DB function only adds the delta vs what
-  // earlier approvals already paid out.
-  let goalMult = 1;
-  let goalNote = "";
-  if (current.shipped_at) {
-    const { data: goals } = await db
-      .from("events")
-      .select("*")
-      .eq("type", "community_goal")
-      .is("stopped_at", null)
-      .lte("starts_at", current.shipped_at)
-      .gt("ends_at", current.shipped_at);
-    for (const g of (goals ?? []) as DashEventRow[]) {
-      const target = Number(g.config.target) || 0;
-      const bonusPct = Number(g.config.bonusPct) || 0;
-      const wantType = String(g.config.projectType ?? "");
-      if (wantType && wantType !== project.project_type) continue;
-      if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
-        goalMult *= 1 + bonusPct / 100;
-        goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
-      }
-    }
-  }
-  const xpBefore = await lifetimeApprovedHours(project.user_id, projectId);
-  let pxRate = pxPerHourFor(xpBefore);
-  const alreadyPx = await projectPixelTotal(project.id);
-  // A project only counts as a "new ship" for referral purposes the first
-  // time it earns any pixels , re-approvals of an already-credited project
-  // (edits, overturned first passes, etc.) don't re-trigger the boost/reward.
-  const isNewShip = alreadyPx === 0;
-  const { data: referral } = isNewShip
-    ? await db
-        .from("referrals")
-        .select("id, referrer_id, rewarded_at, boosted_ships")
-        .eq("referred_id", project.user_id)
-        .maybeSingle()
-    : { data: null };
+  // Collected up front so each beneficiary's referral check can see who else
+  // is being credited on this same project , see the referrerRidingAlong
+  // guard in creditBeneficiary.
+  const { data: collabRows } = await db
+    .from("project_collaborators")
+    .select("id, user_id, hackatime_seconds")
+    .eq("project_id", projectId)
+    .eq("status", "accepted");
+  const collaborators = (collabRows ?? []) as { id: number; user_id: string; hackatime_seconds: number | null }[];
+  const allBeneficiaryIds = [project.user_id, ...collaborators.map((c) => c.user_id)];
 
-  let referralNote = "";
-  if (referral && referral.boosted_ships < REFERRAL_BOOST_SHIP_CAP) {
-    pxRate += REFERRAL_BOOST_PX_PER_HOUR;
-    referralNote += ` +${REFERRAL_BOOST_PX_PER_HOUR}px/hr referral boost (${referral.boosted_ships + 1}/${REFERRAL_BOOST_SHIP_CAP} ships used).`;
-    await db
-      .from("referrals")
-      .update({ boosted_ships: referral.boosted_ships + 1 })
-      .eq("id", referral.id);
-  }
+  // One tier per project, applied to everyone credited on it. Re-read rather
+  // than trusting the form value, since the tier update above is what actually
+  // decides it.
+  const { data: tierRow } = await db
+    .from("projects")
+    .select("level")
+    .eq("id", projectId)
+    .maybeSingle();
+  const tierUsed = Math.min(Math.max(Number(tierRow?.level) || 1, 1), 4);
 
-  const totalPx = Math.round(creditHours * pxRate * goalMult);
-  const deltaPx = totalPx - alreadyPx;
-  await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
-
-  // Referrer payout: pays once per referral, on the first qualifying ship.
-  if (referral && !referral.rewarded_at) {
-    const tier = referralTierFor(creditHours);
-    if (tier) {
-      await db
-        .from("referrals")
-        .update({ rewarded_at: new Date().toISOString(), reward_tier: tier.key, reward_pixels: tier.px })
-        .eq("id", referral.id);
-      await db.rpc("adjust_user_pixels", {
-        p_user_id: referral.referrer_id,
-        p_amount: tier.px,
-        p_reason: "referral_reward",
-        p_created_by: by,
-      });
-      await db.from("notifications").insert({
-        user_id: referral.referrer_id,
-        title: "Referral reward!",
-        body: `Someone you referred shipped a ${creditHours}h project , you earned ${tier.px} pixels ($${(tier.px * 0.07).toFixed(2)})!`,
-      });
-
-      const { count: rewardedCount } = await db
-        .from("referrals")
-        .select("id", { count: "exact", head: true })
-        .eq("referrer_id", referral.referrer_id)
-        .not("rewarded_at", "is", null);
-      if (rewardedCount && rewardedCount % REFERRAL_MILESTONE_EVERY === 0) {
-        await db.rpc("adjust_user_pixels", {
-          p_user_id: referral.referrer_id,
-          p_amount: REFERRAL_MILESTONE_PX,
-          p_reason: "referral_milestone",
-          p_created_by: by,
-        });
-        await db.from("notifications").insert({
-          user_id: referral.referrer_id,
-          title: "Referral milestone!",
-          body: `${rewardedCount} of your referrals have shipped , bonus ${REFERRAL_MILESTONE_PX} pixels ($${(REFERRAL_MILESTONE_PX * 0.07).toFixed(2)})!`,
-        });
-      }
-    }
-  }
+  const ownerPayout = await creditBeneficiary(
+    project.user_id,
+    project.id,
+    project.project_type,
+    creditHours,
+    current.shipped_at,
+    by,
+    collaborators.map((c) => c.user_id),
+    tierUsed,
+  );
+  const { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx } = ownerPayout;
 
   let credited: string;
   if (alreadyPx > 0 && deltaPx > 0) {
@@ -748,9 +903,53 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (deltaPx > 0)
-    credited += ` Your rate: ${pxRate} px/h ($${(pxRate * 0.07).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
+    credited +=
+      ` Your rate: ${Math.round(pxRate)} px/h ($${(pxRate * config.economy.pixelValueUsd).toFixed(2)}/hr)` +
+      (ownerPayout.kickerPx > 0
+        ? ` plus a T${tierUsed} bonus of ${Math.round(ownerPayout.kickerPx)} px`
+        : "") +
+      ` , this ship earned ${Math.round(ownerPayout.projectRe)} RE, putting you at level ${levelForRe(xpBefore + ownerPayout.projectRe)}.`;
   if (goalNote && deltaPx > 0) credited += goalNote;
   if (referralNote && deltaPx > 0) credited += referralNote;
+
+  // Split payout: every accepted collaborator is credited independently at
+  // their own rate tier for their own submitted hours slice (capped at what
+  // they actually tracked — see claimedHoursForCollaborator).
+  for (const c of collaborators) {
+    const cClaimedHours = await claimedHoursForCollaborator(projectId, c.user_id, c.hackatime_seconds);
+    const rawHours = Number(String(formData.get(`collabHours_${c.id}`) ?? cClaimedHours));
+    const cCreditHours = Number.isFinite(rawHours)
+      ? Math.min(cClaimedHours, Math.max(0, Math.round(rawHours * 10) / 10))
+      : cClaimedHours;
+    await db.from("project_collaborators").update({ approved_hours: cCreditHours }).eq("id", c.id);
+    const cPayout = await creditBeneficiary(
+      c.user_id,
+      project.id,
+      project.project_type,
+      cCreditHours,
+      current.shipped_at,
+      by,
+      allBeneficiaryIds.filter((id) => id !== c.user_id),
+      tierUsed,
+    );
+    let cCredited: string;
+    if (cPayout.alreadyPx > 0 && cPayout.deltaPx > 0) {
+      cCredited = `\n\n+${cPayout.deltaPx} pixels for what's new (${cPayout.totalPx} pixels total for this project , ${cCreditHours}h approved).`;
+    } else if (cPayout.alreadyPx > 0 && cPayout.deltaPx <= 0) {
+      cCredited = `\n\nNo new pixels this time , you already earned ${cPayout.alreadyPx} pixels on this project.`;
+    } else {
+      cCredited = `\n\n${cPayout.totalPx} pixels credited for ${cCreditHours}h approved.`;
+    }
+    if (cPayout.deltaPx > 0)
+      cCredited += ` Your rate: ${cPayout.pxRate} px/h ($${(cPayout.pxRate * 0.07).toFixed(2)}/hr).`;
+    if (cPayout.goalNote && cPayout.deltaPx > 0) cCredited += cPayout.goalNote;
+    if (cPayout.referralNote && cPayout.deltaPx > 0) cCredited += cPayout.referralNote;
+    await notifyOwner(
+      c.user_id,
+      "Project approved!",
+      `"${project.name}" passed review , approved by ${reviewer}. Congrats on shipping!${cCredited}`,
+    );
+  }
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
   // only for projects shipped inside the bounty window.
@@ -892,6 +1091,49 @@ export async function setProjectLevel(formData: FormData): Promise<void> {
   redirect(back);
 }
 
+// Undoes whatever referral side effects this specific project caused for a
+// beneficiary, if any , counterpart to the boost/reward grants in
+// creditBeneficiary. Without this, voiding a verdict clawed back the pixels
+// but left the referrer holding a reward (and the referred player holding a
+// spent boost slot) for a ship that turned out not to count.
+async function reverseReferralForRevokedProject(
+  userId: string,
+  projectId: number,
+  by: string,
+): Promise<void> {
+  const { data: referral } = await db
+    .from("referrals")
+    .select("id, referrer_id, boosted_ships, boost_project_id, rewarded_at, reward_pixels, reward_project_id")
+    .eq("referred_id", userId)
+    .maybeSingle();
+  if (!referral) return;
+
+  if (referral.boost_project_id === projectId) {
+    await db
+      .from("referrals")
+      .update({ boosted_ships: Math.max(0, Number(referral.boosted_ships) - 1), boost_project_id: null })
+      .eq("id", referral.id);
+  }
+
+  if (referral.reward_project_id === projectId && referral.rewarded_at) {
+    await db
+      .from("referrals")
+      .update({ rewarded_at: null, reward_tier: null, reward_pixels: null, reward_project_id: null })
+      .eq("id", referral.id);
+    await db.rpc("adjust_user_pixels", {
+      p_user_id: referral.referrer_id,
+      p_amount: -(Number(referral.reward_pixels) || 0),
+      p_reason: "referral_reward_reverted",
+      p_created_by: by,
+    });
+    await db.from("notifications").insert({
+      user_id: referral.referrer_id,
+      title: "Referral reward reversed",
+      body: "The ship that earned you a referral reward got sent back for another review, so that reward's on hold , it'll pay out again once a qualifying ship clears review.",
+    });
+  }
+}
+
 export async function reReviewProject(formData: FormData): Promise<void> {
   // Send back to review is a staff action , admins only (not plain reviewers).
   const access = await requirePerm("ban");
@@ -914,8 +1156,22 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   const claimedHours = await claimedHoursFor(projectId);
 
   // The verdict is void, so the payout is too , claw back every pixel this
-  // project was credited and leave the reversal in the ledger.
-  const revoked = await revokeProjectPixels(project.user_id, project.id, by);
+  // project was credited and leave the reversal in the ledger. Collaborators
+  // were credited independently, so each gets their own clawback too.
+  let revoked = await revokeProjectPixels(project.user_id, project.id, by);
+  await reverseReferralForRevokedProject(project.user_id, project.id, by);
+  for (const collaboratorId of await acceptedCollaboratorUserIds(projectId)) {
+    const collabRevoked = await revokeProjectPixels(collaboratorId, project.id, by);
+    revoked += collabRevoked;
+    await reverseReferralForRevokedProject(collaboratorId, project.id, by);
+    if (collabRevoked > 0) {
+      await db.from("notifications").insert({
+        user_id: collaboratorId,
+        title: "Project back in review",
+        body: `"${project.name}" is getting another look from the review team. The ${collabRevoked} pixels it earned you are on hold until the new verdict.`,
+      });
+    }
+  }
 
   await logModAction(
     project.user_id,
@@ -1041,10 +1297,6 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     redirect(`/pixels?error=${encodeURIComponent("Pick a player and a whole number of pixels.")}`);
   if (!reason)
     redirect(`/pixels?error=${encodeURIComponent("A reason is required for manual pixel changes.")}`);
-  const { data: target } = await db.from("users").select("slack_id").eq("id", userId).single();
-  if (!deduct && target?.slack_id && target.slack_id === access.session.slackId)
-    redirect(`/pixels?error=${encodeURIComponent("You can't grant pixels to yourself.")}`);
-
   const delta = deduct ? -amount : amount;
   const { error } = await db.rpc("adjust_user_pixels", {
     p_user_id: userId,
@@ -1237,6 +1489,67 @@ export async function unbanProject(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+export async function banIdea(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const ideaId = Number(formData.get("ideaId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const returnTo = String(formData.get("returnTo") ?? "") || "/ideas";
+  if (!ideaId) return;
+  if (!reason)
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to ban an idea.")}`);
+
+  const reviewer = await reviewerLabel(access.session.slackId, access.session.name);
+
+  const { data: idea, error } = await db
+    .from("ideas")
+    .update({
+      banned_at: new Date().toISOString(),
+      ban_reason: reason,
+      ban_by: reviewer,
+    })
+    .eq("id", ideaId)
+    .select("id, title, user_id")
+    .single();
+  if (error || !idea) {
+    console.error("banIdea failed", error?.message);
+    return;
+  }
+  await logModAction(idea.user_id, "idea_banned", `${idea.title}: ${reason}`, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: idea.user_id,
+    title: "Idea removed",
+    body: `Your idea "${idea.title}" was removed by ${reviewer}.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`,
+  });
+  if (notifyError) console.error("idea ban notification failed", notifyError.message);
+  revalidatePath("/ideas");
+}
+
+export async function unbanIdea(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const ideaId = Number(formData.get("ideaId") ?? 0);
+  if (!ideaId) return;
+  const { data: idea, error } = await db
+    .from("ideas")
+    .update({ banned_at: null, ban_reason: "", ban_by: "" })
+    .eq("id", ideaId)
+    .select("id, title, user_id")
+    .single();
+  if (error || !idea) {
+    console.error("unbanIdea failed", error?.message);
+    return;
+  }
+  await logModAction(idea.user_id, "idea_unbanned", idea.title, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: idea.user_id,
+    title: "Idea restored",
+    body: `Your idea "${idea.title}" was restored. Sorry for the mix-up!`,
+  });
+  if (notifyError) console.error("idea unban notification failed", notifyError.message);
+  revalidatePath("/ideas");
+}
+
 export async function banPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);
@@ -1270,6 +1583,97 @@ export async function banPlayer(formData: FormData): Promise<void> {
   lines.push("If you believe this is a mistake, reach out to the Pixl team.");
   await dmOrEmail(userId, "Banned from Pixl", lines.join("\n\n"));
   revalidatePath("/", "layout");
+}
+
+// Everyone who can confirm a ban proposal: env owners plus sub-admins
+// explicitly holding the "ban" permission.
+async function banConfirmerSlackIds(): Promise<string[]> {
+  const admins = await listAdmins();
+  const withBanPerm = admins.filter((a) => a.permissions.includes("ban")).map((a) => a.slack_id);
+  return [...new Set([...ownerSlackIds(), ...withBanPerm])];
+}
+
+// Moderators can't ban directly , they propose one, and an admin/owner with
+// the "ban" permission confirms or rejects it (see confirmBanProposal /
+// rejectBanProposal below).
+export async function proposeBan(formData: FormData): Promise<void> {
+  const session = await requireModerator();
+  const by = `${session.name} (${session.slackId})`;
+  const userId = String(formData.get("userId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const hours = Number(formData.get("hours") ?? 0);
+  if (!userId || !reason) return;
+  await insertBanProposal(userId, reason, hours, by);
+  await logModAction(userId, "ban_proposed", hours > 0 ? `${hours}h , ${reason}` : `permanent , ${reason}`, by);
+
+  const { data: player } = await db
+    .from("users")
+    .select("display_name, real_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const playerName = playerLabel(player, userId);
+  const durationText = hours > 0 ? `${hours}h` : "permanent";
+  const text = `${session.name} proposed a ${durationText} ban for ${playerName}: ${reason}\n\nReview it: ${DASH_URL}/bans`;
+  const confirmers = await banConfirmerSlackIds();
+  await Promise.all(
+    confirmers.map((slackId) =>
+      dmUser(slackId, text).catch((e) =>
+        console.error("ban proposal DM failed", slackId, (e as Error).message),
+      ),
+    ),
+  );
+
+  revalidatePath("/reports");
+  revalidatePath("/bans");
+}
+
+export async function confirmBanProposal(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const proposal = await getBanProposal(id);
+  if (!proposal || proposal.status !== "pending") return;
+
+  const expiresAt =
+    proposal.hours > 0 ? new Date(Date.now() + proposal.hours * 3600_000).toISOString() : null;
+  const { data: inserted, error } = await db
+    .from("bans")
+    .insert({ user_id: proposal.user_id, reason: proposal.reason, banned_by: by, expires_at: expiresAt })
+    .select("id")
+    .single();
+  if (error || !inserted) throw new Error(error?.message ?? "ban insert failed");
+
+  await decideBanProposal(id, "confirmed", by, inserted.id as number);
+  await logModAction(
+    proposal.user_id,
+    "ban",
+    `${expiresAt ? `${proposal.hours}h` : "permanent"} , ${proposal.reason} (proposed by ${proposal.proposed_by})`,
+    by,
+  );
+
+  const lines = [
+    expiresAt
+      ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
+      : "You've been permanently banned from Pixl.",
+  ];
+  if (proposal.reason) lines.push(`Reason: ${proposal.reason}`);
+  lines.push("If you believe this is a mistake, reach out to the Pixl team.");
+  await dmOrEmail(proposal.user_id, "Banned from Pixl", lines.join("\n\n"));
+  revalidatePath("/", "layout");
+  revalidatePath("/bans");
+}
+
+export async function rejectBanProposal(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const proposal = await getBanProposal(id);
+  if (!proposal || proposal.status !== "pending") return;
+  await decideBanProposal(id, "rejected", by);
+  await logModAction(proposal.user_id, "ban_rejected", `proposed by ${proposal.proposed_by}`, by);
+  revalidatePath("/bans");
 }
 
 export async function liftBan(formData: FormData): Promise<void> {
@@ -1763,6 +2167,44 @@ export async function removeHelperAction(formData: FormData): Promise<void> {
   revalidatePath("/tickets");
 }
 
+// Fulfillers work the shop-order queue. Owners add/remove them here, same
+// shape as the ticket helpers list.
+export async function addFulfillerAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await addFulfiller(slackId);
+  revalidatePath("/fulfillment");
+}
+
+export async function removeFulfillerAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await removeFulfiller(slackId);
+  revalidatePath("/fulfillment");
+}
+
+// Moderators are an owner-managed allow-list (see lib/guard.ts) , granted
+// from the Reports page since seeing reports is the core of the role.
+export async function addModeratorAction(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim().toUpperCase();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!/^[UW][A-Z0-9]{6,}$/.test(slackId))
+    redirect(`/reports?verror=${encodeURIComponent("Enter a valid Slack member ID (starts with U).")}`);
+  await addModerator(slackId, name, actorName(access));
+  revalidatePath("/reports");
+}
+
+export async function removeModeratorAction(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  await removeModerator(slackId);
+  revalidatePath("/reports");
+}
+
 export async function kickPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);
@@ -1774,6 +2216,96 @@ export async function kickPlayer(formData: FormData): Promise<void> {
   revalidatePath("/online");
 }
 
+// Clears every saved (user, scene) row so the player spawns at each scene's
+// default next time they connect. If they're currently online we also kick
+// them , otherwise their in-memory position just gets written straight back
+// on disconnect (see gameServer.ts persist()), undoing the reset.
+export async function resetPlayerPosition(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return;
+
+  const { data: cleared, error } = await db
+    .from("player_state")
+    .delete()
+    .eq("user_id", userId)
+    .select("scene");
+  if (error) throw new Error(error.message);
+
+  await kickOnlinePlayer(userId, "Your position was reset by an admin");
+  await logModAction(
+    userId,
+    "reset_position",
+    `cleared ${(cleared ?? []).length} saved position(s)`,
+    by,
+  );
+  revalidatePath(`/players/${userId}`);
+}
+
+// Owners only , touches the identity fields the review/export pipeline and
+// DMs key off of.
+export async function updatePlayerInfo(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  const displayName = String(formData.get("displayName") ?? "").trim().slice(0, 60);
+  const realName = String(formData.get("realName") ?? "").trim().slice(0, 100);
+  const email = String(formData.get("email") ?? "").trim().slice(0, 200);
+  if (!userId || !displayName) return;
+
+  const { error } = await db
+    .from("users")
+    .update({ display_name: displayName, real_name: realName, email: email || null })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+
+  await logModAction(
+    userId,
+    "edit_info",
+    `name: ${displayName}${realName ? ` (${realName})` : ""}${email ? `, email: ${email}` : ""}`,
+    by,
+  );
+  revalidatePath(`/players/${userId}`);
+}
+
+// Owners only , irreversible. Every FK back to users(id) cascades (see
+// drizzle/0019_user_delete_cascade.sql), including mod_actions, so there's no
+// row left to log this against afterwards , console.log is the only record
+// that survives.
+export async function deletePlayerAccount(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  if (!userId || !reason) return;
+
+  const { data: player } = await db
+    .from("users")
+    .select("display_name, real_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const playerName = playerLabel(player, userId);
+
+  await dmOrEmail(
+    userId,
+    "Pixl account deleted",
+    [
+      "Your Pixl account has been deleted by an admin.",
+      `Reason: ${reason}`,
+      "If you believe this is a mistake, reach out to the Pixl team.",
+    ].join("\n\n"),
+  );
+  await kickOnlinePlayer(userId, "Your account was deleted");
+
+  const { error } = await db.from("users").delete().eq("id", userId);
+  if (error) throw new Error(error.message);
+
+  console.log(`[admin] ${by} deleted account ${playerName} (${userId}): ${reason}`);
+  revalidatePath("/players");
+  redirect(`/players?done=${encodeURIComponent(`Deleted ${playerName}'s account.`)}`);
+}
+
 // Upload a shop image to Supabase Storage (public "shop" bucket, created on
 // first use) and return its public URL. Resized/re-encoded to WebP first —
 // shop images are shown at most at 300×300 (the item detail page), but
@@ -1781,13 +2313,13 @@ export async function kickPlayer(formData: FormData): Promise<void> {
 // which made shop pages painfully slow to load. Capping at 900×900 (a 3x
 // retina margin) and re-encoding to WebP keeps every upload small regardless
 // of what was submitted.
-async function uploadShopImage(file: File): Promise<string> {
+async function uploadShopImageBuffer(raw: Buffer): Promise<string> {
   const base = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!base || !key) throw new Error("Supabase is not configured");
   const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
   const { default: sharp } = await import("sharp");
-  const body = await sharp(Buffer.from(await file.arrayBuffer()))
+  const body = await sharp(raw)
     .resize({ width: 900, height: 900, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 82 })
     .toBuffer();
@@ -1816,6 +2348,16 @@ async function uploadShopImage(file: File): Promise<string> {
   }
   if (!res.ok) throw new Error(`image upload failed (${res.status})`);
   return `${base}/storage/v1/object/public/shop/${name}`;
+}
+
+async function uploadShopImage(file: File): Promise<string> {
+  return uploadShopImageBuffer(Buffer.from(await file.arrayBuffer()));
+}
+
+async function uploadShopImageFromUrl(url: string): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  if (!res.ok) throw new Error(`image fetch failed (${res.status})`);
+  return uploadShopImageBuffer(Buffer.from(await res.arrayBuffer()));
 }
 
 function readRegion(raw: string): ShopRegion {
@@ -1924,11 +2466,106 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
+export interface ShopCsvRow {
+  key: string; // stable per-row id assigned client-side, echoed back so results line up
+  name: string;
+  price: number;
+  region: ShopRegion;
+  description: string;
+  options: string;
+  imageUrl: string;
+  unlockXp: number;
+}
+
+// Bulk-upload preview step: tell the client which rows already have a
+// same-name-and-region item in the shop, so it can ask the admin to
+// replace or skip each one before anything is written.
+export async function checkShopItemsConflicts(
+  rows: ShopCsvRow[],
+): Promise<Record<string, { id: number; price: number; description: string }>> {
+  await requireSuper();
+  const names = [...new Set(rows.map((r) => r.name).filter(Boolean))];
+  if (names.length === 0) return {};
+  const { data, error } = await db
+    .from("shop_items")
+    .select("id, name, region, price, description")
+    .in("name", names);
+  if (error) throw new Error(error.message);
+  const byKey: Record<string, { id: number; price: number; description: string }> = {};
+  for (const row of data ?? []) {
+    byKey[`${row.name}|${row.region}`] = {
+      id: row.id,
+      price: row.price,
+      description: row.description,
+    };
+  }
+  const out: Record<string, { id: number; price: number; description: string }> = {};
+  for (const r of rows) {
+    const hit = byKey[`${r.name}|${r.region}`];
+    if (hit) out[r.key] = hit;
+  }
+  return out;
+}
+
+// Bulk-upload commit step. `resolutions[row.key]` is "replace" or "skip" for
+// rows that checkShopItemsConflicts flagged as already existing; rows with no
+// conflict are always inserted.
+export async function commitShopItemsCsv(
+  rows: ShopCsvRow[],
+  conflicts: Record<string, number>, // key -> existing shop_items.id
+  resolutions: Record<string, "replace" | "skip">,
+): Promise<{ added: number; replaced: number; skipped: number; errors: string[] }> {
+  const access = await requireSuper();
+  let added = 0;
+  let replaced = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+  for (const row of rows) {
+    const name = row.name.trim().slice(0, 60);
+    if (!name) continue;
+    const existingId = conflicts[row.key];
+    if (existingId && resolutions[row.key] !== "replace") {
+      skipped++;
+      continue;
+    }
+    let imageUrl = "";
+    if (row.imageUrl.trim()) {
+      try {
+        imageUrl = await uploadShopImageFromUrl(row.imageUrl.trim());
+      } catch (e) {
+        errors.push(`${name}: ${e instanceof Error ? e.message : "image fetch failed"}`);
+      }
+    }
+    const patch: Record<string, unknown> = {
+      name,
+      description: row.description.trim().slice(0, 300),
+      price: Math.max(0, Math.round(row.price || 0)),
+      options: readOptions(row.options),
+      region: readRegion(row.region),
+      unlock_xp: Math.max(0, Math.round(row.unlockXp || 0)),
+    };
+    if (imageUrl) patch.image_url = imageUrl;
+    if (existingId) {
+      const { error } = await db.from("shop_items").update(patch).eq("id", existingId);
+      if (error) errors.push(`${name}: ${error.message}`);
+      else replaced++;
+    } else {
+      const { error } = await db
+        .from("shop_items")
+        .insert({ ...patch, image_url: imageUrl, created_by: actorName(access) });
+      if (error) errors.push(`${name}: ${error.message}`);
+      else added++;
+    }
+  }
+  revalidatePath("/shop");
+  return { added, replaced, skipped, errors };
+}
+
 // Claim an unclaimed (pending) order: the fulfiller has placed the real order
 // and now owns it. It moves into their queue at the 'ordered' stage (placed, not
 // yet credited by HCB) and nobody else advances it unless they reassign it.
 export async function claimOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   if (!id) return;
   const { data: order } = await db
@@ -1973,7 +2610,7 @@ function ownsOrder(access: AdminAccess, claimedSlack: string): boolean {
 // HCB credited the card and the fulfiller uploaded the receipt: ordered ->
 // credited (paid, not shipped yet). Only the claiming fulfiller can advance it.
 export async function markOrderCredited(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   if (!id) return;
   const { data: order } = await db
@@ -1998,7 +2635,7 @@ export async function markOrderCredited(formData: FormData): Promise<void> {
 // DM'd to the buyer by Pixo and also lands as an in-game notification. Only the
 // claiming fulfiller can ship it, and tracking is required.
 export async function shipOrder(formData: FormData): Promise<void> {
-  const access = await requireSuper();
+  const access = await requireFulfiller();
   const id = Number(formData.get("id") ?? 0);
   const tracking = String(formData.get("tracking") ?? "").trim().slice(0, 120);
   if (!id) return;

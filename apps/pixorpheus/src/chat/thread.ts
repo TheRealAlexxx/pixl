@@ -1,0 +1,105 @@
+import type { WebClient } from "@slack/web-api";
+import { aiPost } from "../ai/client.js";
+import { ensureUserName, getDisplayName, resolveUserMentions } from "../memory/users.js";
+import type { AIMessage } from "../ai/types.js";
+
+export interface PendingReplyMessage {
+  user: string;
+  text: string;
+}
+
+export interface PendingReply {
+  messages: PendingReplyMessage[];
+  channel: string;
+  threadTs?: string;
+  userId: string;
+  isMention: boolean;
+  lastMsgTs?: string;
+  timer?: ReturnType<typeof setTimeout>;
+}
+
+export interface ThreadMemoryEntry {
+  summary: string;
+  lastBotReply: string;
+  botInvited: boolean;
+  recentMsgs: string[];
+}
+
+export const THREAD_TTL = 2 * 60 * 60 * 1000;
+
+export const dmHistory = new Map<string, AIMessage[]>();
+
+// threadKey -> { summary, lastBotReply, botInvited, recentMsgs }
+export const threadMemory = new Map<string, ThreadMemoryEntry>();
+
+export const activeThreads = new Map<string, number>();
+export const pendingReplies = new Map<string, PendingReply>();
+export const threadHistory = new Map<string, AIMessage[]>();
+export const mutedThreads = new Set<string>();
+/** channel -> timestamp, dedupes "thx orphan" ping-pong */
+export const lastOrphanThanksAt = new Map<string, number>();
+export const welcomeThreads = new Set<string>();
+
+export async function maybeUpdateThreadSummary(threadKey: string): Promise<void> {
+  const tm = threadMemory.get(threadKey);
+  if (!tm || tm.recentMsgs.length < 5) return;
+  const msgs = tm.recentMsgs.join("\n");
+  tm.recentMsgs = [];
+  try {
+    const res = await aiPost({
+      messages: [
+        {
+          role: "system",
+          content: "Summarize this chat in 1-2 sentences. Just the topic/gist, no intro.",
+        },
+        { role: "user", content: msgs },
+      ],
+      max_tokens: 60,
+    });
+    const summary = res.data.choices?.[0]?.message?.content?.trim();
+    if (summary) tm.summary = summary;
+  } catch (e) {}
+}
+
+export async function seedThreadHistory(
+  threadKey: string,
+  channel: string,
+  threadTs: string,
+  client: WebClient,
+): Promise<void> {
+  if (threadHistory.has(threadKey) && threadHistory.get(threadKey)!.length > 0) return;
+  try {
+    const data = await client.conversations.replies({
+      channel,
+      ts: threadTs,
+      limit: 80,
+    });
+    const msgs = data.messages || [];
+    // ensure names are loaded for all participants before mapping
+    await Promise.all(
+      [...new Set(msgs.map((m) => m.user).filter(Boolean) as string[])].map((uid) => ensureUserName(uid, client)),
+    );
+    const seeded: AIMessage[] = msgs
+      .filter((m) => m.text)
+      .map((m) => {
+        if (m.bot_id) return { role: "assistant" as const, content: resolveUserMentions(m.text!) };
+        const name = getDisplayName(m.user) || m.user || "someone";
+        return {
+          role: "user" as const,
+          content: `[${name}]: ${resolveUserMentions(m.text!)}`,
+        };
+      });
+    if (seeded.length) threadHistory.set(threadKey, seeded);
+  } catch (e) {}
+}
+
+export async function seedDMHistory(channel: string, client: WebClient): Promise<void> {
+  try {
+    const data = await client.conversations.history({ channel, limit: 20 });
+    const seeded: AIMessage[] = (data.messages || [])
+      .reverse()
+      .filter((m) => m.text)
+      .map((m) => ({ role: m.bot_id ? ("assistant" as const) : ("user" as const), content: m.text! }));
+    if (seeded.length) dmHistory.set(channel, seeded);
+  } catch (e) {}
+}

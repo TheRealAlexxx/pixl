@@ -18,7 +18,9 @@
     "dev": "turbo dev",
     "landing": "turbo dev --filter=@pixl/landing",
     "dashboard": "turbo dev --filter=@pixl/dashboard",
-    "build": "turbo build"
+    "build": "turbo build",
+    "config:sync": "bun run packages/config/sync.ts",
+    "docs:build": "bun run packages/docs-engine/build.ts"
   },
   "packageManager": "bun@1.3.13"
 }

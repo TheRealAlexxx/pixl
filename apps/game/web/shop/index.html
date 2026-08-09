@@ -7,9 +7,7 @@
     <link rel="icon" href="/index.icon.png" />
     <link rel="stylesheet" href="/pixl.css" />
     <style>
-      /* ── shop hero: a pixel-HUD outpost window with the keeper in an
-         inventory-slot frame (re-skinned off Beest's confidence, none of its
-         parchment). ── */
+      /* ── shop hero: a pixel-HUD outpost window ── */
       .shop-hero {
         margin-top: 4px;
         padding: 22px 26px 24px;
@@ -20,62 +18,8 @@
         align-items: center;
         flex-wrap: wrap;
       }
-      .keeper-slot {
-        width: 96px;
-        height: 96px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        background: var(--panel-deep);
-        border: 1px solid var(--stroke);
-        border-radius: 3px;
-        overflow: hidden;
-        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
-      }
-      .keeper {
-        width: 32px;
-        height: 32px;
-        background: url("/img/gabin_char.png") no-repeat 0 -64px;
-        transform: scale(3);
-        transform-origin: bottom center;
-        image-rendering: pixelated;
-        animation: keeper-bob 1.6s steps(2) infinite;
-      }
-      @keyframes keeper-bob {
-        0%, 100% { transform: scale(3) translateY(0); }
-        50% { transform: scale(3) translateY(-0.6px); }
-      }
-      .bubble {
-        position: relative;
-        align-self: flex-start;
-        margin-top: 10px;
-        background: var(--panel-deep);
-        color: var(--ink);
-        border: 1px solid var(--teal);
-        border-radius: 3px;
-        padding: 11px 15px;
-        font-family: var(--pixel);
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        max-width: 340px;
-        line-height: 1.5;
-      }
-      .bubble::after {
-        content: "";
-        position: absolute;
-        left: -6px;
-        top: 16px;
-        width: 9px;
-        height: 9px;
-        background: var(--panel-deep);
-        border-left: 1px solid var(--teal);
-        border-bottom: 1px solid var(--teal);
-        transform: rotate(45deg);
-      }
       .shop-title-box {
-        margin-left: auto;
-        text-align: right;
+        text-align: left;
       }
       .open-sign {
         display: inline-flex;
@@ -241,6 +185,18 @@
         animation: limited-blink 1s steps(2) infinite;
       }
       @keyframes limited-blink { 50% { background: var(--gold-soft); } }
+      .stock-corner-tag {
+        position: absolute;
+        top: -9px;
+        left: 9px;
+        background: var(--teal);
+        color: var(--btn-ink);
+        border-radius: 3px;
+        font-family: var(--pixel);
+        font-size: 10px;
+        letter-spacing: 1px;
+        padding: 3px 7px;
+      }
 
       /* ── trophies / restoration rewards ── */
       .trophy-card {
@@ -335,10 +291,6 @@
     <main class="wrap">
       <section class="shop-hero hud">
         <div class="shop-hero-inner">
-          <div class="keeper-slot">
-            <div class="keeper" id="keeper"></div>
-          </div>
-          <div class="bubble" id="bubble">HEY! WELCOME IN.</div>
           <div class="shop-title-box">
             <h1 class="page-title">THE PIXL SHOP</h1>
             <div class="page-sub">Stickers · Licenses · Plushies · Hardware, all real</div>
@@ -411,22 +363,25 @@
         return item.config_options ? Number(item.config_options.base_price) : Number(item.price);
       }
 
-      // Every price is hours x 50 at the shop's lowest rate ($3.5/h). Shows
-      // a range: hours needed at that lowest rate, then hours needed at the
-      // shop's highest rate ($6/h) - your Restoration Energy multiplier
-      // puts you somewhere between the two.
+      // Every price is set at the payout floor. Shows a range: hours needed at
+      // that floor rate, then hours needed at the ceiling - your lifetime
+      // Restoration Energy puts you somewhere between the two.
       function fmtHours(h) {
         const r = Math.round(h * 10) / 10;
         return Number.isInteger(r) ? String(r) : r.toFixed(1);
       }
       // Spells out both rates every time (not just two bare numbers) so it's
-      // clear why there are two: hours needed at the shop's $3.5/h floor
-      // rate, then hours needed at its $6/h rate (reachable with a
-      // Restoration Energy multiplier).
+      // clear why there are two: hours needed at the payout floor, then hours
+      // needed at the ceiling you reach once you've built up Restoration
+      // Energy. Both rates come from config so they can't drift from the
+      // server's actual payout maths.
+      const LO_USD = Pixl.config.economy.basePayoutUsd;
+      const HI_USD = Pixl.config.economy.maxPayoutUsd;
+      const fmtRate = (usd) => "$" + (Number.isInteger(usd) ? usd : usd.toFixed(2));
       function hoursOf(px) {
-        const lo = px / 50;
-        const hi = (lo * 3.5) / 6;
-        return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
+        const lo = px / (LO_USD / Pixl.config.economy.pixelValueUsd);
+        const hi = (lo * LO_USD) / HI_USD;
+        return `${fmtHours(lo)}h at ${fmtRate(LO_USD)}/h → ${fmtHours(hi)}h at ${fmtRate(HI_USD)}/h`;
       }
 
       function isTrophy(item) {
@@ -437,32 +392,19 @@
         return xp >= Number(item.unlock_xp) ? "claimable" : "locked";
       }
 
-      const GREETS = [
-        "HEY! WELCOME IN.",
-        "FRESH STOCK, STRAIGHT FROM HQ.",
-        "PIXELS WELL SPENT ARE PIXELS WELL EARNED.",
-        "CLICK ANYTHING ON THE SHELF!",
-        "SHIP PROJECTS → EARN PIXELS → LEAVE RICH.",
-      ];
-      let greetIdx = 0;
-      let bubbleTimer = null;
-
-      function say(text, hold = 2600) {
-        $("bubble").textContent = text;
-        clearTimeout(bubbleTimer);
-        bubbleTimer = setTimeout(() => {
-          greetIdx = (greetIdx + 1) % GREETS.length;
-          $("bubble").textContent = GREETS[greetIdx];
-        }, hold);
-      }
-
-      setInterval(() => {
-        greetIdx = (greetIdx + 1) % GREETS.length;
-        $("bubble").textContent = GREETS[greetIdx];
-      }, 7000);
+      // No-op: the shopkeeper avatar + speech bubble were removed from the
+      // hero. Kept as a stub so callers (e.g. the trophy-claim celebration)
+      // don't need their own guard.
+      function say() {}
 
       function canAfford(item) {
         return wallet && wallet.pixels >= basePrice(item);
+      }
+
+      // Newly-stocked-region items whose price research came back empty for
+      // that region — still shown in the catalog, just not buyable yet.
+      function isPending(item) {
+        return !item.config_options && Number(item.price) <= 0;
       }
 
       function tierMatch(item) {
@@ -491,7 +433,7 @@
         const foot =
           state === "locked"
             ? `<div class="trophy-progress"><div style="width:${pct}%"></div></div>
-       <div class="trophy-need">${Math.floor(xp)} / ${need} XP · keep shipping!</div>`
+       <div class="trophy-need">LEVEL ${Math.floor(xp)} / ${need} · keep shipping!</div>`
             : state === "claimable"
               ? `<button class="btn teal trophy-claim" data-claim="${item.id}">CLAIM</button>`
               : `<div class="trophy-need earned">Yours forever.</div>`;
@@ -543,15 +485,20 @@
             (item, idx) => `
     <div class="card panel item-card ${item.limited ? "limited" : ""}" data-id="${item.id}" style="animation: toast-in .2s ease both; animation-delay:${Math.min(idx * 30, 400)}ms">
       ${item.limited ? `<div class="limited-tag">LIMITED</div>` : ""}
+      ${item.stock && item.stock.length ? `<div class="stock-corner-tag">${item.stock[0].total} ONLY</div>` : ""}
       <div class="item-img">${imgHtml(item)}</div>
       <div class="item-name">${Pixl.esc(item.name)}</div>
       <div class="item-desc">${Pixl.esc(Pixl.bbstrip(item.description || ""))}</div>
       <div class="item-foot">
-        <div class="price-wrap">
+        ${
+          isPending(item)
+            ? `<div class="price-wrap"><span class="price cant">PRICE TBD</span><span class="price-hours">Coming soon to this region</span></div>`
+            : `<div class="price-wrap">
           <span class="price ${canAfford(item) ? "" : "cant"}"><img src="/img/pixel.png" alt="">${item.config_options ? `FROM ${basePrice(item).toLocaleString()}` : basePrice(item).toLocaleString()} PX</span>
           <span class="price-hours">${hoursOf(basePrice(item))}</span>
         </div>
-        <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>
+        <span class="dot ${canAfford(item) ? "on" : "off"}" title="${canAfford(item) ? "You can afford this" : "Keep shipping!"}"></span>`
+        }
       </div>
     </div>`,
           )

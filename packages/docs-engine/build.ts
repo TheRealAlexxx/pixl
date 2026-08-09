@@ -1,0 +1,131 @@
+import { mkdir, readdir, rm } from "node:fs/promises";
+import { render, type Doc } from "./src/markdown.ts";
+import { renderPage, type NavItem } from "./src/page.ts";
+import { renderCard } from "./src/og.ts";
+
+const ROOT = new URL("../../", import.meta.url).pathname;
+const CONTENT = `${ROOT}docs`;
+const OUT = `${ROOT}apps/game/web/docs`;
+const SITE = "https://pixl.rsvp";
+
+const config = JSON.parse(
+  await Bun.file(`${ROOT}packages/config/pixl.json`).text(),
+);
+const E = config.economy;
+
+// Numbers the copy quotes, resolved at build time so the pages can never drift
+// from packages/config the way the hand-written HTML did.
+const px = (usd: number) => `${Math.round(usd / E.pixelValueUsd)} px`;
+const tokens: Record<string, string> = {
+  basePx: px(E.basePayoutUsd),
+  maxPx: px(E.maxPayoutUsd),
+  baseUsd: `$${E.basePayoutUsd.toFixed(2)}`,
+  maxUsd: `$${E.maxPayoutUsd.toFixed(2)}`,
+  reCap: E.reForMaxPayout.toLocaleString("en-US"),
+  maxLevel: String(E.levelBands[E.levelBands.length - 1].throughLevel),
+  kickerUsd: `$${E.tierKickerUsdPerStep.toFixed(2)}`,
+  kickerHours: String(E.tierKickerHours),
+  t1: String(E.tierRePerHour[0]),
+  t2: String(E.tierRePerHour[1]),
+  t3: String(E.tierRePerHour[2]),
+  t4: String(E.tierRePerHour[3]),
+  cutoff: new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(config.hackatimeCutoff)),
+};
+
+const exampleHours = 10;
+const exampleTier = E.tierRePerHour.length;
+const exampleUsd = E.tierKickerUsdPerStep * (exampleTier - 1) * exampleHours;
+tokens.kickerExampleUsd = `$${exampleUsd.toFixed(2)}`;
+tokens.kickerExamplePx = `${Math.round(exampleUsd / E.pixelValueUsd)} px`;
+
+let from = 1;
+let cumulative = 0;
+E.levelBands.forEach((band: { throughLevel: number; rePerLevel: number }, i: number) => {
+  cumulative += (band.throughLevel - from + 1) * band.rePerLevel;
+  tokens[`band${i + 1}From`] = String(from);
+  tokens[`band${i + 1}To`] = String(band.throughLevel);
+  tokens[`band${i + 1}Per`] = String(band.rePerLevel);
+  tokens[`band${i + 1}Total`] = cumulative.toLocaleString("en-US");
+  from = band.throughLevel + 1;
+});
+
+// Order comes from the filename prefix (010-welcome.md), which keeps the nav
+// order in the filesystem instead of a separate manifest.
+const files = (await readdir(CONTENT)).filter((f) => f.endsWith(".md")).sort();
+if (files.length === 0) {
+  console.error(`[docs] no markdown in ${CONTENT}`);
+  process.exit(1);
+}
+
+const docs: Doc[] = [];
+for (const file of files) {
+  const slug = file.replace(/^\d+-/, "").replace(/\.md$/, "");
+  try {
+    const doc = render(await Bun.file(`${CONTENT}/${file}`).text(), tokens);
+    docs.push({ ...doc, slug });
+  } catch (err) {
+    console.error(`[docs] ${file}: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
+
+const nav: NavItem[] = docs.map((d) => ({
+  slug: d.slug,
+  title: d.meta.title,
+  group: d.meta.group,
+}));
+
+// Wipe generated page directories but keep hand-maintained assets alongside.
+for (const entry of await readdir(OUT, { withFileTypes: true })) {
+  if (entry.isDirectory())
+    await rm(`${OUT}/${entry.name}`, { recursive: true, force: true });
+}
+
+for (const [i, doc] of docs.entries()) {
+  const dir = `${OUT}/${doc.slug}`;
+  await mkdir(dir, { recursive: true });
+  await Bun.write(
+    `${dir}/index.html`,
+    renderPage({
+      doc,
+      nav,
+      siteUrl: SITE,
+      prev: nav[i - 1] ?? null,
+      next: nav[i + 1] ?? null,
+    }),
+  );
+  await Bun.write(
+    `${dir}/og.png`,
+    renderCard({
+      title: doc.meta.title,
+      eyebrow: doc.meta.group,
+      url: `pixl.rsvp/docs/${doc.slug}`,
+    }),
+  );
+}
+
+// /docs itself lands on the first page.
+const first = docs[0]!.slug;
+await Bun.write(
+  `${OUT}/index.html`,
+  `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixl · Docs</title>
+<link rel="canonical" href="${SITE}/docs/${first}/">
+<meta http-equiv="refresh" content="0; url=/docs/${first}/">
+</head>
+<body><a href="/docs/${first}/">Pixl docs</a></body>
+</html>
+`,
+);
+
+console.log(
+  `[docs] built ${docs.length} pages + ${docs.length} cards into apps/game/web/docs/`,
+);

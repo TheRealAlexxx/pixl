@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
-import { fetchHackatimeStats } from "../hackatime/api.js";
+import { fetchHackatimeStats, fetchProjectActivitySummary, HACKATIME_CUTOFF } from "../hackatime/api.js";
 
 // OAuth app config — set these as env vars on the server (never in the repo).
 const BASE = (process.env.HACKATIME_BASE ?? "https://hackatime.hackclub.com").replace(/\/$/, "");
@@ -135,11 +135,33 @@ router.get("/api/hackatime/stats", async (req, res) => {
 
   const { data } = await supabase
     .from("users")
-    .select("hackatime_token")
+    .select("hackatime_token, slack_id")
     .eq("id", session.userId)
     .single();
-  const htToken = (data as { hackatime_token?: string } | null)?.hackatime_token ?? null;
+  const row = data as { hackatime_token?: string; slack_id?: string } | null;
+  const htToken = row?.hackatime_token ?? null;
+  const slackId = row?.slack_id ?? null;
   const stats = await fetchHackatimeStats(htToken);
+  // Flag projects with any activity before the event cutoff so the picker can
+  // warn "only time after the cutoff counts" before the player links one. Capped
+  // to the top 40 by tracked time so a prolific account doesn't fan out into
+  // dozens of Hackatime API calls.
+  if (stats.connected && slackId) {
+    const toCheck = [...stats.projects].sort((a, b) => b.seconds - a.seconds).slice(0, 40);
+    const summaries = await Promise.all(
+      toCheck.map((p) => fetchProjectActivitySummary(slackId, htToken, p.name)),
+    );
+    const byName = new Map(toCheck.map((p, i) => [p.name, summaries[i]]));
+    stats.projects = stats.projects.map((p) => {
+      const s = byName.get(p.name);
+      if (!s) return p;
+      return {
+        ...p,
+        beforeCutoff: s.firstActivity != null && s.firstActivity < HACKATIME_CUTOFF,
+        secondsSinceCutoff: s.secondsSinceCutoff,
+      };
+    });
+  }
   res.json({ ok: true, stats });
 });
 

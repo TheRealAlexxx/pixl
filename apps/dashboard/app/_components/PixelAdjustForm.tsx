@@ -27,6 +27,10 @@ function SubmitButton({ mode }: { mode: "deduct" | "grant" }) {
   );
 }
 
+// 1px = $0.07 , matches the rate everywhere else pixels get converted to
+// dollars (see actions.ts, lib/db.ts).
+const PX_PER_DOLLAR = 1 / 0.07;
+
 // Owner-only manual pixel correction: pick a player, deduct or grant whole
 // pixels with a mandatory reason. Everything lands in the ledger.
 export function PixelAdjustForm() {
@@ -36,6 +40,8 @@ export function PixelAdjustForm() {
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [mode, setMode] = useState<"deduct" | "grant">("deduct");
+  const [amount, setAmount] = useState("");
+  const [dollars, setDollars] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -138,15 +144,38 @@ export function PixelAdjustForm() {
             Grant
           </Button>
         </div>
-        <Input
-          name="amount"
-          type="number"
-          min="1"
-          step="1"
-          required
-          placeholder="Pixels"
-          className="w-28 text-sm"
-        />
+        <div className="flex items-center gap-1.5">
+          <Input
+            name="amount"
+            type="number"
+            min="1"
+            step="1"
+            required
+            placeholder="Pixels"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setDollars("");
+            }}
+            className="w-24 text-sm"
+          />
+          <span className="text-xs text-muted-foreground">=</span>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="$"
+            title="Convert dollars to pixels"
+            value={dollars}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDollars(v);
+              const n = Number(v);
+              setAmount(v && Number.isFinite(n) && n >= 0 ? String(Math.round(n * PX_PER_DOLLAR)) : "");
+            }}
+            className="w-20 text-sm"
+          />
+        </div>
         <Textarea
           name="reason"
           required

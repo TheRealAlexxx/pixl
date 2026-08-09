@@ -3,6 +3,7 @@
 import { motion, useMotionValue } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { useLocale } from "./LocaleProvider";
+import { config } from "../_generated/config";
 
 const ITEM_IMAGES = [
   "/shop/signed-photo.png",
@@ -68,36 +69,57 @@ const ITEM_IMAGES = [
   "/shop/nintendo-switch-2.png",
 ];
 
-// Repriced at the base rate of 1h = $3.5 = 50px (hours rounded to the
-// nearest 0.5). $3.5/h is the floor - it only gets better once a shipped
-// project's Restoration Energy multiplier kicks in.
+// Repriced at the payout floor (hours rounded to the nearest 0.5). That floor
+// is the worst rate anyone gets - it only climbs from there as shipped
+// projects build up Restoration Energy.
 const ITEM_PRICES = [
   125, 125, 150, 150, 150, 150, 150, 150, 175, 150, 225, 150, 250, 225, 150, 225, 225, 275, 325, 350, 650, 350, 425, 475, 500, 650, 725, 575, 725, 725, 725, 725, 1000, 1025, 1425, 1425, 1425, 1425, 1850, 2000, 2150, 2725, 2850, 3350, 3275, 3575, 3725, 4275, 5150, 5725, 5725, 5725, 6425, 7150, 10000, 10000, 17150, 17150, 17900, 22425, 7150,
 ];
 
 const NICHE_INDICES = new Set([0, 1, 10, 12, 18]);
 
-function fmtHours(h: number) {
-  const r = Math.round(h * 10) / 10;
-  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+function fmtHours(h: number, lang: string) {
+  return new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(h);
 }
 
-// Spells out both rates every time (not just two bare numbers) so it's
-// clear why there are two: hours needed at the shop's $3.5/h floor rate,
-// then hours needed at its $6/h rate (reachable with a Restoration Energy
-// multiplier).
-function hoursRange(price: number) {
-  const lo = price / 50;
-  const hi = (lo * 3.5) / 6;
-  return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
+// Spells out both rates every time (not just two bare numbers) so it's clear
+// why there are two: hours needed at the payout floor, then hours needed at
+// the ceiling you reach once you've built up Restoration Energy. Each locale
+// keeps its own currency formatting in the hoursRate template; the rates
+// themselves are substituted in from config so they can't drift from the
+// server's payout maths.
+function hoursRange(price: number, template: string, lang: string) {
+  const lo = price / (config.economy.basePayoutUsd / config.economy.pixelValueUsd);
+  const hi = (lo * config.economy.basePayoutUsd) / config.economy.maxPayoutUsd;
+  return template
+    .replace("{lo}", fmtHours(lo, lang))
+    .replace("{hi}", fmtHours(hi, lang))
+    .replace("{loRate}", fmtRate(config.economy.basePayoutUsd, lang))
+    .replace("{hiRate}", fmtRate(config.economy.maxPayoutUsd, lang));
+}
+
+function fmtRate(usd: number, lang: string) {
+  return new Intl.NumberFormat(lang, {
+    style: "currency",
+    currency: "USD",
+    // narrowSymbol keeps the French form as "3,50 $" rather than "3,50 $US",
+    // which is what the hand-written template used to say.
+    currencyDisplay: "narrowSymbol",
+    // Whole dollars stay whole ("$6"), cents keep their cents ("$3.50").
+    minimumFractionDigits: Number.isInteger(usd) ? 0 : 2,
+  }).format(usd);
 }
 
 function ShopCard({
   item,
   index,
+  rateTemplate,
+  lang,
 }: {
   item: { name: string; description: string };
   index: number;
+  rateTemplate: string;
+  lang: string;
 }) {
   const accent = NICHE_INDICES.has(index) ? "#ec3750" : "#ff8c37";
   const price = ITEM_PRICES[index];
@@ -133,7 +155,9 @@ function ShopCard({
           >
             {price} px
           </span>
-          <span className="text-black/40 text-[9px] leading-snug font-sans">{hoursRange(price)}</span>
+          <span className="text-black/40 text-[9px] leading-snug font-sans">
+            {hoursRange(price, rateTemplate, lang)}
+          </span>
         </div>
       </div>
     </div>
@@ -222,7 +246,7 @@ function Marquee({ children }: { children: React.ReactNode }) {
 }
 
 export function Shop() {
-  const { dict } = useLocale();
+  const { dict, lang } = useLocale();
   const t = dict.shop;
 
   return (
@@ -260,7 +284,13 @@ export function Shop() {
       <Marquee>
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {[...(t.items as any[]), ...(t.items as any[])].map((item: any, i: number) => (
-          <ShopCard key={i} item={item} index={i % t.items.length} />
+          <ShopCard
+            key={i}
+            item={item}
+            index={i % t.items.length}
+            rateTemplate={t.hoursRate}
+            lang={lang}
+          />
         ))}
       </Marquee>
 

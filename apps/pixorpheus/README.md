@@ -31,14 +31,23 @@ Pixorpheus handles the full help/ticket workflow for Pixl, talks to people in th
 
 ## Architecture
 
-| File | Role |
+Pixorpheus is a TypeScript Bun project (no build step - `bun run src/index.ts`), split by feature under `src/`:
+
+| Path | Role |
 |---|---|
-| `index.js` | Main Slack bot - all commands, events, AI, ticket system |
-| `dashboard.js` | Express web server - helper dashboard with Slack OAuth |
-| `public/` | Dashboard frontend (HTML/CSS/JS) |
+| `src/index.ts` | Bootstrap - starts the Bolt app, loads memory/polls, wires up the auto-close cron |
+| `src/slack/` | Shared Bolt `App`/`ExpressReceiver` instances, bot identity, `#pixl-logs` logging |
+| `src/tickets/` | Full help/ticket workflow - repo, blocks, service, event/action/view handlers |
+| `src/chat/` | Message handling - thread state, the main AI chat handler, welcome messages, polls, `:pixl-delete:` |
+| `src/ai/` | OpenRouter client (buffered + streaming), the Pixorpheus persona/system prompt, emoji handling, web search |
+| `src/memory/` | Per-user facts/personality, server-wide facts, speaking-style notes |
+| `src/commands/` | Remaining slash commands (fun/utility, social, helpers, memory, ai, ship) |
+| `src/pixelate/` | `/pixl` avatar pixelation command |
+| `src/github/` | GitHub webhook -> Slack notifications |
+| `src/external/` | API used by `apps/dashboard` to resolve tickets through this bot |
 | `models.json` | OpenRouter model list |
 
-Both `index.js` and `dashboard.js` are separate processes sharing the same PostgreSQL database. The bot runs on Slack's Bolt v4 framework. The dashboard runs on Express.
+There is no separate dashboard process anymore - the standalone helper dashboard (`dashboard.js`) was removed; ticket moderation now lives in `apps/dashboard` (the Next.js admin dashboard), which calls back into this bot via `src/external/ticketApi.ts`. The bot runs on Slack's Bolt v4 framework.
 
 ---
 
@@ -290,31 +299,13 @@ Requires at least 5 messages. The extracted style overwrites the previous style 
 
 ## Dashboard
 
-A web dashboard for helpers and admins, running separately from the bot (`dashboard.js`). Available at https://dashboard.gabintavernier.com and if you need access, please DM me on Slack.
-
-### Access
-
-Login via Slack OAuth - only helpers (in the `helpers` DB table) and admins (`SLACK_ADMIN_USER_IDS`) can log in.
-
-### Features
-
-| Feature | Description |
-|---|---|
-| **Stats** | Total tickets, open count, resolved count, longest currently open ticket |
-| **Activity chart** | Created vs resolved tickets over the last 30 days |
-| **Leaderboard** | Top resolvers all-time, this week, and today |
-| **Ticket list** | All tickets with search and status filter - click to open the thread |
-| **Thread view** | Read the full Slack thread inline |
-| **Reply** | Post a reply to any ticket thread (appears in Slack under your name) |
-| **Resolve** | Mark a ticket as resolved directly from the dashboard |
-
-The dashboard talks to the same PostgreSQL DB as the bot. Resolving from the dashboard posts a message in the Slack thread and updates the ticket channel message.
+Helper/admin ticket moderation now lives in `apps/dashboard` (the Next.js admin dashboard elsewhere in this monorepo), not in this app. It talks to the same Supabase database directly and calls `POST /api/external/tickets/:ts/resolve` on this bot (see `src/external/ticketApi.ts`) to resolve tickets through Slack, since this bot is reliably a member of the help channel.
 
 ---
 
 ## Database
 
-All tables are created automatically at startup via `initMemoryTables()` (except `tickets` and `helpers` which must be created manually).
+Tables (`tickets`, `helpers`, `user_memory`, `user_personality`, `program_memory`, `polls`, `style_memory`) are created via Supabase migrations, not at runtime.
 
 | Table | Purpose |
 |---|---|
@@ -347,8 +338,6 @@ All tables are created automatically at startup via `initMemoryTables()` (except
 
 ## Environment Variables
 
-### Bot (`index.js`)
-
 | Variable | Description |
 |---|---|
 | `SLACK_BOT_TOKEN` | Slack bot OAuth token (`xoxb-...`) |
@@ -358,32 +347,21 @@ All tables are created automatically at startup via `initMemoryTables()` (except
 | `SLACK_FAQ_URL` | URL to the FAQ (linked in the "Someone will be here soon!" message) |
 | `SLACK_ADMIN_USER_IDS` | Comma-separated Slack user IDs of admins (bypass helper checks) |
 | `SLACK_USER_TOKEN` | User token (`xoxp-...`) for deleting macro messages in threads |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` | Supabase project URL + service key (shared with the other apps in this monorepo) |
 | `OPENROUTER_API_KEY` | OpenRouter API key (main AI + utility models) |
-| `ANTHROPIC_API_KEY` | Anthropic API key (DM replies via Haiku with web search) |
+| `PIXO_MODEL` | Overrides the default OpenRouter model (`google/gemini-3.1-flash-lite:nitro`) |
 | `BRAVE_SEARCH_KEY` | Brave Search API key (auto web search in replies) |
+| `PIXL_LOGS_CHANNEL_ID` | Skips the `#pixl-logs` channel-name scan (see `src/slack/logs.ts`) |
+| `GITHUB_WEBHOOK_SECRET` | HMAC secret for the `/webhooks/github` route |
+| `GITHUB_NOTIFY_CHANNEL` | Channel ID to post GitHub push/merge notifications to |
+| `EXTERNAL_API_KEY` | API key `apps/dashboard` uses to call `/api/external/tickets/:ts/resolve` |
 | `PORT` | Port for the Bolt HTTP receiver (default 3000) |
-
-### Dashboard (`dashboard.js`)
-
-| Variable | Description |
-|---|---|
-| `SLACK_CLIENT_ID` | Slack app client ID (OAuth) |
-| `SLACK_CLIENT_SECRET` | Slack app client secret (OAuth) |
-| `DASHBOARD_URL` | Public URL of the dashboard (e.g. `https://dashboard.pixl.app`) |
-| `SESSION_SECRET` | Secret for Express session cookies |
-| `DASHBOARD_PORT` | Port for the dashboard server (default 4000) |
-
-> The dashboard also uses `DATABASE_URL`, `SLACK_BOT_TOKEN`, and `SLACK_ADMIN_USER_IDS`.
 
 ---
 
 ## Deployment
 
-Pixorpheus is deployed on **Railway** with two services sharing one PostgreSQL database:
-
-- **Bot service** - runs `node index.js` - auto-deploys from GitHub pushes to `main`
-- **Dashboard service** - runs `node dashboard.js` - same repo, different start command
+Pixorpheus runs as a single **Bun** process (`bun run src/index.ts` / `bun run start`), no build step. It's deployed on **Railway**, sharing its Supabase database with the rest of the monorepo, and auto-deploys from GitHub pushes to `main`.
 
 The Slack app must have the following **event subscriptions** enabled:
 - `message.channels`
@@ -394,5 +372,3 @@ The Slack app must have the following **event subscriptions** enabled:
 - `member_joined_channel`
 
 And the following **slash commands** registered pointing to the bot's URL.
-
-Both `index.js` and `dashboard.js` need to be running simultaneously for the full system to work.

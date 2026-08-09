@@ -1,0 +1,28 @@
+{
+  "name": "Pixl",
+  "tagline": "A retro 2D world where you level up by building real things",
+  "launchDate": "2026-08-18T00:00:00Z",
+  "hackatimeCutoff": "2026-08-18T00:00:00Z",
+  "urls": {
+    "site": "https://www.pixl.rsvp",
+    "play": "https://play.pixl.rsvp",
+    "docs": "https://pixl.rsvp/docs",
+    "repo": "https://github.com/ridit-jangra/pixl"
+  },
+  "economy": {
+    "pixelValueUsd": 0.07,
+    "sponsorRateUsd": 8.5,
+    "basePayoutUsd": 3.5,
+    "maxPayoutUsd": 6.0,
+    "reForMaxPayout": 5000,
+    "tierRePerHour": [5, 10, 15, 25],
+    "tierKickerUsdPerStep": 0.5,
+    "tierKickerHours": 40,
+    "levelBands": [
+      { "throughLevel": 10, "rePerLevel": 10 },
+      { "throughLevel": 50, "rePerLevel": 35 },
+      { "throughLevel": 100, "rePerLevel": 70 }
+    ]
+  },
+  "team": ["Gabin", "Ridit", "Ricky"]
+}

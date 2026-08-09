@@ -1,0 +1,12 @@
+{
+  "name": "@pixl/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./pixl.json": "./pixl.json"
+  },
+  "scripts": {
+    "sync": "bun run sync.ts"
+  }
+}

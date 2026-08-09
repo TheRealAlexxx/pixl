@@ -1,5 +1,10 @@
 extends Control
 
+# Main menu & pause menu keep the original Monocraft face; the rest of the game
+# moved its default menu font to Pixelify Sans (see commit b8b1360). This menu
+# is reached straight from the main menu, so it keeps Monocraft too.
+const OLD_MENU_FONT := preload("res://assets/fonts/Monocraft.ttf")
+
 const COLOR_PUBLIC := Color(0.290196, 0.870588, 0.501961)
 const COLOR_PRIVATE := Color(1, 0.819608, 0.4)
 
@@ -33,6 +38,10 @@ func _ready() -> void:
 	if NetworkManager.session_token == "":
 		get_tree().change_scene_to_file("res://scenes/login.tscn")
 		return
+
+	# Duplicate first so we don't mutate the shared theme resource other menus use.
+	theme = theme.duplicate(true)
+	theme.default_font = OLD_MENU_FONT
 
 	quick_join_button.pressed.connect(_on_quick_join)
 	refresh_button.pressed.connect(_refresh)

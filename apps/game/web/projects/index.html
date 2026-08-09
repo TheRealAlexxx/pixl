@@ -83,6 +83,160 @@
         margin: 26px 0 16px;
         letter-spacing: 1px;
       }
+      .invite-box {
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+        padding: 16px 20px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .invite-box-head {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 200px;
+      }
+      .invite-box-title {
+        font-family: var(--pixel, var(--sans));
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        color: var(--gold);
+      }
+      .invite-box-sub {
+        font-family: var(--sans);
+        font-size: 13px;
+        color: var(--faint);
+      }
+      .invite-box-row {
+        display: flex;
+        gap: 10px;
+        margin-left: auto;
+        flex-wrap: wrap;
+      }
+      .invite-box-row .field {
+        max-width: 180px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      @media (max-width: 560px) {
+        .invite-box {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .invite-box-row {
+          margin-left: 0;
+        }
+        .invite-box-row .field {
+          max-width: none;
+          flex: 1;
+        }
+      }
+      .ysws-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+      .ysws-modal-veil {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 10, 14, 0.66);
+        backdrop-filter: blur(2px);
+      }
+      .ysws-modal-box {
+        position: relative;
+        width: 100%;
+        max-width: 540px;
+        max-height: 86vh;
+        overflow-y: auto;
+        background: var(--panel);
+        color: var(--ink);
+        border: 2px solid var(--stroke);
+        border-radius: 14px;
+        padding: 22px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        animation: ysws-pop 0.16s ease;
+      }
+      @keyframes ysws-pop {
+        from {
+          transform: scale(0.96);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .ysws-modal-title {
+        font-family: var(--pixel, var(--sans));
+        font-size: 17px;
+        color: var(--gold);
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+      .ysws-modal-body {
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--dim);
+      }
+      .ysws-modal-acts {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+      .ysws-pick-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+        max-height: 44vh;
+        overflow-y: auto;
+      }
+      .ysws-pick {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        width: 100%;
+        text-align: left;
+        padding: 11px 13px;
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: none;
+        cursor: pointer;
+        transition:
+          border-color 0.12s ease,
+          background 0.12s ease;
+      }
+      .ysws-pick:hover:not(:disabled) {
+        border-color: var(--gold);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .ysws-pick:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .ysws-pick-name {
+        font-family: var(--pixel, var(--sans));
+        font-size: 13px;
+        color: var(--ink);
+        letter-spacing: 0.5px;
+      }
+      .ysws-pick-meta {
+        font-size: 12px;
+        color: var(--gold);
+      }
+      .ysws-pick-desc {
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--faint);
+      }
       .proj-thumb {
         height: 140px;
         border: 1px solid var(--stroke);
@@ -744,6 +898,9 @@
       </section>
 
       <div id="ht-slot"></div>
+      <div id="invites-slot"></div>
+      <div id="join-code-slot"></div>
+      <div id="ysws-import-slot"></div>
       <div class="spin" id="loading"></div>
       <div id="view"></div>
     </main>
@@ -754,18 +911,14 @@
       Pixl.loadWallet();
 
       const $ = (id) => document.getElementById(id);
+      // Rates come off config so they can't drift from what the server pays.
+      const RE_RATES = Pixl.config.economy.tierRePerHour;
       const LEVELS = [
-        ["L1 Spark", "A first spark of Restoration: a simple site, script, or tiny tool."],
-        ["L2 Signal", "A focused app, CLI, or game with clean polish — one system back online."],
-        [
-          "L3 Grid",
-          "Multiple systems working together: backend, state, infra.",
-        ],
-        [
-          "L4 Beacon",
-          "Deep systems work: complex architecture and serious scope.",
-        ],
-      ];
+        ["T1 Spark", "A first spark of Restoration: a simple site, script, or tiny tool."],
+        ["T2 Signal", "A focused app, CLI, or game with clean polish — one system back online."],
+        ["T3 Grid", "Multiple systems working together: backend, state, infra."],
+        ["T4 Beacon", "Deep systems work: complex architecture and serious scope."],
+      ].map(([name, blurb], i) => [name, `${blurb} ${RE_RATES[i]} RE per hour.`]);
       const ERRORS = {
         name_required: "Give it a name first.",
         repo_not_github: "The repo link must be a GitHub repository.",
@@ -822,16 +975,105 @@
 
       // Seconds from the Hackatime boxes currently ticked in the editor (which
       // may not be saved yet), so ship-readiness reflects what the player sees.
-      function checkedHtSeconds() {
-        if (!stats || !stats.connected) return 0;
-        const checked = new Set(
-          [...document.querySelectorAll('input[name="ht"]:checked')].map(
-            (c) => c.value,
+      // Uses secondsSinceCutoff when the server has computed it so this matches
+      // what actually counts toward shipping (only time after the cutoff).
+      // Same cutoff the server enforces (HACKATIME_CUTOFF in
+      // apps/server/src/hackatime/api.ts) - both now read packages/config, so
+      // this can no longer drift from it. Needed client-side so the UI can
+      // explain *why* a linked project reads as 0h instead of just insisting
+      // you link one.
+      const HT_CUTOFF_MS = new Date(Pixl.config.hackatimeCutoff).getTime();
+      const HT_CUTOFF_LABEL = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(HT_CUTOFF_MS);
+
+      function checkedHtBoxes() {
+        return [...document.querySelectorAll('input[name="ht"]:checked')];
+      }
+
+      // `counted` is what the server will actually credit (time after the
+      // cutoff); `total` is the projects' whole tracked time. They diverge
+      // whenever someone's hours predate the cutoff — the usual reason a
+      // player links projects and still can't ship.
+      function checkedHtTotals() {
+        if (!stats || !stats.connected) return { counted: 0, total: 0 };
+        const checked = new Set(checkedHtBoxes().map((c) => c.value));
+        const picked = stats.projects.filter((h) => checked.has(h.name));
+        return {
+          counted: picked.reduce(
+            (s, h) => s + (h.secondsSinceCutoff ?? h.seconds),
+            0,
           ),
+          total: picked.reduce((s, h) => s + h.seconds, 0),
+        };
+      }
+
+      function checkedHtSeconds() {
+        return checkedHtTotals().counted;
+      }
+
+      // The blocker used to always read "link a Hackatime project with >= 1h",
+      // which is baffling when you've linked ten of them — the hours are real,
+      // they just fall before the cutoff (or the cutoff hasn't arrived yet).
+      function htBlockerText() {
+        const { counted, total } = checkedHtTotals();
+        if (!stats || !stats.connected)
+          return "connect Hackatime so your hours can count";
+        if (total === 0) return "link a Hackatime project with ≥ 1h";
+        // Only claim "all of it predates the cutoff" when none of it counts —
+        // otherwise some time did land after the cutoff, just not enough yet.
+        if (counted === 0)
+          return Date.now() < HT_CUTOFF_MS
+            ? `wait for ${HT_CUTOFF_LABEL} — only hours tracked from then on count, and your ${Pixl.hours(total)} is all logged before it`
+            : `track time from ${HT_CUTOFF_LABEL} onward — your ${Pixl.hours(total)} was all logged before then`;
+        return `≥ 1h tracked from ${HT_CUTOFF_LABEL} onward (you have ${Pixl.hours(counted)} of ${Pixl.hours(total)})`;
+      }
+
+      // Shared by the initial checklist render and the live refresh as boxes
+      // are ticked, so the two can't drift apart.
+      function shipHtLine() {
+        const { counted, total } = checkedHtTotals();
+        const ok = counted >= 3600;
+        const detail =
+          counted === total
+            ? Pixl.hours(counted)
+            : `${Pixl.hours(counted)} counts, ${Pixl.hours(total)} linked`;
+        return `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked from ${HT_CUTOFF_LABEL} onward <span class="teal">(${detail})</span>`;
+      }
+
+      // Sum of the currently-ticked Hackatime boxes, shown right next to the
+      // picker so the player can see their proof-of-hours total without
+      // scrolling down to the ship checklist.
+      function updateHtTotal() {
+        const el = $("f-ht-total");
+        if (!el) return;
+        if (!checkedHtBoxes().length) return void (el.textContent = "");
+        const { counted, total } = checkedHtTotals();
+        el.textContent =
+          counted === total
+            ? `${Pixl.hours(counted)} selected`
+            : `${Pixl.hours(counted)} counts (of ${Pixl.hours(total)} — rest predates ${HT_CUTOFF_LABEL})`;
+      }
+
+      // Wires the Hackatime picker in whichever form it's rendered in (new
+      // project or existing): keeps the running total next to the label in
+      // sync and warns when a ticked project has time from before the
+      // cutoff. `onChange` lets renderProject also refresh its ship checklist.
+      function wireHtPicker(onChange) {
+        updateHtTotal();
+        document.querySelectorAll('input[name="ht"]').forEach((box) =>
+          box.addEventListener("change", () => {
+            if (box.checked && box.dataset.beforeCutoff === "1") {
+              Pixl.toast(
+                `"${box.value}" has coding time from before ${HT_CUTOFF_LABEL} — only time tracked after ${HT_CUTOFF_LABEL} will count toward shipping.`,
+              );
+            }
+            updateHtTotal();
+            if (onChange) onChange();
+          }),
         );
-        return stats.projects
-          .filter((h) => checked.has(h.name))
-          .reduce((s, h) => s + h.seconds, 0);
       }
 
       /* ---------- hackatime strip ---------- */
@@ -979,8 +1221,8 @@
                 .sort((a, b) => b.seconds - a.seconds)
                 .map(
                   (h) => `
-        <label><input type="checkbox" name="ht" value="${Pixl.esc(h.name)}" ${linked.has(h.name) ? "checked" : ""}>
-        ${Pixl.esc(h.name)}<span class="h">${Pixl.hours(h.seconds)}</span></label>`,
+        <label${h.beforeCutoff ? ` title="Only time coded after ${HT_CUTOFF_LABEL} counts toward shipping — this project has older activity mixed in."` : ""}><input type="checkbox" name="ht" value="${Pixl.esc(h.name)}" data-before-cutoff="${h.beforeCutoff ? "1" : ""}" ${linked.has(h.name) ? "checked" : ""}>
+        ${Pixl.esc(h.name)}<span class="h">${Pixl.hours(h.seconds)}</span>${h.beforeCutoff ? `<span class="faint" style="font-size:11px"> ⚠ only time after ${HT_CUTOFF_LABEL} counts</span>` : ""}</label>`,
                 )
                 .join("")
             : `<span class="faint" style="font-size:13px">Connect Hackatime above to link coding time.</span>`;
@@ -1048,7 +1290,7 @@
         </select>
       </div>
       <div class="form-row">
-        <label>HACKATIME PROJECTS (proof of hours)</label>
+        <label>HACKATIME PROJECTS (proof of hours)<span class="teal" id="f-ht-total" style="margin-left:8px;font-size:12px;letter-spacing:0"></span></label>
         <div class="ht-pick">${htOpts}</div>
       </div>
       ${
@@ -1193,8 +1435,10 @@
           return;
         }
         $("new-btn").style.display = "none";
+        // Collaborators are view/log-hours only — they get a trimmed read-only
+        // page instead of the owner's full editor.
+        if (p.is_owner === false) return renderCollabProjectView(p);
         const [label, cls] = statusInfo(p);
-        const secs = linkedSeconds(p);
         const inReview = p.status === "shipped" || p.status === "second_review";
         const canShip =
           !inReview &&
@@ -1215,6 +1459,9 @@
       ${inReview ? "" : trialBriefHtml(trialForProject(p))}
       ${formHtml(p)}
 
+      <div class="section-h">COLLABORATORS</div>
+      <div id="collab-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
+
       <div class="section-h">SHIP IT</div>
       ${!hasBirthday ? `<div class="note-strip"><a href="/account">Add your birthday</a> for Hack Club compliance — takes 10 seconds.</div>` : ""}
       <div class="form-grid panel">
@@ -1222,7 +1469,7 @@
           <div class="ship-item"><span class="${p.repo_url ? "ok" : "no"}">${p.repo_url ? "+" : "-"}</span> GitHub repo linked</div>
           <div class="ship-item"><span class="${p.demo_url ? "ok" : "no"}">${p.demo_url ? "+" : "-"}</span> Demo link added</div>
           <div class="ship-item"><span class="${p.image_url ? "ok" : "no"}">${p.image_url ? "+" : "-"}</span> Thumbnail uploaded</div>
-          <div class="ship-item" id="ship-ht"><span class="${secs >= 3600 ? "ok" : "no"}">${secs >= 3600 ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span></div>
+          <div class="ship-item" id="ship-ht">${shipHtLine()}</div>
         </div>
         ${inReview ? "" : trialPickerHtml(p)}
         ${
@@ -1310,17 +1557,13 @@
             const fresh = projects.find((x) => x.id === p.id) || p;
             ship(fresh, isUpdate);
           });
-        // Keep the ship checklist's Hackatime line in sync as boxes are ticked,
-        // before any save.
-        document.querySelectorAll('input[name="ht"]').forEach((box) =>
-          box.addEventListener("change", () => {
-            const el = $("ship-ht");
-            if (!el) return;
-            const secs = checkedHtSeconds();
-            const ok = secs >= 3600;
-            el.innerHTML = `<span class="${ok ? "ok" : "no"}">${ok ? "+" : "-"}</span> ≥ 1h tracked on linked Hackatime projects <span class="teal">(${Pixl.hours(secs)})</span>`;
-          }),
-        );
+        // Keep the ship checklist's Hackatime line in sync as boxes are
+        // ticked, before any save.
+        wireHtPicker(() => {
+          const el = $("ship-ht");
+          if (!el) return;
+          el.innerHTML = shipHtLine();
+        });
         if ($("s-unship"))
           $("s-unship").addEventListener("click", () => unship(p));
         initMdBar();
@@ -1349,6 +1592,429 @@
         updateJournalHint();
         autoGrow($("j-content"));
         loadJournal(p.id);
+        renderCollaborators(p);
+      }
+
+      /* ---------- collaborators ---------- */
+
+      async function renderCollaborators(p) {
+        const slot = $("collab-slot");
+        if (!slot) return;
+        let data;
+        try {
+          data = await Pixl.api(`/api/projects/${p.id}/collaborators`);
+        } catch {
+          slot.innerHTML = `<div class="faint" style="font-size:13px">Couldn't load collaborators.</div>`;
+          return;
+        }
+        const collabs = data.collaborators || [];
+        const isOwner = data.isOwner;
+        slot.innerHTML = `
+      ${
+        collabs.length
+          ? collabs
+              .map(
+                (c) => `
+        <div class="check-row" style="justify-content:space-between">
+          <span>${Pixl.esc(c.name)} ${c.status === "pending" ? '<span class="chip muted">INVITED</span>' : '<span class="chip status-approved">JOINED</span>'}</span>
+          ${isOwner ? `<button class="btn ghost" data-remove-collab="${c.id}">REMOVE</button>` : ""}
+        </div>`,
+              )
+              .join("")
+          : `<div class="faint" style="font-size:13px">No collaborators yet — view/log-hours only, they can't edit or ship this project.</div>`
+      }
+      ${
+        isOwner
+          ? `
+      <div style="position:relative;margin-top:10px">
+        <input class="field" id="collab-search" placeholder="Invite by name…" style="max-width:260px" autocomplete="off">
+        <div id="collab-results" class="panel" style="position:absolute;top:38px;left:0;z-index:5;display:none;max-width:260px;width:100%"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span class="faint" style="font-size:12px">or share a join code:</span>
+        <span id="collab-code" class="chip teal" style="display:${p.join_code ? "" : "none"}">${p.join_code ? Pixl.esc(p.join_code) : ""}</span>
+        <button class="btn ghost" id="collab-code-btn">${p.join_code ? "COPY CODE" : "GET INVITE CODE"}</button>
+      </div>`
+          : ""
+      }`;
+        slot.querySelectorAll("[data-remove-collab]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            if (!(await Pixl.confirm({ title: "Remove this collaborator?", confirmText: "Remove", danger: true })))
+              return;
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.removeCollab}/remove`);
+            if (r.ok) {
+              Pixl.toast("Collaborator removed.");
+              renderCollaborators(p);
+            } else Pixl.toast("Couldn't remove them — try again.", true);
+          }),
+        );
+        const codeBtn = $("collab-code-btn");
+        if (codeBtn)
+          codeBtn.addEventListener("click", async () => {
+            if (p.join_code) {
+              try {
+                await navigator.clipboard.writeText(p.join_code);
+                Pixl.toast("Code copied!");
+              } catch {
+                Pixl.toast(p.join_code);
+              }
+              return;
+            }
+            const r = await Pixl.send("POST", `/api/projects/${p.id}/collaborators/code`);
+            if (r.ok && r.code) {
+              p.join_code = r.code;
+              renderCollaborators(p);
+              Pixl.toast(`Code generated: ${r.code}`);
+            } else Pixl.toast("Couldn't generate a code — try again.", true);
+          });
+        const search = $("collab-search");
+        const results = $("collab-results");
+        if (!search) return;
+        let searchTimer;
+        search.addEventListener("input", () => {
+          clearTimeout(searchTimer);
+          const q = search.value.trim();
+          if (q.length < 2) {
+            results.style.display = "none";
+            return;
+          }
+          searchTimer = setTimeout(async () => {
+            let players = [];
+            try {
+              const d = await Pixl.api(`/api/players/search?q=${encodeURIComponent(q)}`);
+              players = d.players || [];
+            } catch {}
+            results.style.display = players.length ? "block" : "none";
+            results.innerHTML = players
+              .map((pl) => `<div class="check-row" data-invite="${pl.userId}" style="cursor:pointer">${Pixl.esc(pl.name)}</div>`)
+              .join("");
+            results.querySelectorAll("[data-invite]").forEach((row) =>
+              row.addEventListener("click", async () => {
+                const r = await Pixl.send("POST", `/api/projects/${p.id}/collaborators/invite`, {
+                  userId: row.dataset.invite,
+                });
+                search.value = "";
+                results.style.display = "none";
+                if (r.ok) {
+                  Pixl.toast("Invite sent!");
+                  renderCollaborators(p);
+                } else Pixl.toast(r.reason || "Couldn't send that invite — try again.", true);
+              }),
+            );
+          }, 250);
+        });
+      }
+
+      // Read-only view for a project the viewer collaborates on but doesn't
+      // own — they can journal their own hours and link their own Hackatime
+      // projects, but can't edit fields, ship, or delete.
+      async function renderCollabProjectView(p) {
+        const view = $("view");
+        const [label, cls] = statusInfo(p);
+        view.innerHTML = `
+    <a class="btn dark back-btn" href="#">← ALL PROJECTS</a>
+    <div class="editor">
+      <div class="section-h" style="margin-top:0;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        ${Pixl.esc(p.name)}
+        <span class="chip ${cls}">${label}</span>
+        <span class="chip muted">COLLABORATOR</span>
+      </div>
+      ${p.image_url ? `<div class="proj-thumb" style="height:200px;margin-bottom:14px"><img src="${Pixl.esc(p.image_url)}" alt=""></div>` : ""}
+      ${p.description ? `<p style="margin-bottom:14px">${Pixl.esc(p.description)}</p>` : ""}
+      <div class="proj-meta" style="margin-bottom:18px">
+        ${p.repo_url ? `<a class="btn ghost" href="${Pixl.esc(p.repo_url)}" target="_blank" rel="noreferrer">REPO</a>` : ""}
+        ${p.demo_url ? `<a class="btn ghost" href="${Pixl.esc(p.demo_url)}" target="_blank" rel="noreferrer">DEMO</a>` : ""}
+      </div>
+
+      <div class="section-h">COLLABORATORS</div>
+      <div id="collab-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
+
+      <div class="section-h">MY HACKATIME</div>
+      <div id="my-ht-slot" class="panel" style="padding:14px"><div class="spin"></div></div>
+
+      <div class="section-h">JOURNAL</div>
+      <div class="composer panel">
+        <div class="md-editor">
+          <div class="md-bar" id="j-mdbar">
+            <button type="button" class="md-btn" data-md="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button type="button" class="md-btn" data-md="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+            <span class="md-sep"></span>
+            <button type="button" class="md-btn" data-md="h" title="Heading">H</button>
+            <button type="button" class="md-btn" data-md="ul" title="Bullet list">•</button>
+            <button type="button" class="md-btn" data-md="quote" title="Quote">&ldquo;</button>
+            <button type="button" class="md-btn" data-md="code" title="Code">&lt;/&gt;</button>
+            <button type="button" class="md-btn" data-md="link" title="Link">LINK</button>
+            <button type="button" class="md-btn" data-md="image" title="Add image">IMAGE</button>
+            <span class="md-sep"></span>
+            <button type="button" class="md-btn" data-md="preview" id="j-preview-btn" title="Toggle preview">PREVIEW</button>
+          </div>
+          <textarea class="field" id="j-content" maxlength="5000" placeholder="What did you build today? Markdown supported."></textarea>
+          <div class="md-preview" id="j-preview" hidden></div>
+        </div>
+        <input type="file" id="j-img-file" accept="image/png,image/jpeg,image/webp" hidden>
+        <div class="composer-foot">
+          <span class="faint" style="font-size:12px">hours:</span>
+          <input class="field" id="j-hours" type="number" min="0" max="100" step="0.5" value="0">
+          <span class="j-hint faint" id="j-hint"></span>
+          <button class="btn" id="j-post">POST ENTRY</button>
+        </div>
+      </div>
+      <div id="j-list" style="display:flex;flex-direction:column;gap:10px;margin-top:14px"><div class="spin"></div></div>
+    </div>`;
+
+        initMdBar();
+        $("j-img-file").addEventListener("change", async () => {
+          const f = $("j-img-file").files[0];
+          if (!f) return;
+          Pixl.toast("Uploading image…");
+          try {
+            const url = await Pixl.upload(f);
+            $("j-content").value += ($("j-content").value ? "\n" : "") + `![](${url})`;
+            autoGrow($("j-content"));
+            Pixl.toast("Image attached!");
+          } catch (e) {
+            Pixl.toast(err(e.message), true);
+          }
+        });
+        $("j-post").addEventListener("click", () => postJournal(p.id));
+        $("j-content").addEventListener("input", updateJournalHint);
+        $("j-content").addEventListener("input", () => autoGrow($("j-content")));
+        $("j-hours").addEventListener("input", updateJournalHint);
+        updateJournalHint();
+        autoGrow($("j-content"));
+        loadJournal(p.id);
+        renderCollaborators(p);
+        renderMyHackatime(p);
+      }
+
+      // The viewer's own Hackatime projects, checked against whatever they've
+      // already linked on their own project_collaborators row (separate from
+      // the owner's hackatime_projects list).
+      async function renderMyHackatime(p) {
+        const slot = $("my-ht-slot");
+        if (!slot) return;
+        let collabRow;
+        try {
+          const d = await Pixl.api(`/api/projects/${p.id}/collaborators`);
+          collabRow = (d.collaborators || []).find((c) => c.isSelf);
+        } catch {}
+        if (!collabRow) {
+          slot.innerHTML = `<div class="faint" style="font-size:13px">Couldn't load your collaborator info.</div>`;
+          return;
+        }
+        if (!stats || !stats.connected) {
+          slot.innerHTML = `
+        <div class="faint" style="font-size:13px">Hackatime isn't connected — <a href="${Pixl.apiUrl("/hackatime/connect")}" target="_blank" rel="noopener">connect it</a> to track your own hours on this project.</div>`;
+          return;
+        }
+        const linked = new Set(collabRow.hackatimeProjects || []);
+        slot.innerHTML = `
+      <div class="faint" style="font-size:13px;margin-bottom:8px">Tick the Hackatime projects that are YOUR work on this project.</div>
+      ${[...stats.projects]
+        .sort((a, b) => b.seconds - a.seconds)
+        .map(
+          (h) => `
+        <label class="check-row">
+          <input type="checkbox" name="my-ht" value="${Pixl.esc(h.name)}" ${linked.has(h.name) ? "checked" : ""}>
+          ${Pixl.esc(h.name)} <span class="teal">${Pixl.hours(h.seconds)}</span>
+        </label>`,
+        )
+        .join("")}
+      <button class="btn" id="my-ht-save" style="margin-top:8px">SAVE</button>`;
+        $("my-ht-save").addEventListener("click", async () => {
+          const checked = [...document.querySelectorAll('input[name="my-ht"]:checked')].map(
+            (c) => c.value,
+          );
+          const r = await Pixl.send("PUT", `/api/collaborators/${collabRow.id}/hackatime`, {
+            hackatimeProjects: checked,
+          });
+          Pixl.toast(r.ok ? "Saved!" : "Couldn't save — try again.", !r.ok);
+        });
+      }
+
+      async function loadPendingInvites() {
+        const slot = $("invites-slot");
+        if (!slot) return;
+        let invites = [];
+        try {
+          const d = await Pixl.api("/api/collaborations/pending");
+          invites = d.invites || [];
+        } catch {
+          slot.innerHTML = "";
+          return;
+        }
+        if (!invites.length) {
+          slot.innerHTML = "";
+          return;
+        }
+        slot.innerHTML = `
+    <div class="section-h" style="margin-top:0">COLLABORATION INVITES</div>
+    ${invites
+      .map(
+        (inv) => `
+      <div class="card panel" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <span>${Pixl.esc(inv.invitedBy)} invited you to collaborate on <b>${Pixl.esc(inv.projectName)}</b></span>
+        <span style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn" data-accept="${inv.id}">ACCEPT</button>
+          <button class="btn ghost" data-decline="${inv.id}">DECLINE</button>
+        </span>
+      </div>`,
+      )
+      .join("")}`;
+        slot.querySelectorAll("[data-accept]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.accept}/accept`);
+            if (r.ok) {
+              Pixl.toast("Joined the project!");
+              await loadProjects();
+              await loadPendingInvites();
+              route();
+            } else Pixl.toast("Couldn't accept — try again.", true);
+          }),
+        );
+        slot.querySelectorAll("[data-decline]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const r = await Pixl.send("POST", `/api/collaborators/${btn.dataset.decline}/decline`);
+            if (r.ok) {
+              Pixl.toast("Invite declined.");
+              loadPendingInvites();
+            } else Pixl.toast("Couldn't decline — try again.", true);
+          }),
+        );
+      }
+
+      // A standing "join a project with a code" box — the redeem-side of the
+      // owner's GET INVITE CODE button in renderCollaborators.
+      function renderJoinCodeBox() {
+        const slot = $("join-code-slot");
+        if (!slot) return;
+        slot.innerHTML = `
+    <div class="invite-box">
+      <div class="invite-box-head">
+        <span class="invite-box-title">GOT AN INVITE CODE?</span>
+        <span class="invite-box-sub">Join a friend's project as a collaborator.</span>
+      </div>
+      <div class="invite-box-row">
+        <input class="field" id="join-code-input" placeholder="E.G. BLUE-FOX" autocomplete="off">
+        <button class="btn" id="join-code-btn">JOIN</button>
+      </div>
+    </div>`;
+        const input = $("join-code-input");
+        $("join-code-btn").addEventListener("click", async () => {
+          const code = input.value.trim();
+          if (!code) return;
+          const r = await Pixl.send("POST", "/api/collaborators/redeem", { code });
+          if (r.ok) {
+            Pixl.toast(`Joined "${r.projectName}"!`);
+            input.value = "";
+            await loadProjects();
+            route();
+          } else Pixl.toast(r.reason || "That code didn't work.", true);
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") $("join-code-btn").click();
+        });
+      }
+
+      let yswsShips = [];
+
+      async function renderYswsImportBox() {
+        const slot = $("ysws-import-slot");
+        if (!slot) return;
+        let r = null;
+        try {
+          r = await Pixl.api("/api/projects/ysws-available");
+        } catch (e) {
+          slot.innerHTML = "";
+          return;
+        }
+        yswsShips = r && r.ok && Array.isArray(r.ships) ? r.ships : [];
+        if (yswsShips.length === 0) {
+          slot.innerHTML = "";
+          return;
+        }
+        const n = yswsShips.length;
+        slot.innerHTML = `
+    <div class="invite-box">
+      <div class="invite-box-head">
+        <span class="invite-box-title">SHIPPED SOMETHING ELSEWHERE?</span>
+        <span class="invite-box-sub">${n} project${n === 1 ? "" : "s"} from other YSWS programs , import one to keep building it here.</span>
+      </div>
+      <div class="invite-box-row">
+        <button class="btn" id="ysws-import-btn">IMPORT</button>
+      </div>
+    </div>`;
+        $("ysws-import-btn").addEventListener("click", openYswsPicker);
+      }
+
+      function openYswsPicker() {
+        const rows = yswsShips
+          .map((s) => {
+            const when = s.approvedAt
+              ? new Date(s.approvedAt * 1000).toISOString().slice(0, 10)
+              : "";
+            const meta = [s.ysws, s.hours ? `${s.hours}h there` : "", when]
+              .filter(Boolean)
+              .map(Pixl.esc)
+              .join(" · ");
+            return `
+        <button class="ysws-pick" data-entry="${Pixl.esc(s.id)}">
+          <span class="ysws-pick-name">${Pixl.esc(s.name)}</span>
+          <span class="ysws-pick-meta">${meta}</span>
+          ${s.description ? `<span class="ysws-pick-desc">${Pixl.esc(s.description.slice(0, 140))}</span>` : ""}
+        </button>`;
+          })
+          .join("");
+        const root = document.createElement("div");
+        root.className = "ysws-modal";
+        root.tabIndex = -1;
+        root.innerHTML = `
+      <div class="ysws-modal-veil"></div>
+      <div class="ysws-modal-box" role="dialog" aria-modal="true">
+        <div class="ysws-modal-title">IMPORT FROM ANOTHER YSWS</div>
+        <div class="ysws-modal-body">
+          Pick a project to bring in as a draft. Its links, description and thumbnail
+          get filled in for you.
+          <br><br>
+          <strong>The hours it earned elsewhere don't carry over.</strong> Only new time
+          you track from here counts toward what you're paid , your reviewer sees the
+          earlier ship either way.
+        </div>
+        <div class="ysws-pick-list">${rows}</div>
+        <div class="ysws-modal-acts"><button class="btn dark">CANCEL</button></div>
+      </div>`;
+        document.body.appendChild(root);
+        root.focus();
+        const close = () => root.remove();
+        root.querySelector(".ysws-modal-veil").onclick = close;
+        root.querySelector(".ysws-modal-acts .btn").onclick = close;
+        root.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") close();
+        });
+        root.querySelectorAll("[data-entry]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            const r = await Pixl.send("POST", "/api/projects/import-ysws", {
+              entryId: btn.dataset.entry,
+            });
+            if (r.ok && r.project) {
+              close();
+              Pixl.toast("Imported , add a thumbnail and start logging hours.");
+              await loadProjects();
+              await renderYswsImportBox();
+              location.hash = `#p=${r.project.id}`;
+              route();
+            } else {
+              btn.disabled = false;
+              Pixl.toast(
+                r.error === "already_imported"
+                  ? "You've already imported that one."
+                  : "Couldn't import that , try again.",
+                true,
+              );
+            }
+          }),
+        );
       }
 
       function journalNeed(hours) {
@@ -1411,8 +2077,7 @@
         if (!p.repo_url) b.push("add a GitHub repo");
         if (!p.demo_url) b.push("add a demo / playable link");
         if (!p.image_url) b.push("upload a thumbnail");
-        if (checkedHtSeconds() < 3600)
-          b.push("link a Hackatime project with ≥ 1h");
+        if (checkedHtSeconds() < 3600) b.push(htBlockerText());
         if (!$("s-eligible") || !$("s-eligible").checked)
           b.push("confirm this isn't a school assignment or paid Hack Club work");
         if (isUpdate) {
@@ -1740,6 +2405,7 @@
           $("view").innerHTML =
             `<a class="btn dark back-btn" href="#">← ALL PROJECTS</a><div class="editor">${trialBriefHtml(activeTrial)}${formHtml({})}</div>`;
           bindForm({});
+          wireHtPicker();
           return;
         }
         if (h.startsWith("p=")) return renderProject(Number(h.slice(2)));
@@ -1808,6 +2474,9 @@
         }
         $("loading").remove();
         renderHt();
+        loadPendingInvites();
+        renderJoinCodeBox();
+        renderYswsImportBox();
         route();
       }
       window.addEventListener("hashchange", route);

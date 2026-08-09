@@ -4,6 +4,11 @@ out
 dist
 *.tgz
 
+# Built from docs/*.md by `bun run docs:build` during the deploy workflow.
+# docs.css and docs.js next to these are hand-maintained and stay tracked.
+apps/game/web/docs/*/
+apps/game/web/docs/index.html
+
 coverage
 *.lcov
 
@@ -24,3 +29,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .idea
 
 .DS_Store
+
+samples/

@@ -31,6 +31,7 @@ func _ready() -> void:
 	_map.offset_top = 12.0
 	_map.offset_bottom = 12.0 + MAP_SIZE
 	_map.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map.clip_contents = true
 	_map.draw.connect(_draw_map)
 	_root.add_child(_map)
 
@@ -41,16 +42,20 @@ func _process(_delta: float) -> void:
 		_map.queue_redraw()
 
 func _draw_map() -> void:
-	_map.draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), COLOR_BG)
-	_map.draw_rect(Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE)), COLOR_BORDER, false, 1.0)
+	var full := Rect2(Vector2.ZERO, Vector2(MAP_SIZE, MAP_SIZE))
+	_map.draw_rect(full, COLOR_BG)
 	var world := get_tree().current_scene
 	if world == null or not "remote_players" in world:
+		_map.draw_rect(full, COLOR_BORDER, false, 1.0)
 		return
 	var me = world.get("_local_player")
 	if me == null or not is_instance_valid(me):
+		_map.draw_rect(full, COLOR_BORDER, false, 1.0)
 		return
 	var center := Vector2(MAP_SIZE, MAP_SIZE) / 2.0
 	var origin: Vector2 = me.global_position
+	_draw_terrain(MapData.scene_key(world), origin, full)
+	_map.draw_rect(full, COLOR_BORDER, false, 1.0)
 	for child in world.get_children():
 		if child is CharacterBody2D and child.has_method("npc_id"):
 			_draw_dot(center + (child.global_position - origin) * WORLD_SCALE, COLOR_NPC, 2.0)
@@ -60,6 +65,23 @@ func _draw_map() -> void:
 		if is_instance_valid(rp):
 			_draw_dot(center + (rp.global_position - origin) * WORLD_SCALE, COLOR_OTHER, 3.0)
 	_draw_dot(center, COLOR_SELF, 3.0)
+
+# Terrain under the dots, cut out of the PNG that scripts/tools/bake_world_map.gd
+# renders. No-op until that has been run, which leaves the old flat-rect minimap.
+func _draw_terrain(key: String, origin: Vector2, dest: Rect2) -> void:
+	if key == "":
+		return
+	var tex := MapData.texture(key)
+	if tex == null:
+		return
+	var img_scale := MapData.image_scale(key)
+	if img_scale == Vector2.ZERO:
+		return
+	# The minimap shows MAP_SIZE screen px at WORLD_SCALE, so it covers this many
+	# world px in each direction from the player.
+	var half_world := (MAP_SIZE * 0.5) / WORLD_SCALE
+	var top_left := MapData.world_to_image(key, origin - Vector2(half_world, half_world))
+	_map.draw_texture_rect_region(tex, dest, Rect2(top_left, Vector2(half_world, half_world) * 2.0 * img_scale))
 
 func _draw_dot(pos: Vector2, color: Color, half: float) -> void:
 	var edge := 3.0

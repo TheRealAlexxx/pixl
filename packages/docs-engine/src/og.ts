@@ -1,0 +1,64 @@
+// 1200x630 Open Graph card, drawn in the shell's DUSK palette.
+import { Canvas, hex, type Rgb } from "./png.ts";
+import { drawText, textWidth, wrap, GLYPH_H } from "./font.ts";
+
+const W = 1200;
+const H = 630;
+
+const BG = hex("#150f0a");
+const PANEL = hex("#241a12");
+const STROKE = hex("#3a2c1d");
+const GOLD = hex("#f4b942");
+const INK = hex("#efe7da");
+const DIM = hex("#897b67");
+
+export interface CardInput {
+  title: string;
+  eyebrow: string;
+  url: string;
+}
+
+function shard(canvas: Canvas, x: number, y: number, unit: number, color: Rgb): void {
+  [1, 2, 3, 4, 3, 2, 1].forEach((w, i) => {
+    canvas.fill(x - (w * unit) / 2, y + i * unit, w * unit, unit, color);
+  });
+}
+
+export function renderCard({ title, eyebrow, url }: CardInput): Uint8Array {
+  const canvas = new Canvas(W, H, BG);
+
+  const pad = 48;
+  canvas.fill(pad, pad, W - pad * 2, H - pad * 2, PANEL);
+  canvas.stroke(pad, pad, W - pad * 2, H - pad * 2, 3, STROKE);
+  canvas.fill(pad, pad, 8, H - pad * 2, GOLD);
+
+  const left = pad + 64;
+  const right = W - pad - 64;
+  const maxWidth = right - left;
+
+  shard(canvas, left + 10, pad + 78, 5, GOLD);
+  drawText(canvas, eyebrow.toUpperCase(), left + 34, pad + 80, 4, GOLD, 2);
+
+  const blockTop = pad + 168;
+  const footY = H - pad - 78;
+  const available = footY - blockTop - 28;
+  const lineHeightAt = (s: number) => GLYPH_H * s + 22;
+
+  // Shrink until the wrapped block fits vertically too, or a long title wraps
+  // happily and then lands on top of the URL.
+  let scale = 13;
+  let lines = wrap(title.toUpperCase(), scale, maxWidth);
+  while (scale > 5 && lines.length * lineHeightAt(scale) > available) {
+    scale -= 1;
+    lines = wrap(title.toUpperCase(), scale, maxWidth);
+  }
+  const lineHeight = lineHeightAt(scale);
+  const top = blockTop + Math.max(0, (available - lines.length * lineHeight) / 2);
+  lines.forEach((line, i) => drawText(canvas, line, left, top + i * lineHeight, scale, INK));
+
+  canvas.fill(left, footY, maxWidth, 2, STROKE);
+  drawText(canvas, url.toUpperCase(), left, footY + 26, 3, DIM, 2);
+  canvas.fill(right - textWidth("PIXL.RSVP", 3, 2) - 24, footY + 26, 14, GLYPH_H * 3, GOLD);
+
+  return canvas.encode();
+}

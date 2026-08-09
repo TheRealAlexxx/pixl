@@ -22,17 +22,25 @@ const VERDICT_LABEL: Record<
   project_sent_to_first_pass: { label: "Sent to first pass", variant: "info" },
 };
 
+export interface YswsImport {
+  ysws: string;
+  hours: number;
+  approvedAt: string | null;
+}
+
 export function ReviewDetailTabs({
   commits,
   journals,
   verdicts,
   yswsShips,
+  yswsImport,
   hackatime,
 }: {
   commits: CommitResult;
   journals: JournalRow[];
   verdicts: ModActionRow[];
   yswsShips: YswsShip[];
+  yswsImport: YswsImport | null;
   hackatime: HackatimeReport | null;
 }) {
   const [tab, setTab] = useState<
@@ -55,7 +63,11 @@ export function ReviewDetailTabs({
       ? [{ key: "hackatime" as const, label: "Hackatime", count: hackatime.projects.filter((p) => p.linked).length }]
       : []),
     { key: "reviews" as const, label: "Past reviews", count: verdicts.length },
-    { key: "ysws" as const, label: "Other YSWS", count: yswsShips.filter((s) => s.urlMatch).length },
+    {
+      key: "ysws" as const,
+      label: "Other YSWS",
+      count: yswsShips.filter((s) => s.urlMatch).length + (yswsImport ? 1 : 0),
+    },
   ];
 
   return (
@@ -119,6 +131,25 @@ export function ReviewDetailTabs({
         </TabsContent>
 
         <TabsContent value="ysws">
+          {yswsImport && (
+            <div className="p-4 border-b border-border bg-muted/40">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <Badge variant="info">imported from {yswsImport.ysws}</Badge>
+                <Badge variant="secondary">{yswsImport.hours}h there</Badge>
+                {yswsImport.approvedAt && (
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    approved {new Date(yswsImport.approvedAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-foreground/70">
+                The maker brought this in through the importer, so the earlier ship was
+                declared up front , this is not an undisclosed double dip. Those{" "}
+                {yswsImport.hours}h were not credited here; only time tracked since the
+                import counts. Credit the new work, not the whole project.
+              </div>
+            </div>
+          )}
           {(() => {
             const matches = yswsShips.filter((s) => s.urlMatch);
             const Row = (s: YswsShip, i: number) => (
@@ -160,7 +191,9 @@ export function ReviewDetailTabs({
               <div className="divide-y divide-border">
                 {matches.length === 0 ? (
                   <div className="p-5 text-sm text-muted-foreground">
-                    This project&apos;s repo/demo isn&apos;t in the YSWS archive , no sign it was double-dipped.
+                    {yswsImport
+                      ? "The archive doesn't match this project's current repo/demo , the links were edited since it was imported. The import record above still applies."
+                      : "This project's repo/demo isn't in the YSWS archive , no sign it was double-dipped."}
                   </div>
                 ) : (
                   <>

@@ -20,66 +20,6 @@
       }
       .back-link:hover { color: var(--teal); }
 
-      /* keeper strip (compact, mirrors the shop hero) */
-      .keeper-strip {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 18px;
-        padding: 14px 18px;
-      }
-      .keeper-slot {
-        width: 72px;
-        height: 72px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        background: var(--panel-deep);
-        border: 1px solid var(--stroke);
-        border-radius: 3px;
-        overflow: hidden;
-        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
-      }
-      .keeper {
-        width: 32px;
-        height: 32px;
-        background: url("/img/gabin_char.png") no-repeat 0 -64px;
-        transform: scale(2.4);
-        transform-origin: bottom center;
-        image-rendering: pixelated;
-        animation: keeper-bob 1.6s steps(2) infinite;
-      }
-      @keyframes keeper-bob {
-        0%, 100% { transform: scale(2.4) translateY(0); }
-        50% { transform: scale(2.4) translateY(-0.6px); }
-      }
-      .bubble {
-        position: relative;
-        background: var(--panel-deep);
-        color: var(--ink);
-        border: 1px solid var(--teal);
-        border-radius: 3px;
-        padding: 11px 15px;
-        font-family: var(--pixel);
-        font-size: 14px;
-        letter-spacing: 0.5px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-      }
-      .bubble::after {
-        content: "";
-        position: absolute;
-        left: -6px;
-        top: 16px;
-        width: 9px;
-        height: 9px;
-        background: var(--panel-deep);
-        border-left: 1px solid var(--teal);
-        border-bottom: 1px solid var(--teal);
-        transform: rotate(45deg);
-      }
-
       /* ── item detail ── */
       .detail-card { padding: 22px 24px 24px; }
       #detail-img {
@@ -190,6 +130,8 @@
         font-weight: 700;
         text-align: center;
         font-size: 14px;
+        appearance: textfield;
+        -moz-appearance: textfield;
       }
       .qty-stepper input::-webkit-outer-spin-button,
       .qty-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -211,8 +153,28 @@
         background: var(--gold);
         border-color: transparent;
       }
+      .opt-choice.sold-out {
+        opacity: 0.4;
+        cursor: default;
+        text-decoration: line-through;
+      }
+      .stock-tag { opacity: 0.75; font-size: 0.85em; }
+      .opt-choice.on .stock-tag { opacity: 0.85; }
       .cfg-delta { opacity: 0.7; font-size: 0.9em; }
       .opt-choice.on .cfg-delta { opacity: 0.85; }
+      .note-row { display: flex; flex-direction: column; gap: 6px; }
+      .note-row textarea {
+        resize: vertical;
+        min-height: 44px;
+        max-height: 120px;
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-sm);
+        background: var(--panel-deep);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-size: 13px;
+        padding: 8px 10px;
+      }
       .cfg-ref-note {
         font-size: 13px;
         color: var(--dim);
@@ -250,11 +212,6 @@
       </div>
 
       <div id="detail" hidden>
-        <div class="keeper-strip hud">
-          <div class="keeper-slot"><div class="keeper" id="keeper"></div></div>
-          <div class="bubble" id="bubble">TAKE YOUR TIME.</div>
-        </div>
-
         <section class="hud detail-card">
           <div class="detail-row">
             <div id="detail-img"></div>
@@ -264,6 +221,19 @@
               <div class="price" id="detail-price"></div>
               <div id="detail-desc"></div>
               <div class="options-row" id="detail-options"></div>
+              <div class="note-row" id="note-row" hidden>
+                <label
+                  class="qty-label"
+                  for="note-input"
+                  >NOTE TO FULFILLER (OPTIONAL)</label
+                >
+                <textarea
+                  id="note-input"
+                  maxlength="300"
+                  rows="2"
+                  placeholder="anything the person shipping this should know..."
+                ></textarea>
+              </div>
               <div>
                 <div
                   class="muted"
@@ -315,7 +285,10 @@
         $("qty-input").value = quantity;
         $("qty-minus").disabled = quantity <= 1;
         $("qty-plus").disabled = quantity >= 999;
-        renderDetail();
+        // Not a full renderDetail() — that resets optionPick back to each
+        // group's first choice, which would silently undo a picked option
+        // (e.g. "Gabin") every time the quantity stepper is touched.
+        if (selected && !isTrophy(selected) && !selected.config_options) updatePlainPriceUI();
       }
 
       // ── real price-varying configurator (Framework 13/16 DIY etc.) ──
@@ -418,6 +391,23 @@
         return named;
       }
 
+      // Per-choice live stock (e.g. 12/15 "Ridit" Signed Org Photos left),
+      // keyed by the raw choice label. Empty map for items with no pool.
+      function stockMap(item) {
+        const m = new Map();
+        for (const s of Array.isArray(item && item.stock) ? item.stock : []) m.set(s.choice, s);
+        return m;
+      }
+      // The option group whose choices are all stock-tracked, if any — that's
+      // the group that gets remaining counts and sold-out chips.
+      function stockGroupIndex(groups, stock) {
+        if (!stock.size) return -1;
+        return groups.findIndex((g) => g.choices.length && g.choices.every((c) => stock.has(c)));
+      }
+      function firstAvailableChoice(choices, stock) {
+        return choices.find((c) => !stock.has(c) || stock.get(c).remaining > 0) ?? choices[0];
+      }
+
       function optionSummary() {
         if (!selected) return "";
         if (selected.config_options) {
@@ -443,14 +433,24 @@
 
       function renderOptions() {
         const groups = optionGroups(selected);
+        const stock = stockMap(selected);
+        const sGroupIdx = stockGroupIndex(groups, stock);
         $("detail-options").innerHTML = groups
           .map((g, gi) => {
-            const pick = optionPick[gi] ?? g.choices[0];
+            const isStockGroup = gi === sGroupIdx;
+            let pick = optionPick[gi] ?? g.choices[0];
+            if (isStockGroup) {
+              const cur = stock.get(pick);
+              if (cur && cur.remaining <= 0) pick = firstAvailableChoice(g.choices, stock);
+            }
+            optionPick[gi] = pick;
             const chips = g.choices
-              .map(
-                (c) =>
-                  `<span class="chip opt-choice ${c === pick ? "on" : ""}" data-g="${gi}" data-c="${Pixl.esc(c)}">${Pixl.esc(c.toUpperCase())}</span>`,
-              )
+              .map((c) => {
+                const s = isStockGroup ? stock.get(c) : null;
+                const soldOut = !!s && s.remaining <= 0;
+                const tag = s ? ` <span class="stock-tag">${soldOut ? "SOLD OUT" : `${s.remaining} LEFT`}</span>` : "";
+                return `<span class="chip opt-choice ${c === pick ? "on" : ""} ${soldOut ? "sold-out" : ""}" data-g="${gi}" data-c="${Pixl.esc(c)}">${Pixl.esc(c.toUpperCase())}${tag}</span>`;
+              })
               .join("");
             const label = g.name
               ? `<div class="opt-group-name">${Pixl.esc(g.name.toUpperCase())}</div>`
@@ -458,12 +458,25 @@
             return `<div class="opt-group">${label}<div class="opt-choices">${chips}</div></div>`;
           })
           .join("");
-        for (const chip of $("detail-options").querySelectorAll(".opt-choice")) {
+        for (const chip of $("detail-options").querySelectorAll(".opt-choice:not(.sold-out)")) {
           chip.addEventListener("click", () => {
             optionPick[Number(chip.dataset.g)] = chip.dataset.c;
             renderOptions();
+            updatePlainPriceUI();
           });
         }
+      }
+
+      // Whether the currently picked stock-tracked choice (if any) can cover
+      // the requested quantity — used to grey out BUY on top of affordability.
+      function stockOk() {
+        const groups = optionGroups(selected);
+        const stock = stockMap(selected);
+        const sGroupIdx = stockGroupIndex(groups, stock);
+        if (sGroupIdx === -1) return true;
+        const pick = optionPick[sGroupIdx];
+        const s = stock.get(pick);
+        return !s || s.remaining >= quantity;
       }
 
       function isTrophy(item) {
@@ -479,17 +492,21 @@
       }
 
       // Spells out both rates every time (not just two bare numbers) so it's
-      // clear why there are two: hours needed at the shop's $3.5/h floor
-      // rate, then hours needed at its $6/h rate (reachable with a
-      // Restoration Energy multiplier).
+      // clear why there are two: hours needed at the payout floor, then hours
+      // needed at the ceiling you reach once you've built up Restoration
+      // Energy. Both rates come from config so they can't drift from the
+      // server's actual payout maths.
       function fmtHours(h) {
         const r = Math.round(h * 10) / 10;
         return Number.isInteger(r) ? String(r) : r.toFixed(1);
       }
+      const LO_USD = Pixl.config.economy.basePayoutUsd;
+      const HI_USD = Pixl.config.economy.maxPayoutUsd;
+      const fmtRate = (usd) => "$" + (Number.isInteger(usd) ? usd : usd.toFixed(2));
       function hoursOf(px) {
-        const lo = px / 50;
-        const hi = (lo * 3.5) / 6;
-        return `${fmtHours(lo)}h at $3.5/h → ${fmtHours(hi)}h at $6/h`;
+        const lo = px / (LO_USD / Pixl.config.economy.pixelValueUsd);
+        const hi = (lo * LO_USD) / HI_USD;
+        return `${fmtHours(lo)}h at ${fmtRate(LO_USD)}/h → ${fmtHours(hi)}h at ${fmtRate(HI_USD)}/h`;
       }
       function imgHtml(item) {
         const url = String(item.image_url || "");
@@ -497,21 +514,10 @@
         return `<img src="${Pixl.esc(url)}" alt="" onerror="this.outerHTML='<span class=ph></span>'">`;
       }
 
-      let bubbleTimer = null;
-      function say(text, hold = 4000) {
-        $("bubble").textContent = text;
-        clearTimeout(bubbleTimer);
-        if (hold)
-          bubbleTimer = setTimeout(() => {
-            $("bubble").textContent = "TAKE YOUR TIME.";
-          }, hold);
-      }
-      function nudgeKeeper() {
-        const k = $("keeper");
-        k.style.animation = "none";
-        void k.offsetWidth;
-        k.style.animation = "";
-      }
+      // The shopkeeper mascot/speech-bubble strip was removed from this page;
+      // these stay as no-ops so the many existing call sites don't need editing.
+      function say() {}
+      function nudgeKeeper() {}
 
       function renderDetail() {
         $("detail-img").innerHTML = imgHtml(selected);
@@ -520,6 +526,7 @@
         document.title = `Pixl · ${selected.name}`;
 
         $("qty-row").hidden = true;
+        $("note-row").hidden = true;
 
         if (isTrophy(selected)) {
           $("detail-options").innerHTML = optionGroups(selected)
@@ -566,6 +573,7 @@
         if (selected.config_options) {
           configPick = {};
           renderConfigurator();
+          $("note-row").hidden = false;
           $("detail-limited").innerHTML =
             `<span class="chip gold">FULLY CUSTOM, PRICE UPDATES AS YOU PICK</span>`;
           updateConfigPriceUI();
@@ -575,21 +583,42 @@
 
         optionPick = {};
         renderOptions();
-        $("detail-limited").innerHTML = selected.limited
-          ? `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`
-          : "";
+        $("note-row").hidden = false;
+        $("detail-limited").innerHTML =
+          (selected.limited ? `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>` : "") +
+          (selected.stock && selected.stock.length
+            ? `<span class="chip teal">${selected.stock[0].total} ONLY PER PERSON</span>`
+            : "");
         $("qty-row").hidden = false;
         $("qty-input").value = quantity;
         $("qty-minus").disabled = quantity <= 1;
         $("qty-plus").disabled = quantity >= 999;
+        updatePlainPriceUI();
+        say(stockOk() && wallet && wallet.pixels >= Number(selected.price) * quantity ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
+      }
+
+      // Price/afford/buy-button state for a plain (non-configurator) priced
+      // item — pulled out of renderDetail() so the stock-poll refresh and the
+      // qty stepper can update it without resetting the picked option/note.
+      function updatePlainPriceUI() {
+        if (Number(selected.price) <= 0) {
+          $("detail-price").innerHTML = "PRICE TBD";
+          $("detail-price").classList.add("cant");
+          $("buy-btn").textContent = "NOT AVAILABLE YET";
+          $("buy-btn").disabled = true;
+          $("afford-fill").style.width = "0%";
+          $("afford-label").textContent = "Coming soon to this region.";
+          return;
+        }
         const total = Number(selected.price) * quantity;
         const afford = wallet && wallet.pixels >= total;
+        const inStock = stockOk();
         $("detail-price").innerHTML =
           `<img src="/img/pixel.png" style="width:20px;height:20px" alt="">${total.toLocaleString()} PIXELS<span class="price-hours">${hoursOf(total)}</span>` +
           (quantity > 1 ? ` <span class="price-hours">(${Number(selected.price).toLocaleString()} × ${quantity})</span>` : "");
         $("detail-price").classList.toggle("cant", !afford);
-        $("buy-btn").textContent = "BUY";
-        $("buy-btn").disabled = !afford;
+        $("buy-btn").textContent = !inStock ? "SOLD OUT" : "BUY";
+        $("buy-btn").disabled = !afford || !inStock;
         const have = wallet ? wallet.pixels : 0;
         const pct = Math.max(0, Math.min(100, (have / Math.max(1, total)) * 100));
         $("afford-fill").style.width = pct + "%";
@@ -600,7 +629,6 @@
         $("afford-label").textContent =
           `YOU HAVE ${Math.round(have)} / ${total.toLocaleString()} PX` +
           (pct >= 100 ? ", EASY." : "");
-        say(afford ? "OOH, GOOD EYE." : "BIT PRICEY FOR YOU… FOR NOW.", 5000);
       }
 
       async function claimTrophy(id) {
@@ -645,15 +673,41 @@
         buyItem(id);
       }
 
+      // The raw picked label for the stock-tracked group (e.g. "Ridit"), or
+      // "" for items with no stock-limited choice.
+      function currentStockChoice() {
+        const groups = optionGroups(selected);
+        const stock = stockMap(selected);
+        const sGroupIdx = stockGroupIndex(groups, stock);
+        return sGroupIdx === -1 ? "" : optionPick[sGroupIdx] ?? "";
+      }
+
+      async function refreshStock() {
+        if (!selected || isTrophy(selected) || selected.config_options) return;
+        try {
+          const r = await Pixl.api(`/api/shop/stock/${selected.id}`);
+          if (r.ok && Array.isArray(r.stock) && r.stock.length) {
+            selected.stock = r.stock;
+            renderOptions();
+            updatePlainPriceUI();
+          }
+        } catch (e) {}
+      }
+
       async function buyItem(id) {
         if (buying) return;
         buying = true;
         $("buy-btn").disabled = true;
         $("buy-btn").textContent = "BUYING...";
         const option = optionSummary();
-        const body = { option };
+        const note = $("note-row").hidden ? "" : $("note-input").value.trim().slice(0, 300);
+        const body = { option, note };
         if (selected && selected.config_options) body.config = configPick;
-        else body.quantity = quantity;
+        else {
+          body.quantity = quantity;
+          const stockChoice = currentStockChoice();
+          if (stockChoice) body.stockChoice = stockChoice;
+        }
         const r = await Pixl.send("POST", `/api/shop/buy/${id}`, body);
         buying = false;
         if (r.ok) {
@@ -672,6 +726,11 @@
           Pixl.toast("That one isn't for sale.", true);
           $("buy-btn").disabled = false;
           $("buy-btn").textContent = "BUY";
+        } else if (r.error === "sold_out") {
+          Pixl.toast("That option just sold out — pick another.", true);
+          await refreshStock();
+          $("buy-btn").disabled = false;
+          $("buy-btn").textContent = "BUY";
         } else {
           Pixl.toast("Couldn't place that order right now.", true);
           $("buy-btn").disabled = false;
@@ -683,6 +742,11 @@
         if (!selected) return;
         if (isTrophy(selected)) {
           if (trophyState(selected) === "claimable") claimTrophy(selected.id);
+          return;
+        }
+        if (!selected.config_options && !stockOk()) {
+          Pixl.toast("That option just sold out — pick another.", true);
+          refreshStock();
           return;
         }
         const price = selected.config_options
@@ -705,8 +769,15 @@
       setInterval(() => {
         if (selected && selected.limited && selected.limited_until && !isTrophy(selected))
           $("detail-limited").innerHTML =
-            `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>`;
+            `<span class="chip red">LIMITED, ${Pixl.countdown(selected.limited_until)}</span>` +
+            (selected.stock && selected.stock.length
+              ? `<span class="chip teal">${selected.stock[0].total} ONLY PER PERSON</span>`
+              : "");
       }, 1000);
+
+      // Live stock refresh — so "12/15 left" updates while someone's looking
+      // at the page, not just after their own purchase.
+      setInterval(refreshStock, 8000);
 
       async function boot() {
         if (!Pixl.hasToken) {

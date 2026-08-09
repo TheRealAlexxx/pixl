@@ -4,8 +4,9 @@ import { isIP } from "node:net";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { addNotification } from "./notifications.js";
-import { findInYswsArchive } from "../shipsArchive.js";
-import { fetchHackatimeStats } from "../hackatime/api.js";
+import { findInYswsArchive } from "../ysws/archive.js";
+import { buildDoubleDip } from "../ysws/doubleDip.js";
+import { fetchHackatimeStats, fetchTrackedSecondsSince } from "../hackatime/api.js";
 
 const router = Router();
 
@@ -26,13 +27,14 @@ const PROJECT_TYPES = [
   "other",
 ];
 
-// List the logged-in user's projects, newest first.
+// List the logged-in user's projects, newest first — their own plus any
+// they're an accepted collaborator on (view/log-hours only, not editable).
 router.get("/api/projects", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;
   if (!session) return res.status(401).json({ ok: false });
 
-  const { data, error } = await supabase
+  const { data: owned, error } = await supabase
     .from("projects")
     .select("*")
     .eq("user_id", session.userId)
@@ -42,7 +44,29 @@ router.get("/api/projects", async (req, res) => {
     console.error("[projects] list failed", error);
     return res.status(500).json({ ok: false });
   }
-  const projects = data ?? [];
+
+  const { data: collabRows } = await supabase
+    .from("project_collaborators")
+    .select("project_id")
+    .eq("user_id", session.userId)
+    .eq("status", "accepted");
+  const collabProjectIds = (collabRows ?? []).map((r) => r.project_id as number);
+  let collaborating: Record<string, unknown>[] = [];
+  if (collabProjectIds.length > 0) {
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .in("id", collabProjectIds)
+      .is("archived_at", null);
+    collaborating = data ?? [];
+  }
+
+  const projects = [
+    ...(owned ?? []).map((p) => ({ ...p, is_owner: true })),
+    ...collaborating.map((p) => ({ ...p, is_owner: false })),
+  ].sort(
+    (a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime(),
+  );
   const ids = projects.map((p) => p.id as number);
   const earned = new Map<number, number>();
   if (ids.length > 0) {
@@ -217,8 +241,9 @@ interface ProjectFields {
 }
 
 // Shared field parsing/validation for create + update. Returns an error code
-// on a missing name or a repo link that isn't a GitHub repository.
-function parseProjectBody(
+// on a missing name or a repo link that isn't a GitHub repository. Also used by
+// the YSWS importer (src/ysws/routes.ts) to turn an archive entry into a draft.
+export function parseProjectBody(
   body: any,
 ): { error: string; fields?: never } | { error?: never; fields: ProjectFields } {
   const name = String(body?.name ?? "").trim().slice(0, 120);
@@ -317,7 +342,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
 
   const { data: project, error } = await supabase
     .from("projects")
-    .select("id, name, status, repo_url, demo_url, image_url, hackatime_projects, rejected_at, banned_at")
+    .select("*")
     .eq("id", id)
     .eq("user_id", session.userId)
     .maybeSingle();
@@ -357,20 +382,59 @@ router.post("/api/projects/:id/ship", async (req, res) => {
 
   const { data: userRow } = await supabase
     .from("users")
-    .select("hackatime_token")
+    .select("hackatime_token, slack_id")
     .eq("id", session.userId)
     .single();
-  const stats = await fetchHackatimeStats(
-    (userRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
-  );
+  const htToken = (userRow as { hackatime_token?: string } | null)?.hackatime_token ?? null;
+  const stats = await fetchHackatimeStats(htToken);
   if (!stats.connected && stats.error)
     return res.status(502).json({ ok: false, error: "hackatime_unavailable" });
-  const linked = new Set((project.hackatime_projects as string[]) ?? []);
-  const trackedSeconds = stats.projects
-    .filter((p) => linked.has(p.name))
-    .reduce((sum, p) => sum + p.seconds, 0);
+  const linked = (project.hackatime_projects as string[]) ?? [];
+  // Only hours logged from the cutoff onward count — see HACKATIME_CUTOFF.
+  const trackedSeconds = await fetchTrackedSecondsSince(
+    (userRow as { slack_id?: string } | null)?.slack_id ?? null,
+    htToken,
+    linked,
+  );
   if (trackedSeconds < 3600)
     return res.status(400).json({ ok: false, error: "hackatime_hours_required" });
+
+  // Refresh each accepted collaborator's own tracked hours (their own
+  // Hackatime account, filtered by the projects *they* linked) so review-time
+  // crediting has up-to-date numbers per person. Purely informational — it
+  // never gates whether this ship goes through.
+  const { data: collaborators } = await supabase
+    .from("project_collaborators")
+    .select("id, user_id, hackatime_projects")
+    .eq("project_id", id)
+    .eq("status", "accepted");
+  if (collaborators && collaborators.length > 0) {
+    const collaboratorIds = collaborators.map((c) => c.user_id as string);
+    const { data: collabUsers } = await supabase
+      .from("users")
+      .select("id, hackatime_token, slack_id")
+      .in("id", collaboratorIds);
+    const tokenFor = new Map(
+      (collabUsers ?? []).map((u) => [u.id as string, u.hackatime_token as string | null]),
+    );
+    const slackFor = new Map(
+      (collabUsers ?? []).map((u) => [u.id as string, u.slack_id as string | null]),
+    );
+    await Promise.all(
+      collaborators.map(async (c) => {
+        const collabLinked = (c.hackatime_projects as string[]) ?? [];
+        const collabSeconds = await fetchTrackedSecondsSince(
+          slackFor.get(c.user_id as string) ?? null,
+          tokenFor.get(c.user_id as string) ?? null,
+          collabLinked,
+        );
+        await supabase
+          .from("project_collaborators")
+          .update({ hackatime_seconds: collabSeconds })
+          .eq("id", c.id);
+      }),
+    );
+  }
 
   const isUpdate = project.status === "approved" && !project.rejected_at;
   const updateNotes = String(req.body?.updateNotes ?? "").trim().slice(0, 2000);
@@ -378,7 +442,7 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     return res.status(400).json({ ok: false, error: "update_notes_required" });
   if (isUpdate && updateNotes.length < 100)
     return res.status(400).json({ ok: false, error: "update_notes_too_short" });
-  const otherYsws = req.body?.otherYsws === true;
+  const otherYsws = req.body?.otherYsws === true || !!project.imported_ysws_entry_id;
 
   // Optional: the player flags this ship as a submission for a Trial. Only an
   // active Trial they've actually accepted (unlocked) can be linked; anything
@@ -413,30 +477,32 @@ router.post("/api/projects/:id/ship", async (req, res) => {
     }
   }
 
-  let systemNote = "";
   const matched = await findInYswsArchive(
     project.repo_url as string,
     project.demo_url as string,
   );
-  if (matched) {
-    const claimedHours = Math.round((trackedSeconds / 3600) * 10) / 10;
-    const suggested = Math.max(0, Math.round((claimedHours - matched.hours) * 10) / 10);
-    const when = matched.approvedAt
-      ? new Date(matched.approvedAt * 1000).toISOString().slice(0, 10)
-      : "unknown date";
-    const overlap = `It got ${matched.hours}h there (approved ${when}); the player claims ${claimedHours}h here — suggest crediting at most ${suggested}h unless the new work is clearly separate.`;
-    if (otherYsws) {
-      systemNote = `SYSTEM: Player disclosed this was submitted to "${matched.ysws}" (${matched.url}). ${overlap}`;
-    } else {
-      systemNote = `SYSTEM: ${matched.url} already appears in the Hack Club YSWS archive under "${matched.ysws}" but the player did NOT disclose it. Possible double dip. ${overlap}`;
-      const { error: flagError } = await supabase.from("mod_actions").insert({
-        user_id: session.userId,
-        action: "double_dip_flag",
-        detail: `"${project.name}" shipped without disclosure — ${matched.url} found in the YSWS archive (${matched.ysws}, ${matched.hours}h)`,
-        actor: "system",
-      });
-      if (flagError) console.error("[projects] double dip log failed", flagError);
-    }
+  const { systemNote, flagDetail } = buildDoubleDip({
+    project: {
+      name: project.name as string,
+      imported_ysws_entry_id: (project.imported_ysws_entry_id as string | null) ?? null,
+      imported_from_ysws: (project.imported_from_ysws as string | null) ?? null,
+      imported_ysws_hours: project.imported_ysws_hours != null
+        ? Number(project.imported_ysws_hours)
+        : null,
+      imported_ysws_approved_at: (project.imported_ysws_approved_at as string | null) ?? null,
+    },
+    matched,
+    otherYsws,
+    trackedSeconds,
+  });
+  if (flagDetail) {
+    const { error: flagError } = await supabase.from("mod_actions").insert({
+      user_id: session.userId,
+      action: "double_dip_flag",
+      detail: flagDetail,
+      actor: "system",
+    });
+    if (flagError) console.error("[projects] double dip log failed", flagError);
   }
 
   const { data, error: updateError } = await supabase
@@ -512,7 +578,10 @@ router.post("/api/projects/:id/unship", async (req, res) => {
   res.json({ ok: true, project: data });
 });
 
-async function ownsProject(userId: string, projectId: number): Promise<boolean> {
+// True for the project's owner, or an accepted collaborator (view/log-hours
+// only — journal and timeline reads/writes are gated on this; edit/ship/
+// unship/delete stay owner-only via their own direct .eq("user_id", ...)).
+async function canAccessProject(userId: string, projectId: number): Promise<boolean> {
   const { data, error } = await supabase
     .from("projects")
     .select("id")
@@ -523,10 +592,20 @@ async function ownsProject(userId: string, projectId: number): Promise<boolean> 
     console.error("[projects] ownership check failed", error);
     return false;
   }
-  return data !== null;
+  if (data !== null) return true;
+
+  const { data: collab } = await supabase
+    .from("project_collaborators")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .eq("status", "accepted")
+    .maybeSingle();
+  return collab !== null;
 }
 
-// List journal entries for one of the user's own projects, newest first.
+// List journal entries for a project the caller owns or collaborates on,
+// newest first.
 router.get("/api/projects/:id/journal", async (req, res) => {
   const token = typeof req.query.token === "string" ? req.query.token : "";
   const session = token ? verifySessionToken(token) : null;
@@ -534,7 +613,7 @@ router.get("/api/projects/:id/journal", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const { data, error } = await supabase
@@ -559,7 +638,7 @@ router.get("/api/projects/:id/timeline", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const [{ data: proj }, { data: audits }] = await Promise.all([
@@ -599,7 +678,7 @@ router.post("/api/projects/:id/journal", async (req, res) => {
 
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
-  if (!(await ownsProject(session.userId, id)))
+  if (!(await canAccessProject(session.userId, id)))
     return res.status(404).json({ ok: false });
 
   const content = String(req.body?.content ?? "").trim().slice(0, 5000);

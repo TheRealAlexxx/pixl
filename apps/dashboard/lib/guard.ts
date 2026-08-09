@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { getSession, isAllowed, type AdminSession } from "./session";
-import { getAdmin, listReportViewerIds, listHelperIds } from "./db";
+import {
+  getAdmin,
+  listReportViewerIds,
+  listHelperIds,
+  listFulfillerIds,
+  listModeratorIds,
+} from "./db";
 
 export const ALL_PERMISSIONS = ["warn", "ban", "notify", "review"] as const;
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -101,17 +107,59 @@ export async function requirePerm(perm: Permission): Promise<AdminAccess> {
 
 // Reports are a separate, explicit allow-list (report_viewers table) , regular
 // admins/sub-admins do NOT get in. A viewer only needs a valid session.
+// Moderators (see below) get folded in here too , seeing reports is the
+// whole point of the role, so they don't need a second listing.
+async function reportAccessIds(): Promise<string[]> {
+  const [viewers, mods] = await Promise.all([listReportViewerIds(), listModeratorIds()]);
+  return [...new Set([...viewers, ...mods])];
+}
+
 export async function isReportViewer(): Promise<boolean> {
   const session = await getSession();
   if (!session) return false;
-  return (await listReportViewerIds()).includes(session.slackId);
+  return (await reportAccessIds()).includes(session.slackId);
 }
 
 export async function requireReportViewer(): Promise<AdminSession> {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (!(await listReportViewerIds()).includes(session.slackId)) redirect("/");
+  if (!(await reportAccessIds()).includes(session.slackId)) redirect("/");
   return session;
+}
+
+// Moderators: a lighter-weight role than sub-admins, its own explicit
+// allow-list (moderators table) , same shape as report_viewers, NOT folded
+// into owners/sub-admins. Grants: seeing reports (via reportAccessIds
+// above), warning players directly, and proposing a ban. They can never ban
+// outright , only an admin/owner with the "ban" permission can confirm a
+// proposal (see confirmBanProposal/rejectBanProposal in app/actions.ts).
+export async function isModerator(): Promise<boolean> {
+  const session = await getSession();
+  if (!session) return false;
+  return (await listModeratorIds()).includes(session.slackId);
+}
+
+export async function requireModerator(): Promise<AdminSession> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!(await listModeratorIds()).includes(session.slackId)) redirect("/");
+  return session;
+}
+
+// Warn access for the warnPlayer action: either a moderator (their own
+// allow-list is the grant) or an admin/sub-admin holding the "warn"
+// permission. Lets moderators warn without needing a parallel admins-table
+// row just to unlock the one action their role is for. Throws (rather than
+// redirecting) since it's called from a form action, not a page load.
+export async function requireWarnAccess(): Promise<string> {
+  const session = await getSession();
+  if (!session) throw new Error("Not signed in");
+  if ((await listModeratorIds()).includes(session.slackId))
+    return `${session.name} (${session.slackId})`;
+  const access = await getAccess();
+  if (!access || !access.perms.has("warn"))
+    throw new Error('You don\'t have the "warn" permission.');
+  return `${access.session.name} (${access.session.slackId})`;
 }
 
 export async function requireSuper(): Promise<AdminAccess> {
@@ -137,6 +185,28 @@ export async function isHelper(): Promise<boolean> {
 export async function requireHelper(): Promise<AdminAccess> {
   await requireAdmin();
   const access = await getHelperAccess();
+  if (!access) redirect("/");
+  return access;
+}
+
+// Fulfillers work the shop-order queue (claim/credit/ship), the same
+// allow-list shape as ticket helpers. Owners always qualify; other sub-admins
+// do NOT unless they're explicitly listed as a fulfiller. The final close
+// (mark done), reassign, and cancel/refund stay owner-only.
+export async function getFulfillerAccess(): Promise<AdminAccess | null> {
+  const access = await getAccess();
+  if (!access) return null;
+  if (access.isSuper) return access;
+  return (await listFulfillerIds()).includes(access.session.slackId) ? access : null;
+}
+
+export async function isFulfiller(): Promise<boolean> {
+  return (await getFulfillerAccess()) !== null;
+}
+
+export async function requireFulfiller(): Promise<AdminAccess> {
+  await requireAdmin();
+  const access = await getFulfillerAccess();
   if (!access) redirect("/");
   return access;
 }

@@ -2,7 +2,15 @@ import { Router } from "express";
 import { issueSessionToken, verifySessionToken } from "../auth/session.js";
 import { containsBlocked, logViolation } from "../moderation.js";
 import { supabase } from "../db/client.js";
-import { approvedHoursFor, levelFor, pxPerHourFor } from "../xp.js";
+import {
+  approvedHoursFor,
+  lifetimeRe,
+  levelForRe,
+  payoutUsdPerHour,
+  pxPerHourFor,
+  reForLevel,
+  MAX_LEVEL,
+} from "../xp.js";
 import { decryptPII, encryptPII } from "../crypto.js";
 
 const router = Router();
@@ -54,17 +62,24 @@ router.get("/api/profile/wallet", async (req, res) => {
   const session = token ? verifySessionToken(token) : null;
   if (!session) return res.status(401).json({ ok: false });
 
-  const [{ data: user }, approvedHours] = await Promise.all([
+  const [{ data: user }, approvedHours, re] = await Promise.all([
     supabase.from("users").select("pixels").eq("id", session.userId).single(),
     approvedHoursFor(session.userId),
+    lifetimeRe(session.userId),
   ]);
   const pixels = Math.round(Number(user?.pixels) || 0);
+  // Both are sent: hours is the raw work, RE is that work weighted by the tier
+  // it was shipped at, and RE is what the level and the rate come from.
   res.json({
     ok: true,
     pixels,
     approvedHours,
-    level: levelFor(approvedHours),
-    pxPerHour: pxPerHourFor(approvedHours),
+    re,
+    level: levelForRe(re),
+    maxLevel: MAX_LEVEL,
+    reForNextLevel: reForLevel(Math.min(levelForRe(re) + 1, MAX_LEVEL)),
+    pxPerHour: pxPerHourFor(re),
+    usdPerHour: payoutUsdPerHour(re),
   });
 });
 

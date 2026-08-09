@@ -123,6 +123,11 @@ export default async function ReviewerPage({
     payoutTotals.get(slackId) ?? { earnedPixels: 0, paid: 0, pending: 0, cut: 0 };
   const display = admin?.name || handle || playerNames.get(slackId) || slackId;
   const isOwner = ownerSlackIds().includes(slackId);
+  // Mirrors isSecondPassReviewer's env fallback: with SECOND_PASS_SLACK_IDS
+  // unset, owners qualify automatically, so the toggle button below must
+  // agree with that or it contradicts the "second pass" badge above it.
+  const secondPassIds = secondPassSlackIds();
+  const envGrantsSecondPass = secondPassIds.length === 0 ? isOwner : secondPassIds.includes(slackId);
   const initials =
     display
       .split(/\s+/)
@@ -186,9 +191,11 @@ export default async function ReviewerPage({
               Remove reviewer
             </PendingButton>
           </form>
-          {secondPassSlackIds().includes(slackId) ? (
+          {envGrantsSecondPass ? (
             <span className="text-xs text-muted-foreground">
-              Final reviewer via SECOND_PASS_SLACK_IDS , change it in the env.
+              {secondPassIds.length === 0
+                ? "Final reviewer , owners qualify by default while SECOND_PASS_SLACK_IDS is unset."
+                : "Final reviewer via SECOND_PASS_SLACK_IDS , change it in the env."}
             </span>
           ) : (
             <form action={setSecondPass}>

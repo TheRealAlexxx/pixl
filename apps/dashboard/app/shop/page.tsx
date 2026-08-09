@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
-import { listShopItems, SHOP_REGIONS, SHOP_REGION_LABELS, type ShopRegion } from "@/lib/db";
+import { listShopItems, listShopOptionStock, SHOP_REGIONS, SHOP_REGION_LABELS, type ShopRegion } from "@/lib/db";
 import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Disclosure } from "@/app/_components/Disclosure";
 import { OptionsEditor } from "@/app/_components/OptionsEditor";
 import { AddShopItemForm } from "@/app/_components/AddShopItemForm";
+import { BulkUploadShopItemsForm } from "@/app/_components/BulkUploadShopItemsForm";
 import { parseOptionGroups } from "@/lib/shopOptions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -47,6 +48,7 @@ export default async function ShopPage({
   const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
   const start = (cur - 1) * PER;
   const items = allItems.slice(start, start + PER);
+  const stockByItem = await listShopOptionStock(items.map((i) => i.id));
 
   return (
     <div className="space-y-8">
@@ -128,6 +130,9 @@ export default async function ShopPage({
       <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-4">Add an item to {SHOP_REGION_LABELS[region]}</div>
         <AddShopItemForm action={addShopItem} region={region} />
+        <Disclosure summary="Bulk upload from CSV" className="mt-5">
+          <BulkUploadShopItemsForm region={region} />
+        </Disclosure>
       </Card>
 
       <div>
@@ -179,6 +184,16 @@ export default async function ShopPage({
                             </Badge>
                           ))}
                         </div>
+                      ))}
+                    </div>
+                  )}
+                  {(stockByItem.get(item.id)?.length ?? 0) > 0 && (
+                    <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-xs">
+                      <span className="font-medium text-muted-foreground">Stock:</span>
+                      {stockByItem.get(item.id)!.map((s) => (
+                        <Badge key={s.choice} variant={s.remaining <= 0 ? "destructive" : "secondary"}>
+                          {s.choice} {s.remaining}/{s.total}
+                        </Badge>
                       ))}
                     </div>
                   )}

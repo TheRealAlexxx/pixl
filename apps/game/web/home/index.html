@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixl · Overview</title>
+    <link rel="icon" href="/index.icon.png" />
+    <link rel="stylesheet" href="/pixl.css" />
+    <style>
+      /* The one thing this page has to answer on arrival: what do I do next.
+         Everything below it is status, not instruction. */
+      .next { display: flex; align-items: center; justify-content: space-between; gap: 18px;
+        flex-wrap: wrap; padding: 20px 22px; margin-top: 22px;
+        border-left: 3px solid var(--gold); }
+      .next-txt { flex: 1; min-width: 240px; }
+      .next-k { font-family: var(--pixel); font-size: 12px; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--gold); margin-bottom: 5px; }
+      .next-h { font-family: var(--pixel); font-size: 19px; color: var(--ink); letter-spacing: .3px; }
+      .next-s { font-size: 14px; color: var(--dim); line-height: 1.55; margin-top: 6px; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 14px; margin-top: 22px; }
+      .stat { padding: 16px 18px; }
+      .stat-k { font-family: var(--pixel); font-size: 11px; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--faint); }
+      .stat-v { font-family: var(--sans); font-weight: 700; font-size: 26px; color: var(--ink);
+        margin-top: 6px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+      .stat-v.gold { color: var(--gold); }
+      .stat-v.teal { color: var(--teal); }
+      .stat-s { font-size: 12.5px; color: var(--faint); margin-top: 5px; }
+
+      /* Level progress: a segmented bar rather than a smooth one, to match the
+         blocky rest of the shell. */
+      .lvl { margin-top: 22px; padding: 18px 20px; }
+      .lvl-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+      .lvl-n { font-family: var(--pixel); font-size: 17px; color: var(--ink); letter-spacing: .3px; }
+      .lvl-next { font-size: 12.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+      .lvl-bar { display: flex; gap: 3px; margin-top: 12px; }
+      .lvl-bar i { flex: 1; height: 10px; background: var(--panel-2);
+        border: 1px solid var(--stroke); border-radius: 2px; }
+      .lvl-bar i.on { background: var(--gold); border-color: var(--gold); }
+
+      .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+      @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+      .panel-h { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        margin-bottom: 12px; }
+      .panel-h b { font-family: var(--pixel); font-size: 14px; color: var(--ink); letter-spacing: .5px; }
+      .panel-h a { font-size: 12.5px; color: var(--gold); text-decoration: none; }
+      .panel-h a:hover { text-decoration: underline; }
+      .box { padding: 18px 20px; }
+
+      .plist { display: flex; flex-direction: column; gap: 8px; }
+      .prow { display: flex; align-items: center; gap: 10px; text-decoration: none;
+        padding: 9px 11px; border: 1px solid var(--stroke); border-radius: var(--radius-sm);
+        background: var(--panel-2); }
+      .prow:hover { border-color: var(--gold); }
+      .prow .nm { flex: 1; min-width: 0; color: var(--ink); font-size: 14px;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .tag { font-family: var(--pixel); font-size: 10.5px; letter-spacing: .5px;
+        padding: 3px 7px; border-radius: 3px; border: 1px solid var(--stroke);
+        color: var(--faint); flex-shrink: 0; }
+      .tag.approved { color: var(--teal); border-color: color-mix(in srgb, var(--teal) 45%, var(--stroke)); }
+      .tag.shipped { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 45%, var(--stroke)); }
+      .tag.needs_changes { color: #ff8b8b; border-color: rgba(255,139,139,.4); }
+
+      .nlist { display: flex; flex-direction: column; gap: 10px; }
+      .nrow { display: flex; gap: 10px; font-size: 13.5px; color: var(--dim); line-height: 1.5; }
+      .nrow .dot { width: 6px; height: 6px; border-radius: 2px; background: var(--stroke);
+        margin-top: 6px; flex-shrink: 0; }
+      .nrow.unread .dot { background: var(--gold); }
+      .nrow .when { color: var(--faint); font-size: 12px; white-space: nowrap; }
+      .quiet { color: var(--faint); font-size: 13.5px; }
+
+      .links { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px; margin-top: 16px; }
+      .links a { display: block; padding: 13px 15px; text-decoration: none;
+        border: 1px solid var(--stroke); border-radius: var(--radius-sm); background: var(--panel);
+        transition: border-color .13s ease, background .13s ease; }
+      .links a:hover { border-color: var(--gold); background: var(--panel-2); }
+      .links .lk { font-family: var(--pixel); font-size: 13px; color: var(--ink); letter-spacing: .4px; }
+      .links .ls { font-size: 12px; color: var(--faint); margin-top: 4px; line-height: 1.45; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1 class="page-title" id="hello">OVERVIEW</h1>
+      <div class="page-sub" id="sub">Where you're at, and what to do next.</div>
+
+      <div class="spin" id="loading"></div>
+      <div id="view" hidden>
+        <a class="next card panel" id="next" href="/projects/">
+          <span class="next-txt">
+            <span class="next-k">Next up</span>
+            <span class="next-h" id="next-h"></span>
+            <span class="next-s" id="next-s"></span>
+          </span>
+          <span class="btn" id="next-b">GO</span>
+        </a>
+
+        <div class="stat-row">
+          <div class="stat card panel">
+            <div class="stat-k">Pixels</div>
+            <div class="stat-v gold" id="s-px">—</div>
+            <div class="stat-s" id="s-px-s">to spend in the shop</div>
+          </div>
+          <div class="stat card panel">
+            <div class="stat-k">Restoration Energy</div>
+            <div class="stat-v teal" id="s-re">—</div>
+            <div class="stat-s">lifetime, never spent</div>
+          </div>
+          <div class="stat card panel">
+            <div class="stat-k">Your rate</div>
+            <div class="stat-v" id="s-rate">—</div>
+            <div class="stat-s" id="s-rate-s">per shipped hour</div>
+          </div>
+          <div class="stat card panel">
+            <div class="stat-k">Approved hours</div>
+            <div class="stat-v" id="s-hrs">—</div>
+            <div class="stat-s">signed off by a reviewer</div>
+          </div>
+        </div>
+
+        <div class="lvl card panel">
+          <div class="lvl-top">
+            <span class="lvl-n" id="lvl-n">LEVEL —</span>
+            <span class="lvl-next" id="lvl-next"></span>
+          </div>
+          <div class="lvl-bar" id="lvl-bar"></div>
+        </div>
+
+        <div class="cols">
+          <section class="box card panel">
+            <div class="panel-h"><b>YOUR PROJECTS</b><a href="/projects/">All projects</a></div>
+            <div class="plist" id="plist"></div>
+          </section>
+          <section class="box card panel">
+            <div class="panel-h"><b>RECENT</b></div>
+            <div class="nlist" id="nlist"></div>
+          </section>
+        </div>
+
+        <div class="links">
+          <a href="/docs/first-project"><span class="lk">FIRST PROJECT</span><span class="ls">The whole loop, start to finish</span></a>
+          <a href="/docs/rules"><span class="lk">SHIP RULES</span><span class="ls">What the submit button checks</span></a>
+          <a href="/docs/energy"><span class="lk">RE &amp; LEVELS</span><span class="ls">How your rate actually works</span></a>
+          <a href="/explore/"><span class="lk">EXPLORE</span><span class="ls">See what others shipped</span></a>
+        </div>
+      </div>
+    </main>
+
+    <script src="/pixl.js"></script>
+    <script>
+      Pixl.mountTopbar("home");
+      Pixl.loadWallet();
+      const $ = (id) => document.getElementById(id);
+
+      const STATUS_LABEL = {
+        draft: "DRAFT",
+        shipped: "IN REVIEW",
+        approved: "APPROVED",
+        needs_changes: "NEEDS WORK",
+        rejected: "REJECTED",
+      };
+
+      // What to tell the player to do, in priority order. The first match wins,
+      // so this reads top-down as "the most useful thing right now".
+      function nextStep(projects) {
+        const has = (s) => projects.find((p) => p.status === s);
+        const needsWork = has("needs_changes");
+        if (needsWork)
+          return {
+            h: "Fix up " + needsWork.name,
+            s: "A reviewer sent this one back. Sort what they flagged and ship it again.",
+            href: "/projects/",
+            b: "OPEN",
+          };
+        const draft = has("draft");
+        if (draft)
+          return {
+            h: "Ship " + draft.name,
+            s: "It's still a draft. When it's finished and tracked, send it for review.",
+            href: "/projects/",
+            b: "OPEN",
+          };
+        if (has("shipped"))
+          return {
+            h: "You're in the review queue",
+            s: "Nothing to do but wait. Start the next one while you're here.",
+            href: "/projects/",
+            b: "NEW PROJECT",
+          };
+        if (projects.length === 0)
+          return {
+            h: "Start your first project",
+            s: "Pick something small and real. The docs walk through the whole thing.",
+            href: "/docs/first-project",
+            b: "READ",
+          };
+        return {
+          h: "Start your next project",
+          s: "Everything's approved. Pick up a trial or build something of your own.",
+          href: "/projects/",
+          b: "NEW PROJECT",
+        };
+      }
+
+      function projectRow(p) {
+        const cls = ["approved", "shipped", "needs_changes"].includes(p.status) ? p.status : "";
+        return `
+          <a class="prow" href="/projects/">
+            <span class="nm">${Pixl.esc(p.name || "Untitled")}</span>
+            <span class="tag ${cls}">${STATUS_LABEL[p.status] || String(p.status || "").toUpperCase()}</span>
+          </a>`;
+      }
+
+      function levelBar(re, level, nextAt) {
+        // Fill relative to the current band, not to level 100, so the bar moves
+        // visibly on every ship instead of creeping a pixel at a time.
+        const bands = Pixl.config.economy.levelBands;
+        const band = bands.find((b) => level < b.throughLevel) || bands[bands.length - 1];
+        const prevAt = Math.max(0, nextAt - band.rePerLevel);
+        const span = Math.max(1, nextAt - prevAt);
+        const pct = Math.max(0, Math.min(1, (re - prevAt) / span));
+        const cells = 20;
+        const on = Math.round(pct * cells);
+        return Array.from({ length: cells }, (_, i) => `<i class="${i < on ? "on" : ""}"></i>`).join("");
+      }
+
+      async function boot() {
+        if (!Pixl.hasToken) return;
+        let wallet, projects, notifs;
+        try {
+          [wallet, projects, notifs] = await Promise.all([
+            Pixl.api("/api/profile/wallet"),
+            Pixl.api("/api/projects"),
+            Pixl.api("/api/notifications").catch(() => ({ notifications: [] })),
+          ]);
+        } catch (e) {
+          $("loading").remove();
+          if (e.message !== "unauthorized") Pixl.toast("Couldn't load your overview.", true);
+          return;
+        }
+        $("loading").remove();
+        $("view").hidden = false;
+
+        const list = (projects.projects || []).filter((p) => p.is_owner !== false);
+
+        const step = nextStep(list);
+        $("next-h").textContent = step.h;
+        $("next-s").textContent = step.s;
+        $("next-b").textContent = step.b;
+        $("next").href = step.href;
+
+        $("s-px").textContent = Math.round(wallet.pixels || 0).toLocaleString();
+        $("s-re").textContent = Math.round(wallet.re || 0).toLocaleString();
+        $("s-rate").textContent = Math.round(wallet.pxPerHour || 0) + " px";
+        $("s-rate-s").textContent =
+          "per shipped hour · $" + Number(wallet.usdPerHour || 0).toFixed(2) + "/h";
+        $("s-hrs").textContent = Math.round(wallet.approvedHours || 0).toLocaleString();
+
+        const level = wallet.level || 0;
+        const nextAt = wallet.reForNextLevel || 0;
+        $("lvl-n").textContent = "LEVEL " + level;
+        $("lvl-next").textContent =
+          level >= (wallet.maxLevel || 100)
+            ? "max level"
+            : Math.max(0, Math.ceil(nextAt - (wallet.re || 0))) + " RE to level " + (level + 1);
+        $("lvl-bar").innerHTML = levelBar(wallet.re || 0, level, nextAt);
+
+        $("plist").innerHTML = list.length
+          ? list.slice(0, 5).map(projectRow).join("")
+          : `<div class="quiet">Nothing here yet. Your first project starts on the projects page.</div>`;
+
+        const recent = (notifs.notifications || []).slice(0, 5);
+        $("nlist").innerHTML = recent.length
+          ? recent
+              .map(
+                (n) => `
+                <div class="nrow ${n.read ? "" : "unread"}">
+                  <span class="dot"></span>
+                  <span>${Pixl.esc(n.body || n.title || "")}</span>
+                  <span class="when">${Pixl.timeAgo(n.created_at)}</span>
+                </div>`,
+              )
+              .join("")
+          : `<div class="quiet">Nothing yet. Approvals, invites and orders show up here.</div>`;
+      }
+      boot();
+    </script>
+  </body>
+</html>

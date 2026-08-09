@@ -1,4 +1,60 @@
 const Pixl = (() => {
+  // <pixl-config>
+  // GENERATED from packages/config/pixl.json by `bun run config:sync` - do not edit
+  const config = {
+    "name": "Pixl",
+    "tagline": "A retro 2D world where you level up by building real things",
+    "launchDate": "2026-08-18T00:00:00Z",
+    "hackatimeCutoff": "2026-08-18T00:00:00Z",
+    "urls": {
+      "site": "https://www.pixl.rsvp",
+      "play": "https://play.pixl.rsvp",
+      "docs": "https://pixl.rsvp/docs",
+      "repo": "https://github.com/ridit-jangra/pixl"
+    },
+    "economy": {
+      "pixelValueUsd": 0.07,
+      "sponsorRateUsd": 8.5,
+      "basePayoutUsd": 3.5,
+      "maxPayoutUsd": 6,
+      "reForMaxPayout": 5000,
+      "tierRePerHour": [
+        5,
+        10,
+        15,
+        25
+      ],
+      "tierKickerUsdPerStep": 0.5,
+      "tierKickerHours": 40,
+      "levelBands": [
+        {
+          "throughLevel": 10,
+          "rePerLevel": 10
+        },
+        {
+          "throughLevel": 50,
+          "rePerLevel": 35
+        },
+        {
+          "throughLevel": 100,
+          "rePerLevel": 70
+        }
+      ]
+    },
+    "team": [
+      "Gabin",
+      "Ridit",
+      "Ricky"
+    ]
+  };
+  // </pixl-config>
+
+  // Starting pixels-per-hour: the payout floor, before any Restoration Energy.
+  // Quoted in the onboarding copy, which is why it's derived rather than typed
+  // out - the rate has moved once already and the old "50 pixels" was left
+  // stranded in three places.
+  const BASE_PX_PER_HOUR = Math.round(config.economy.basePayoutUsd / config.economy.pixelValueUsd);
+
   // play.pixl.rsvp is the raw game origin; the canonical host is the apex
   // pixl.rsvp (which proxies these same pages). Bounce direct visitors to the
   // apex so every link lives on one host. This is client-side and host-keyed, so
@@ -149,37 +205,85 @@ const Pixl = (() => {
     return json.url;
   }
 
-  const PAGES = [
-    ["docs", "DOCS"],
-    ["shop", "SHOP"],
-    ["orders", "ORDERS"],
-    ["refers", "REFERS"],
-    ["collectibles", "COLLECT"],
-    // VAULT and QUESTS are hidden from the dash for now — not ready for players.
-    // Re-enable when they are.
-    // ["vault", "VAULT"],
-    ["explore", "EXPLORE"],
-    // ["quests", "QUESTS"],
-    // STORY (The Chronicle) is disabled in the dash for now — the storyline is
-    // surfaced through community goals instead. Re-enable when it's ready.
-    // ["timeline", "STORY"],
-    ["projects", "PROJECTS"],
-    ["report", "REPORT"],
-    ["account", "ACCOUNT"],
+  // Grouped into little labeled shelves instead of one flat list — reads more
+  // like a game menu ("PLAY" / "ECONOMY" / "YOU") than a nav dump. Mobile
+  // collapses the groups back into one row (see .nav-group in pixl.css).
+  const NAV_GROUPS = [
+    {
+      label: "PLAY",
+      items: [
+        ["home", "OVERVIEW"],
+        ["docs", "DOCS"],
+        ["explore", "EXPLORE"],
+        ["ideas", "IDEAS"],
+        // VAULT and QUESTS are hidden from the dash for now — not ready for
+        // players. Re-enable when they are.
+        // ["vault", "VAULT"],
+        // ["quests", "QUESTS"],
+        // STORY (The Chronicle) is disabled in the dash for now — the
+        // storyline is surfaced through community goals instead. Re-enable
+        // when it's ready.
+        // ["timeline", "STORY"],
+        ["projects", "PROJECTS"],
+      ],
+    },
+    {
+      label: "ECONOMY",
+      items: [
+        ["shop", "SHOP"],
+        ["orders", "ORDERS"],
+        ["collectibles", "COLLECT"],
+        ["refers", "REFERS"],
+      ],
+    },
+    {
+      label: "YOU",
+      items: [
+        ["report", "REPORT"],
+        ["account", "ACCOUNT"],
+      ],
+    },
   ];
 
+  // What the mobile dock shows without opening the MORE sheet. Four items plus
+  // MORE fits a phone row at a readable size; the full ten did not.
+  const MOBILE_PRIMARY = ["home", "projects", "shop", "explore"];
+
   // Small inline pixel-art glyphs (no image assets) for the sidebar nav.
+  //
+  // All ten are whole-pixel <rect>s on a 16x16 grid, so they stay crisp at the
+  // sidebar's small size and match the blocky HELP/SUN/MOON glyphs below.
+  // Everything reads from the silhouette and the gaps between rects — never
+  // paint "detail" on top of a filled shape, since it's all one currentColor
+  // and the detail just disappears into the fill.
   const ICONS = {
-    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 3h5c.6 0 1 .3 1 .6V14c0-.3-.4-.6-1-.6H2zM14 3H9c-.6 0-1 .3-1 .6V14c0-.3.4-.6 1-.6h5z"/></svg>`,
-    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 5h10l-1 9H4z"/><path d="M6 3h4v1H6z"/><rect x="6" y="4" width="1" height="1.6"/><rect x="9" y="4" width="1" height="1.6"/></svg>`,
-    orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2h9l3 3v9H2z"/><rect x="4" y="6" width="8" height="1.4"/><rect x="4" y="9" width="8" height="1.4"/><rect x="4" y="12" width="5" height="1.4"/></svg>`,
-    refers: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="1" y="3" width="5" height="5" rx="1"/><rect x="10" y="8" width="5" height="5" rx="1"/><rect x="6" y="5" width="3" height="1.5"/><rect x="7.5" y="6" width="1.5" height="3"/></svg>`,
-    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l2 4 4 .5-3 3 .8 4L8 14.5 4.2 12.5 5 8.5 2 5.5 6 5z"/></svg>`,
-    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l1.6 4.4L14 7l-4.4 1.6L8 13l-1.6-4.4L2 7l4.4-1.6z"/></svg>`,
-    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>`,
-    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2h1.5v12H4z"/><path d="M5.5 2H14l-2 3 2 3H5.5z"/></svg>`,
-    account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5v.5H2z"/></svg>`,
+    // house: roof over a body with a doorway punched out of the bottom
+    home: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="7" y="1" width="2" height="2"/><rect x="5" y="3" width="6" height="2"/><rect x="3" y="5" width="10" height="2"/><rect x="3" y="7" width="3" height="7"/><rect x="10" y="7" width="3" height="7"/><rect x="6" y="7" width="4" height="2"/></svg>`,
+    // open book: two pages split by a full-height gutter, bound at the bottom
+    docs: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="4" width="5" height="8"/><rect x="9" y="4" width="5" height="8"/><rect x="2" y="12" width="12" height="2"/></svg>`,
+    // shopping bag: square body under an arched handle (the old one tapered,
+    // which read as a trash can)
+    shop: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="1" width="6" height="2"/><rect x="5" y="3" width="2" height="2"/><rect x="9" y="3" width="2" height="2"/><rect x="3" y="5" width="10" height="9"/></svg>`,
+    // receipt: hollow frame so the two ruled lines inside actually show
+    orders: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="10" height="2"/><rect x="3" y="12" width="10" height="2"/><rect x="3" y="2" width="2" height="12"/><rect x="11" y="2" width="2" height="12"/><rect x="6" y="6" width="4" height="2"/><rect x="6" y="9" width="4" height="2"/></svg>`,
+    // person + plus: "bring a friend"
+    refers: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="4" height="4"/><rect x="1" y="8" width="8" height="6"/><rect x="9" y="4" width="6" height="2"/><rect x="11" y="2" width="2" height="6"/></svg>`,
+    // gem, stepped down to a point
+    collectibles: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="8" height="2"/><rect x="2" y="5" width="12" height="2"/><rect x="4" y="7" width="8" height="2"/><rect x="6" y="9" width="4" height="2"/><rect x="7" y="11" width="2" height="2"/></svg>`,
+    // compass: octagon ring around a hub (a diagonal needle just collided with
+    // the ring and turned to mush at this size)
+    explore: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="2"/><rect x="3" y="4" width="2" height="2"/><rect x="11" y="4" width="2" height="2"/><rect x="2" y="6" width="2" height="4"/><rect x="12" y="6" width="2" height="4"/><rect x="3" y="10" width="2" height="2"/><rect x="11" y="10" width="2" height="2"/><rect x="5" y="12" width="6" height="2"/><rect x="7" y="7" width="2" height="2"/></svg>`,
+    // lightbulb, bulb on top and screw base below (the old one was upside down)
+    ideas: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="1" width="6" height="1"/><rect x="4" y="2" width="8" height="6"/><rect x="5" y="8" width="6" height="1"/><rect x="6" y="10" width="4" height="2"/><rect x="6" y="13" width="4" height="2"/></svg>`,
+    // app window with a title bar, hollow inside
+    projects: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="3" width="12" height="2"/><rect x="2" y="5" width="2" height="8"/><rect x="12" y="5" width="2" height="8"/><rect x="2" y="11" width="12" height="2"/></svg>`,
+    // flag on a pole
+    report: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="2" height="12"/><rect x="5" y="3" width="8" height="6"/></svg>`,
+    // head and shoulders
+    account: `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="6" height="5"/><rect x="3" y="9" width="10" height="5"/></svg>`,
   };
+  // Three-by-three grid, the "more" affordance on the mobile dock.
+  const MORE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="2" y="2" width="3" height="3"/><rect x="7" y="2" width="3" height="3"/><rect x="12" y="2" width="2" height="3"/><rect x="2" y="7" width="3" height="3"/><rect x="7" y="7" width="3" height="3"/><rect x="12" y="7" width="2" height="3"/><rect x="2" y="12" width="3" height="2"/><rect x="7" y="12" width="3" height="2"/><rect x="12" y="12" width="2" height="2"/></svg>`;
   // Teal energy shard — the Restoration Energy motif, reused in the top rail.
   const RE_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 1l4 6-4 8-4-8z"/></svg>`;
   // Blocky pixel-art glyphs for the top-rail controls (help + theme toggle),
@@ -189,9 +293,35 @@ const Pixl = (() => {
   const MOON_ICON = `<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="5" y="2" width="2" height="1"/><rect x="4" y="3" width="3" height="1"/><rect x="3" y="4" width="3" height="1"/><rect x="2" y="5" width="4" height="1"/><rect x="2" y="6" width="5" height="1"/><rect x="2" y="7" width="5" height="1"/><rect x="2" y="8" width="5" height="1"/><rect x="2" y="9" width="6" height="1"/><rect x="2" y="10" width="8" height="1"/><rect x="3" y="11" width="10" height="1"/><rect x="4" y="12" width="8" height="1"/><rect x="5" y="13" width="6" height="1"/></svg>`;
 
   function mountTopbar(active) {
-    const nav = PAGES.map(([slug, label]) =>
-      `<a href="/${slug}/" class="${slug === active ? "active" : ""}">${ICONS[slug] || ""}<span>${label}</span></a>`,
+    const navLink = (slug, label, extra) =>
+      `<a href="/${slug}/" class="${slug === active ? "active" : ""}${extra ? " " + extra : ""}"><span class="ic">${ICONS[slug] || ""}</span><span>${label}</span></a>`;
+    const nav = NAV_GROUPS.map(
+      (group) => `
+        <div class="nav-group">
+          <div class="nav-label">${group.label}</div>
+          ${group.items
+            .map(([slug, label]) =>
+              navLink(slug, label, MOBILE_PRIMARY.includes(slug) ? "" : "secondary"),
+            )
+            .join("")}
+        </div>`,
     ).join("");
+    // The mobile dock is one 60px row, so it only carries MOBILE_PRIMARY plus a
+    // MORE button; everything else lives in a sheet that slides up from it.
+    // These are a second copy of the same links rather than the same nodes
+    // moved around, since the dock and the sheet are visible at once.
+    const overflow = NAV_GROUPS.flatMap((g) =>
+      g.items.filter(([slug]) => !MOBILE_PRIMARY.includes(slug)),
+    );
+    const sheet = `
+      <button class="nav-more" id="pixl-more" type="button" aria-expanded="false" aria-controls="pixl-sheet">
+        <span class="ic">${MORE_ICON}</span><span>MORE</span>
+      </button>
+      <div class="nav-sheet" id="pixl-sheet" hidden>
+        <div class="nav-sheet-grid">
+          ${overflow.map(([slug, label]) => navLink(slug, label)).join("")}
+        </div>
+      </div>`;
     // Signed-out visitors (e.g. someone reading the public docs) get a trimmed
     // rail: no wallet, no tour replay, and the CTA invites them into the game.
     const themeBtn = `<button class="theme-toggle" id="pixl-theme-btn" type="button" title="Toggle theme" aria-label="Toggle theme"></button>`;
@@ -210,18 +340,39 @@ const Pixl = (() => {
           ${themeBtn}`
       : `<a class="btn" href="${GAME}">ENTER THE GAME</a>${themeBtn}`;
     const foot = token
-      ? `<a class="btn dark" href="${GAME}">◄ BACK TO GAME</a>`
+      ? `<a class="btn dark back-to-game" href="${GAME}"><span class="arrow">◄</span> BACK TO GAME</a>`
       : `<a class="btn" href="${GAME}">ENTER GAME</a>`;
     document.body.classList.add("has-sidebar");
     document.body.insertAdjacentHTML("afterbegin", `
       <aside class="sidebar">
-        <a class="sb-logo" href="${GAME}" title="Back to the game"><img src="/index.icon.png" alt=""><span>PI<span>XL</span></span></a>
-        <nav class="nav">${nav}</nav>
+        <a class="sb-logo" href="${GAME}" title="Back to the game"><span class="sb-logo-glow"></span><img src="/index.icon.png" alt=""><span>PI<span>XL</span></span></a>
+        <nav class="nav">${nav}${sheet}</nav>
         <div class="sb-foot">${foot}</div>
       </aside>
       <div class="toprail">${rail}</div>`);
     const help = document.getElementById("pixl-help-btn");
     if (help) help.onclick = () => runTour();
+    const more = document.getElementById("pixl-more");
+    const sheetEl = document.getElementById("pixl-sheet");
+    if (more && sheetEl) {
+      const setOpen = (open) => {
+        sheetEl.hidden = !open;
+        more.classList.toggle("open", open);
+        more.setAttribute("aria-expanded", String(open));
+      };
+      more.onclick = (e) => {
+        e.stopPropagation();
+        setOpen(sheetEl.hidden);
+      };
+      // Any tap outside the sheet closes it, including on a link inside it
+      // (which navigates anyway).
+      document.addEventListener("click", (e) => {
+        if (!sheetEl.hidden && !sheetEl.contains(e.target)) setOpen(false);
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !sheetEl.hidden) setOpen(false);
+      });
+    }
     syncThemeToggles();
     // Auto-run the walkthrough once, on whichever dash page a newcomer lands on.
     maybeOnboard();
@@ -236,7 +387,10 @@ const Pixl = (() => {
       const w = await api("/api/profile/wallet");
       if (!w.ok) return null;
       el.querySelector(".px").textContent = Math.round(w.pixels).toLocaleString();
-      el.querySelector(".lv").textContent = `LVL ${w.level} · ${w.pxPerHour} px/h`;
+      // pxPerHour is a continuous ramp off RE now, not a step table, so it
+      // arrives fractional - round it for display.
+      el.querySelector(".lv").textContent =
+        `LVL ${w.level} · ${Math.round(w.re ?? 0).toLocaleString()} RE · ${Math.round(w.pxPerHour)} px/h`;
       return w;
     } catch {
       return null;
@@ -461,7 +615,7 @@ const Pixl = (() => {
     {
       target: "#ht-connect",
       title: "Track your time with Hackatime",
-      body: "This is the important one. <b>Hackatime</b> logs the hours you spend building — and every shipped hour becomes <b>50 pixels</b>. Connect it, then tick this project's boxes so your time counts.",
+      body: `This is the important one. <b>Hackatime</b> logs the hours you spend building, and every shipped hour starts at <b>${BASE_PX_PER_HOUR} pixels</b>, climbing as you build up Restoration Energy. Connect it, then tick this project's boxes so your time counts.`,
       extra: { label: "New to Hackatime? Read this", href: "/docs/hackatime" },
     },
     {
@@ -849,5 +1003,5 @@ const Pixl = (() => {
     document.addEventListener("DOMContentLoaded", gate);
   }
 
-  return { API, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
+  return { API, config, token, api, apiUrl, send, upload, esc, bbcode, bbstrip, markdown, toast, mountTopbar, loadWallet, loadRestoration, timeAgo, countdown, hours, hasToken: !!token, runTour, maybeOnboard, ONBOARDING_STEPS, confirm: confirmDialog, toggleTheme };
 })();

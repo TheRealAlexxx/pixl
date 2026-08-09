@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireSuper } from "@/lib/guard";
-import { listShopOrders, ORDER_STAGES, type ShopOrderRow, type OrderStatus } from "@/lib/db";
+import { requireFulfiller } from "@/lib/guard";
+import { listShopOrders, listFulfillers, ORDER_STAGES, type ShopOrderRow, type OrderStatus } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
-import { claimOrder, markOrderCredited, shipOrder, markOrderDone, reassignOrder, cancelOrder } from "@/app/actions";
+import {
+  claimOrder,
+  markOrderCredited,
+  shipOrder,
+  markOrderDone,
+  reassignOrder,
+  cancelOrder,
+  addFulfillerAction,
+  removeFulfillerAction,
+} from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,22 +43,74 @@ function slackLink(id: string): string {
   return `https://slack.com/app_redirect?channel=${id}`;
 }
 
-const TAB_KEYS = ["pending", "ordered", "credited", "shipped", "done", "cancelled", "all"] as const;
+const TAB_KEYS = ["pending", "ordered", "credited", "shipped", "done", "cancelled", "all", "fulfillers"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
+
+async function FulfillerManager() {
+  const fulfillers = await listFulfillers();
+  const handles = await slackHandles(fulfillers.map((f) => f.slack_user_id));
+  return (
+    <Card className="p-5 mb-6">
+      <div className="text-sm font-semibold mb-1">Fulfillers</div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Fulfillers (and owners) can claim orders and mark them credited/shipped. Marking an order
+        done, reassigning it, and cancel &amp; refund stay owner-only.
+      </p>
+      <form action={addFulfillerAction} className="flex flex-wrap gap-2 mb-3">
+        <Input
+          name="slackId"
+          placeholder="Slack user ID (U0…)"
+          className="max-w-56 text-sm font-mono"
+          required
+        />
+        <PendingButton pendingText="Adding…">Add fulfiller</PendingButton>
+      </form>
+      {fulfillers.length === 0 ? (
+        <div className="text-xs text-muted-foreground">No fulfillers yet.</div>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {fulfillers.map((f) => (
+            <li
+              key={f.slack_user_id}
+              className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1 text-sm"
+            >
+              <Link href={`/fulfillers/${f.slack_user_id}`} className="font-medium hover:text-brand">
+                {handles.get(f.slack_user_id) ?? `@${f.slack_user_id}`}
+              </Link>
+              <span className="font-mono text-xs text-muted-foreground">{f.slack_user_id}</span>
+              <form action={removeFulfillerAction}>
+                <input type="hidden" name="slackId" value={f.slack_user_id} />
+                <button
+                  type="submit"
+                  className="text-xs text-destructive hover:underline"
+                  title="Remove fulfiller"
+                >
+                  remove
+                </button>
+              </form>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
 
 export default async function FulfillmentPage({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string; mine?: string }>;
 }) {
-  const access = await requireSuper();
-  if (!access.isSuper) redirect("/");
+  const access = await requireFulfiller();
   const me = access.session.slackId;
   const { status, mine } = await searchParams;
   const active: TabKey = TAB_KEYS.includes(status as TabKey) ? (status as TabKey) : "pending";
   const mineOnly = mine === "1";
+  const showingFulfillers = active === "fulfillers";
 
-  let orders = await listShopOrders(active === "all" ? undefined : active, 500);
+  let orders = showingFulfillers
+    ? []
+    : await listShopOrders(active === "all" ? undefined : active, 500);
   if (mineOnly) orders = orders.filter((o) => o.claimed_by_slack === me);
   const pendingCount =
     active === "pending" && !mineOnly
@@ -66,12 +126,13 @@ export default async function FulfillmentPage({
     { key: "done", label: "Done" },
     { key: "cancelled", label: "Cancelled" },
     { key: "all", label: "All" },
+    ...(access.isSuper ? [{ key: "fulfillers" as TabKey, label: "Fulfillers" }] : []),
   ];
 
   const linkFor = (key: TabKey) => {
     const params = new URLSearchParams();
     if (key !== "pending") params.set("status", key);
-    if (mineOnly) params.set("mine", "1");
+    if (mineOnly && key !== "fulfillers") params.set("mine", "1");
     const qs = params.toString();
     return qs ? `/fulfillment?${qs}` : "/fulfillment";
   };
@@ -109,17 +170,21 @@ export default async function FulfillmentPage({
             </Button>
           ))}
         </div>
-        <Button
-          asChild
-          variant={mineOnly ? "default" : "outline"}
-          size="sm"
-          className={mineOnly ? "bg-brand text-white hover:bg-brand/90 hover:text-white border-transparent" : ""}
-        >
-          <Link href={mineToggleLink()}>{mineOnly ? "My queue ✓" : "My queue"}</Link>
-        </Button>
+        {!showingFulfillers && (
+          <Button
+            asChild
+            variant={mineOnly ? "default" : "outline"}
+            size="sm"
+            className={mineOnly ? "bg-brand text-white hover:bg-brand/90 hover:text-white border-transparent" : ""}
+          >
+            <Link href={mineToggleLink()}>{mineOnly ? "My queue ✓" : "My queue"}</Link>
+          </Button>
+        )}
       </div>
 
-      {orders.length === 0 ? (
+      {showingFulfillers ? (
+        <FulfillerManager />
+      ) : orders.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground text-sm">
           {active === "pending"
             ? "No orders waiting to be claimed. Nice and clear."
@@ -135,6 +200,7 @@ export default async function FulfillmentPage({
               order={o}
               handle={o.player_slack ? handles.get(o.player_slack) : undefined}
               mine={o.claimed_by_slack === me}
+              isSuper={access.isSuper}
             />
           ))}
         </div>
@@ -173,7 +239,17 @@ function fmtDate(iso: string | null): string {
   return iso ? new Date(iso).toLocaleDateString() : "";
 }
 
-function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: string; mine: boolean }) {
+function OrderCard({
+  order: o,
+  handle,
+  mine,
+  isSuper,
+}: {
+  order: ShopOrderRow;
+  handle?: string;
+  mine: boolean;
+  isSuper: boolean;
+}) {
   // Terminal orders are read-only; everything else still has an action.
   const actionable = o.status !== "done" && o.status !== "cancelled";
   return (
@@ -226,6 +302,11 @@ function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: s
               Tracking: <span className="text-foreground font-mono">{o.tracking}</span> · DM&apos;d to buyer
             </div>
           )}
+          {o.buyer_note && (
+            <div className="text-xs mt-1 rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1">
+              <span className="font-semibold">Note from buyer:</span> {o.buyer_note}
+            </div>
+          )}
           {o.status === "cancelled" && o.note && (
             <div className="text-xs text-muted-foreground mt-1">{o.note}</div>
           )}
@@ -233,13 +314,23 @@ function OrderCard({ order: o, handle, mine }: { order: ShopOrderRow; handle?: s
         <StageSteps status={o.status} />
       </div>
 
-      {actionable && <OrderActions order={o} mine={mine} />}
+      {actionable && <OrderActions order={o} mine={mine} isSuper={isSuper} />}
     </Card>
   );
 }
 
-function OrderActions({ order: o, mine }: { order: ShopOrderRow; mine: boolean }) {
-  const cancelForm = (
+function OrderActions({
+  order: o,
+  mine,
+  isSuper,
+}: {
+  order: ShopOrderRow;
+  mine: boolean;
+  isSuper: boolean;
+}) {
+  // Reassign, cancel/refund, and the final "mark done" close stay owner-only ,
+  // fulfillers can work a claimed order but not override or refund one.
+  const cancelForm = isSuper ? (
     <form action={cancelOrder}>
       <input type="hidden" name="id" value={o.id} />
       <PendingButton
@@ -251,10 +342,11 @@ function OrderActions({ order: o, mine }: { order: ShopOrderRow; mine: boolean }
         Cancel &amp; refund
       </PendingButton>
     </form>
-  );
+  ) : null;
 
   // Shipped: the only thing left is the final close, which any super can do.
   if (o.status === "shipped") {
+    if (!isSuper) return null;
     return (
       <div className="flex items-end gap-2 flex-wrap">
         <form action={markOrderDone}>
@@ -269,6 +361,7 @@ function OrderActions({ order: o, mine }: { order: ShopOrderRow; mine: boolean }
 
   // Claimed by someone else: offer to take it over rather than acting on their queue.
   if (!mine && o.status !== "pending") {
+    if (!isSuper) return null;
     return (
       <div className="flex items-end gap-2 flex-wrap">
         <form action={reassignOrder}>

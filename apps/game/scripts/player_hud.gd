@@ -199,11 +199,16 @@ func _build_ui() -> void:
 	chip.theme_type_variation = &"HudPanel"
 	chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	chip.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if _in_gameplay() and not global.ui_blocked() and not ChatHud.is_typing() and not Dialogue.is_open:
+				_toggle_list())
 	column.add_child(chip)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 7)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.add_child(row)
 
 	var dot := ColorRect.new()
@@ -216,17 +221,25 @@ func _build_ui() -> void:
 	_online_label = Label.new()
 	_ssize(_online_label, 16)
 	_online_label.text = "1 online  [Tab]"
+	_online_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(_online_label)
 
 	var friends_chip := PanelContainer.new()
 	friends_chip.theme_type_variation = &"HudPanel"
 	friends_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	friends_chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	friends_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	friends_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	friends_chip.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if FriendsHud.is_open():
+				FriendsHud.close()
+			elif not ChatHud.is_typing() and not Dialogue.is_open and not global.ui_blocked():
+				FriendsHud.open())
 	column.add_child(friends_chip)
 
 	var friends_row := HBoxContainer.new()
 	friends_row.add_theme_constant_override("separation", 7)
+	friends_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	friends_chip.add_child(friends_row)
 
 	var friends_dot := ColorRect.new()
@@ -239,17 +252,23 @@ func _build_ui() -> void:
 	var friends_label := Label.new()
 	_ssize(friends_label, 16)
 	friends_label.text = "Friends  [F]"
+	friends_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	friends_row.add_child(friends_label)
 
 	var shop_chip := PanelContainer.new()
 	shop_chip.theme_type_variation = &"HudPanel"
 	shop_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	shop_chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	shop_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shop_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	shop_chip.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if _in_gameplay() and not global.ui_blocked() and not ChatHud.is_typing() and not Dialogue.is_open:
+				WebPages.open("shop"))
 	column.add_child(shop_chip)
 
 	var shop_row := HBoxContainer.new()
 	shop_row.add_theme_constant_override("separation", 7)
+	shop_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shop_chip.add_child(shop_row)
 
 	var shop_dot := ColorRect.new()
@@ -262,17 +281,23 @@ func _build_ui() -> void:
 	var shop_label := Label.new()
 	_ssize(shop_label, 16)
 	shop_label.text = "Shop  [B]"
+	shop_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	shop_row.add_child(shop_label)
 
 	var quest_chip := PanelContainer.new()
 	quest_chip.theme_type_variation = &"HudPanel"
 	quest_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	quest_chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	quest_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	quest_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	quest_chip.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if _in_gameplay() and not global.ui_blocked() and not ChatHud.is_typing() and not Dialogue.is_open:
+				WebPages.open("quests"))
 	column.add_child(quest_chip)
 
 	var quest_row := HBoxContainer.new()
 	quest_row.add_theme_constant_override("separation", 7)
+	quest_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	quest_chip.add_child(quest_row)
 
 	var quest_dot := ColorRect.new()
@@ -285,17 +310,25 @@ func _build_ui() -> void:
 	var quest_label := Label.new()
 	_ssize(quest_label, 16)
 	quest_label.text = "Trials  [J]"
+	quest_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	quest_row.add_child(quest_label)
 
 	var inbox_chip := PanelContainer.new()
 	inbox_chip.theme_type_variation = &"HudPanel"
 	inbox_chip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	inbox_chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	inbox_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inbox_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	inbox_chip.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			if InboxHud.is_open():
+				InboxHud.close()
+			elif not ChatHud.is_typing() and not Dialogue.is_open and not global.ui_blocked():
+				InboxHud.open())
 	column.add_child(inbox_chip)
 
 	var inbox_row := HBoxContainer.new()
 	inbox_row.add_theme_constant_override("separation", 7)
+	inbox_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inbox_chip.add_child(inbox_row)
 
 	_inbox_dot = ColorRect.new()
@@ -306,6 +339,7 @@ func _build_ui() -> void:
 
 	_inbox_label = Label.new()
 	_ssize(_inbox_label, 16)
+	_inbox_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	inbox_row.add_child(_inbox_label)
 
 	_update_inbox(InboxHud.unread_count)
@@ -499,7 +533,15 @@ func _fetch_wallet() -> void:
 		var json = JSON.parse_string(data.get_string_from_utf8()) if data.size() > 0 else null
 		if typeof(json) != TYPE_DICTIONARY or not json.get("ok", false):
 			return
-		_set_wallet(float(json.get("pixels", 0)), float(json.get("approvedHours", 0)), int(json.get("level", 0)), int(json.get("pxPerHour", 0)))
+		# pxPerHour ramps continuously off RE, so it arrives fractional - round
+		# rather than let int() truncate 65.7 down to 65.
+		_set_wallet(
+			float(json.get("pixels", 0)),
+			float(json.get("approvedHours", 0)),
+			int(json.get("level", 0)),
+			int(round(float(json.get("pxPerHour", 0)))),
+			float(json.get("re", 0)),
+		)
 	)
 	req.request(url, PackedStringArray(), HTTPClient.METHOD_GET)
 
@@ -541,12 +583,14 @@ func _set_events(events: Array) -> void:
 	_event_label.text = "EVENT  " + "  ·  ".join(parts)
 	_event_card.visible = true
 
-func _set_wallet(pixels: float, hours: float, level: int = 0, px_rate: int = 0) -> void:
+func _set_wallet(pixels: float, hours: float, level: int = 0, px_rate: int = 0, re: float = 0.0) -> void:
 	if _pixels_label == null:
 		return
 	_pixels_label.text = "%s pixels" % _fmt_amount(pixels)
 	if px_rate > 0:
-		_hours_label.text = "%sh · LVL %d · %d px/h" % [_fmt_amount(hours), level, px_rate]
+		_hours_label.text = "%sh · LVL %d · %s RE · %d px/h" % [
+			_fmt_amount(hours), level, _fmt_amount(re), px_rate,
+		]
 	else:
 		_hours_label.text = "%sh approved" % _fmt_amount(hours)
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePerm, canView } from "@/lib/guard";
-import { getProject } from "@/lib/db";
+import { getProject, listCollaboratorsForProject } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
 import {
   reReviewProject,
@@ -63,6 +63,7 @@ export default async function ProjectPage({
   const totalHours = hackatimeHours > 0 ? hackatimeHours : journalHours;
   const commits = await fetchCommits(project.repo_url);
   const ownerHandle = await slackHandle(project.users?.slack_id);
+  const collaborators = await listCollaboratorsForProject(projectId);
   // Banning / archiving / rejecting / sending back is an admin action ,
   // reviewers only grade. Gated on the "ban" permission (owners + sub-admins).
   const canModerate = canView(access, ["ban"]);
@@ -125,6 +126,29 @@ export default async function ProjectPage({
                 project.user_id
               )}
             </span>
+            {collaborators.length > 0 && (
+              <span>
+                with{" "}
+                {collaborators.map((c, i) => (
+                  <span key={c.id}>
+                    {i > 0 && ", "}
+                    {c.users ? (
+                      <Link
+                        href={`/players/${c.user_id}`}
+                        className="font-bold hover:text-brand"
+                      >
+                        {c.users.real_name || c.users.display_name || c.users.slack_id}
+                      </Link>
+                    ) : (
+                      c.user_id
+                    )}
+                    {c.status === "pending" && (
+                      <span className="text-muted-foreground"> (invited)</span>
+                    )}
+                  </span>
+                ))}
+              </span>
+            )}
             <span>created {new Date(project.created_at).toLocaleString()}</span>
             {project.shipped_at && (
               <span>

@@ -1,0 +1,210 @@
+import { Router } from "express";
+import { verifySessionToken } from "../auth/session.js";
+import { supabase } from "../db/client.js";
+import { containsBlocked } from "../moderation.js";
+
+const router = Router();
+
+// Batch vote counts + this viewer's own votes for a set of ideas — same
+// shape as explore.ts's project vote batching.
+async function voteInfo(ideaIds: number[], viewerId: string) {
+  const upCounts = new Map<number, number>();
+  const myUp = new Set<number>();
+  const downCounts = new Map<number, number>();
+  const myDown = new Set<number>();
+  if (ideaIds.length > 0) {
+    const [{ data: ups }, { data: downs }] = await Promise.all([
+      supabase.from("idea_upvotes").select("idea_id, voter_id").in("idea_id", ideaIds),
+      supabase.from("idea_downvotes").select("idea_id, voter_id").in("idea_id", ideaIds),
+    ]);
+    for (const u of ups ?? []) {
+      const id = u.idea_id as number;
+      upCounts.set(id, (upCounts.get(id) ?? 0) + 1);
+      if (u.voter_id === viewerId) myUp.add(id);
+    }
+    for (const d of downs ?? []) {
+      const id = d.idea_id as number;
+      downCounts.set(id, (downCounts.get(id) ?? 0) + 1);
+      if (d.voter_id === viewerId) myDown.add(id);
+    }
+  }
+  return { upCounts, myUp, downCounts, myDown };
+}
+
+// Browse ideas, newest or top first, with an optional title search.
+router.get("/api/ideas", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  const sort = req.query.sort === "top" ? "top" : "new";
+  let query = supabase
+    .from("ideas")
+    .select("*")
+    .is("banned_at", null)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (q) query = query.ilike("title", `%${q}%`);
+  const { data: ideas, error } = await query;
+  if (error) {
+    console.error("[ideas] list failed", error);
+    return res.status(500).json({ ok: false });
+  }
+
+  const uids = [...new Set((ideas ?? []).map((i) => i.user_id as string))];
+  const names = new Map<string, string>();
+  if (uids.length > 0) {
+    const { data: users } = await supabase.from("users").select("id, display_name").in("id", uids);
+    for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
+  }
+
+  const ids = (ideas ?? []).map((i) => i.id as number);
+  const { upCounts, myUp, downCounts, myDown } = await voteInfo(ids, session.userId);
+
+  let out = (ideas ?? []).map((i) => ({
+    ...i,
+    author_name: names.get(i.user_id as string) ?? "?",
+    is_mine: i.user_id === session.userId,
+    upvotes: upCounts.get(i.id as number) ?? 0,
+    has_upvoted: myUp.has(i.id as number),
+    downvotes: downCounts.get(i.id as number) ?? 0,
+    has_downvoted: myDown.has(i.id as number),
+  }));
+  if (sort === "top")
+    out = out.sort((a, b) => (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes));
+
+  res.json({ ok: true, ideas: out });
+});
+
+// Post an idea. Instant — no review queue, this is just a prompt board.
+router.post("/api/ideas", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const title = String(req.body?.title ?? "").trim().slice(0, 120);
+  const body = String(req.body?.body ?? "").trim().slice(0, 2000);
+  if (title.length < 3) return res.status(400).json({ ok: false, error: "title_too_short" });
+  if (containsBlocked(title) || containsBlocked(body))
+    return res.status(400).json({ ok: false, error: "blocked_content" });
+
+  const { data, error } = await supabase
+    .from("ideas")
+    .insert({ user_id: session.userId, title, body })
+    .select("*")
+    .single();
+  if (error || !data) {
+    console.error("[ideas] insert failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, idea: data });
+});
+
+// Delete one of the user's own ideas.
+router.delete("/api/ideas/:id", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
+
+  const { error } = await supabase
+    .from("ideas")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", session.userId);
+  if (error) {
+    console.error("[ideas] delete failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true });
+});
+
+// Permanent upvote on an idea. One per voter, never taken back, can't vote
+// your own idea — same rules as project upvotes.
+router.post("/api/ideas/:id/upvote", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "bad_id" });
+
+  const { data: idea } = await supabase
+    .from("ideas")
+    .select("id, user_id")
+    .eq("id", id)
+    .is("banned_at", null)
+    .maybeSingle();
+  if (!idea) return res.status(404).json({ ok: false, error: "not_found" });
+  if (idea.user_id === session.userId)
+    return res.status(400).json({ ok: false, error: "own_idea" });
+
+  const { data: existingDownvote } = await supabase
+    .from("idea_downvotes")
+    .select("id")
+    .eq("idea_id", id)
+    .eq("voter_id", session.userId)
+    .maybeSingle();
+  if (existingDownvote) return res.status(400).json({ ok: false, error: "already_downvoted" });
+
+  const { error } = await supabase
+    .from("idea_upvotes")
+    .insert({ idea_id: id, voter_id: session.userId });
+  if (error && !String(error.code).startsWith("23")) {
+    console.error("[ideas] upvote insert failed", error);
+    return res.status(500).json({ ok: false });
+  }
+
+  const { count } = await supabase
+    .from("idea_upvotes")
+    .select("id", { count: "exact", head: true })
+    .eq("idea_id", id);
+  res.json({ ok: true, upvotes: count ?? 0, has_upvoted: true });
+});
+
+// Permanent downvote on an idea — same rules as upvote, opposite direction.
+router.post("/api/ideas/:id/downvote", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "bad_id" });
+
+  const { data: idea } = await supabase
+    .from("ideas")
+    .select("id, user_id")
+    .eq("id", id)
+    .is("banned_at", null)
+    .maybeSingle();
+  if (!idea) return res.status(404).json({ ok: false, error: "not_found" });
+  if (idea.user_id === session.userId)
+    return res.status(400).json({ ok: false, error: "own_idea" });
+
+  const { data: existingUpvote } = await supabase
+    .from("idea_upvotes")
+    .select("id")
+    .eq("idea_id", id)
+    .eq("voter_id", session.userId)
+    .maybeSingle();
+  if (existingUpvote) return res.status(400).json({ ok: false, error: "already_upvoted" });
+
+  const { error } = await supabase
+    .from("idea_downvotes")
+    .insert({ idea_id: id, voter_id: session.userId });
+  if (error && !String(error.code).startsWith("23")) {
+    console.error("[ideas] downvote insert failed", error);
+    return res.status(500).json({ ok: false });
+  }
+
+  const { count } = await supabase
+    .from("idea_downvotes")
+    .select("id", { count: "exact", head: true })
+    .eq("idea_id", id);
+  res.json({ ok: true, downvotes: count ?? 0, has_downvoted: true });
+});
+
+export default router;

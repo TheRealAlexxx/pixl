@@ -6,18 +6,18 @@ Thanks for wanting to help. Here's how things work.
 
 1. Fork the repo and clone it locally
 2. Copy `.env.example` to `.env` and fill in your tokens (you'll need a test Slack workspace)
-3. Run `npm install`
-4. Start the bot with `node index.js` and the dashboard with `node dashboard.js`
+3. Run `bun install`
+4. Start the bot with `bun run dev` (from `apps/pixorpheus`)
 
 You'll need:
 - A Slack app with the right permissions (see the event subscriptions and slash commands listed in the README)
-- A PostgreSQL database (Railway, Neon, or local)
+- A Supabase project (shared with the rest of the monorepo)
 - An OpenRouter API key for AI features
-- Optionally: an Anthropic API key (DMs), a Brave Search key (web search)
+- Optionally: a Brave Search key (web search), a GitHub webhook secret (push/merge notifications)
 
 ## Project Structure
 
-Everything bot-related lives in `index.js`. It's a single file - not ideal architecturally but intentional for simplicity. The dashboard is `dashboard.js`. Both share the same DB.
+Pixorpheus is a TypeScript Bun project, organized by feature under `src/` (tickets, chat, ai, memory, commands, etc — see the Architecture section in the README for the full breakdown). There's no separate dashboard process anymore — helper/admin ticket moderation lives in `apps/dashboard` elsewhere in this monorepo, which calls back into this bot's external API to resolve tickets.
 
 Before touching the ticket system or the AI prompt, read the relevant sections in the README so you understand the full flow.
 

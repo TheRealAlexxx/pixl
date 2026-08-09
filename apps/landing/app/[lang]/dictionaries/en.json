@@ -1,7 +1,17 @@
 {
+  "meta": {
+    "title": "Pixl",
+    "description": "A pixelated YSWS!"
+  },
   "menu": {
-    "testTheGame": "Test the game!",
-    "stillInDev": "still in dev!"
+    "playTheGame": "Play the game!",
+    "language": "Language"
+  },
+  "easterEgg": {
+    "title": "PIXLIFY — secret text converter",
+    "hint": "you found the secret — turn your text into pixl emojis for Slack",
+    "close": "Close",
+    "dialogLabel": "Pixlify converter"
   },
   "hero": {
     "youShip": "You ship",
@@ -14,7 +24,8 @@
     "viewYourRsvp": "view your RSVP",
     "errorNoEmail": "yo, drop your email first 👀",
     "errorInvalidEmail": "that doesn't look like a real email lol",
-    "scrollHint": "keep scrolling"
+    "scrollHint": "keep scrolling",
+    "openDash": "Open your dash"
   },
   "description": {
     "title": "What is Pixl?",
@@ -83,7 +94,7 @@
       },
       {
         "title": "Restoration Energy",
-        "text": "Hours of shipped work convert into Restoration Energy. Keep shipping and it stacks into multipliers on what you earn."
+        "text": "Hours of shipped work convert into Restoration Energy. Keep shipping and it lifts the rate every future hour pays."
       },
       {
         "title": "Community goals",
@@ -218,6 +229,7 @@
     "title": "The Shop",
     "description": "1 hour of work = 50 pixels.",
     "moreComing": "...and even more coming!",
+    "hoursRate": "{lo}h at {loRate}/h → {hi}h at {hiRate}/h",
     "items": [
       {
         "name": "Signed Org Photo",
@@ -499,7 +511,7 @@
       },
       {
         "question": "What's Restoration Energy?",
-        "answer": "It's your XP. Every ship earns Restoration Energy based on how many hours you put in AND how complex the project is, so bigger, harder builds earn more. Every 10 levels bumps your pixel multiplier (starting around 50 px/hr and climbing toward ~79 px/hr, exact rates TBD). The whole community's Restoration Energy also unlocks community goals, like new skins for your in-game house."
+        "answer": "It's the number everything runs on. Every ship earns Restoration Energy based on how many hours you put in AND how complex the project is (reviewers tier it 1 to 4), so bigger, harder builds earn more. Your RE sets your pay rate, which climbs from 50 px/hr to about 86 px/hr as you ship, and your level is a display of the RE you've built up. The whole community's Restoration Energy also unlocks community goals, like new skins for your in-game house."
       },
       {
         "question": "Who is running Pixl?",
@@ -519,6 +531,7 @@
     "partneredWithGithub": "partnered with GitHub to run Summer of Making",
     "hostedWorldsLongest": "hosted the world’s longest hackathon on land",
     "ranCanadasLargest": "ran Canada’s largest high school hackathon",
+    "and": "and",
     "hackClubMotto": "At Hack Club, students aren’t just learning, they’re shipping.",
     "pixl": "Pixl",
     "whatIsPixl": "What is Pixl",

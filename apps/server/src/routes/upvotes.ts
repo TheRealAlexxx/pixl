@@ -51,6 +51,14 @@ router.post("/api/projects/:id/upvote", async (req, res) => {
   if (project.user_id === session.userId)
     return res.status(400).json({ ok: false, error: "own_project" });
 
+  const { data: existingDownvote } = await supabase
+    .from("project_downvotes")
+    .select("id")
+    .eq("project_id", id)
+    .eq("voter_id", session.userId)
+    .maybeSingle();
+  if (existingDownvote) return res.status(400).json({ ok: false, error: "already_downvoted" });
+
   // Permanent + unique(project_id, voter_id): ignore a duplicate rather than 500.
   const { error } = await supabase
     .from("project_upvotes")
@@ -65,6 +73,55 @@ router.post("/api/projects/:id/upvote", async (req, res) => {
     .select("id", { count: "exact", head: true })
     .eq("project_id", id);
   res.json({ ok: true, upvotes: count ?? 0, has_upvoted: true });
+});
+
+// Permanent downvote on an approved project. Same rules as upvote (one per
+// voter, never taken back, can't vote your own project), plus: a voter can't
+// downvote a project they've already upvoted, or upvote one they've already
+// downvoted — only one direction per voter per project. Doesn't touch the
+// upvote currency/balance; it's a signal, not a spend.
+router.post("/api/projects/:id/downvote", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false, error: "bad_id" });
+
+  const { data: project } = await supabase
+    .from("projects")
+    .select("id, user_id, status")
+    .eq("id", id)
+    .is("archived_at", null)
+    .is("banned_at", null)
+    .maybeSingle();
+  if (!project || project.status !== "approved")
+    return res.status(404).json({ ok: false, error: "not_found" });
+  if (project.user_id === session.userId)
+    return res.status(400).json({ ok: false, error: "own_project" });
+
+  const { data: existingUpvote } = await supabase
+    .from("project_upvotes")
+    .select("id")
+    .eq("project_id", id)
+    .eq("voter_id", session.userId)
+    .maybeSingle();
+  if (existingUpvote) return res.status(400).json({ ok: false, error: "already_upvoted" });
+
+  // Permanent + unique(project_id, voter_id): ignore a duplicate rather than 500.
+  const { error } = await supabase
+    .from("project_downvotes")
+    .insert({ project_id: id, voter_id: session.userId });
+  if (error && !String(error.code).startsWith("23")) {
+    console.error("[downvotes] insert failed", error);
+    return res.status(500).json({ ok: false });
+  }
+
+  const { count } = await supabase
+    .from("project_downvotes")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", id);
+  res.json({ ok: true, downvotes: count ?? 0, has_downvoted: true });
 });
 
 // The signed-in player's spendable upvote balance ("upvote account").

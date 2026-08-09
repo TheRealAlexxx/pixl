@@ -7,6 +7,8 @@ import {
   listSecondReviewProjects,
   claimReview,
   turnedNineteenSinceShipping,
+  listCollaboratorsForProject,
+  lifetimeRe,
 } from "@/lib/db";
 import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor, fetchHackatimeReport } from "@/lib/hackatime";
@@ -101,6 +103,30 @@ export default async function ReviewDetail({
   const hackatimeHours = Math.round(((p.hackatime_seconds ?? 0) / 3600) * 10) / 10;
   const hours = Math.round((hackatimeHours + journalHours) * 10) / 10;
   const htPct = hours > 0 ? Math.round((hackatimeHours / hours) * 100) : 0;
+
+  // The RE the player already holds, excluding this project — this is what sets
+  // the rate they'll be paid at, so the reviewer sees it before deciding.
+  const playerReBefore = await lifetimeRe(p.user_id, projectId);
+
+  // Same "hackatime if tracked, else journal" source-of-truth as
+  // claimedHoursFor() in actions.ts uses for the owner — kept consistent so
+  // the cap shown here matches what reviewProject actually enforces.
+  const allCollaborators = await listCollaboratorsForProject(projectId);
+  const acceptedCollaborators = allCollaborators.filter((c) => c.status === "accepted");
+  const collaboratorHours = acceptedCollaborators.map((c) => {
+    const cJournalHours =
+      Math.round(
+        journals
+          .filter((j) => j.user_id === c.user_id)
+          .reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
+      ) / 10;
+    const cHackatimeHours = Math.round(((c.hackatime_seconds ?? 0) / 3600) * 10) / 10;
+    return {
+      id: c.id,
+      name: c.users?.real_name || c.users?.display_name || c.users?.slack_id || c.user_id,
+      claimedHours: cHackatimeHours > 0 ? cHackatimeHours : cJournalHours,
+    };
+  });
 
   const formDefaultHours =
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
@@ -217,16 +243,16 @@ export default async function ReviewDetail({
             {!isOwn && (
               <form action={setProjectLevel} className="flex items-center gap-2 mb-3 text-sm">
                 <input type="hidden" name="projectId" value={p.id} />
-                <label className="text-muted-foreground">Re-grade level</label>
+                <label className="text-muted-foreground">Re-grade tier</label>
                 <select
                   name="level"
                   defaultValue={p.level ?? 1}
                   className="rounded-md border border-border bg-background px-2 py-1 text-sm"
                 >
-                  <option value={1}>L1 · Greenhorn</option>
-                  <option value={2}>L2 · Deputy</option>
-                  <option value={3}>L3 · Outlaw</option>
-                  <option value={4}>L4 · Legend</option>
+                  <option value={1}>T1 · Spark</option>
+                  <option value={2}>T2 · Signal</option>
+                  <option value={3}>T3 · Grid</option>
+                  <option value={4}>T4 · Beacon</option>
                 </select>
                 <PendingButton variant="secondary" size="sm" pendingText="Saving…">
                   Set
@@ -311,6 +337,14 @@ export default async function ReviewDetail({
                 )}
               </div>
             </div>
+            {acceptedCollaborators.length > 0 && (
+              <div className="text-xs text-muted-foreground">
+                with{" "}
+                {acceptedCollaborators
+                  .map((c) => c.users?.real_name || c.users?.display_name || c.users?.slack_id || c.user_id)
+                  .join(", ")}
+              </div>
+            )}
             {p.repo_url && (
               <Button asChild variant="secondary" size="sm">
                 <a href={p.repo_url} target="_blank" rel="noreferrer">
@@ -344,6 +378,17 @@ export default async function ReviewDetail({
             journals={journals}
             verdicts={verdicts}
             yswsShips={yswsShips}
+            yswsImport={
+              p.imported_from_ysws
+                ? {
+                    ysws: String(p.imported_from_ysws),
+                    hours: Number(p.imported_ysws_hours) || 0,
+                    approvedAt: p.imported_ysws_approved_at
+                      ? String(p.imported_ysws_approved_at)
+                      : null,
+                  }
+                : null
+            }
             hackatime={hackatimeReport}
           />
         </div>
@@ -484,6 +529,9 @@ export default async function ReviewDetail({
                     hackatimeProjects={hackatimeProjects}
                     hackatimeSeconds={p.hackatime_seconds ?? 0}
                     ageFlag={ageFlag}
+                    collaborators={collaboratorHours}
+                    tier={Number(p.level) || 1}
+                    playerReBefore={playerReBefore}
                   />
                 </Card>
 

@@ -1,0 +1,54 @@
+---
+title: Restoration Energy and levels
+group: Build & ship
+description: Every hour you ship becomes Restoration Energy, or RE.
+---
+
+# Restoration Energy and levels
+
+^ Every hour you ship becomes **Restoration Energy**, or RE. It's the number the whole economy runs on: RE decides what an hour of your work pays, and your level is a readout of how much of it you've built up.
+
+You never spend RE. It only goes up, nothing decays, and nothing anyone else ships takes any of it away from you. Pixels are the thing you spend; RE is the thing that decides how many pixels an hour is worth.
+
+## Tiers decide what an hour is worth
+
+When a reviewer approves your project they also give it a **tier**, 1 to 4, based on how ambitious the build actually is. The tier sets how much RE each shipped hour on that project earns.
+
+| T1 Spark | A first spark of Restoration: a simple site, script or tiny tool. | {{t1}} RE / hour |
+| T2 Signal | A focused app, CLI or game with real polish, one system back online. | {{t2}} RE / hour |
+| T3 Grid | Several systems working together: backend, state, infrastructure. | {{t3}} RE / hour |
+| T4 Beacon | Deep systems work: complex architecture and serious scope. | {{t4}} RE / hour |
+
+Tier is about the project, not about you. A first timer who ships something genuinely hard gets the high tier for it. Padding a simple site out with hours doesn't move it up either, since reviewers look at the actual repo.
+
+## RE decides your rate
+
+Your lifetime RE is every approved project's hours weighted by the tier it shipped at, added up. That's what sets your hourly rate. It starts at {{baseUsd}} an hour and climbs in a straight line to {{maxUsd}} an hour once you reach {{reCap}} RE. In pixels, that's {{basePx}} an hour rising to {{maxPx}}.
+
+The climb counts for the project that's earning it, not just the next one. Your rate rises *while* the hours land, so a project gets paid the average rate across the RE it just earned. It also means splitting your work across several projects or bundling it into one pays exactly the same total, so ship however you actually want to build.
+
+::: note The short version
+Ship more, and ship more ambitious things, and every hour after that is worth more than the one before it. RE itself has no ceiling, only the rate does.
+:::
+
+## The tier bonus
+
+That climb is deliberately slow, because {{reCap}} RE is a lot of shipping. On a short project it would barely register, and a tier 4 weekend build would pay about the same as a tier 1 one. So tier also pays a flat bonus on top: {{kickerUsd}} an hour for every tier above T1, on the first {{kickerHours}} hours of a project.
+
+So a 10 hour T4 project earns {{kickerExampleUsd}}, about {{kickerExamplePx}}, on top of whatever its normal rate pays.
+
+After that the bonus stops, because a long high tier project is already earning RE several times faster than a low tier one, and that permanently lifts the rate on everything you ship afterwards.
+
+## Levels
+
+Your level is a display of lifetime RE and nothing more. Levels run 1 to {{maxLevel}}, each one costs more RE than the last, and they have **no effect on what you get paid**: the rate comes straight off RE. Level is just there so the shipping shows up somewhere.
+
+| Levels {{band1From}}-{{band1To}} | {{band1Per}} RE per level | {{band1Total}} RE total |
+| Levels {{band2From}}-{{band2To}} | {{band2Per}} RE per level | {{band2Total}} RE total |
+| Levels {{band3From}}-{{band3To}} | {{band3Per}} RE per level | {{band3Total}} RE total |
+
+Early levels are cheap on purpose: a couple of hours on your first project already moves you a level or two. The last level and the top pay rate land on the same amount of RE, so you hit both at once. RE keeps stacking past that, it just runs out of levels to show for it.
+
+## Where to see all this
+
+The bar at the top of your Builder Terminal shows your level, your lifetime RE and your current rate in pixels per hour. It updates as soon as a project is approved.

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifySessionToken } from "../auth/session.js";
 import { supabase } from "../db/client.js";
 import { activeEvents } from "../events.js";
-import { approvedHoursFor } from "../xp.js";
+import { levelFor } from "../xp.js";
 import { addNotification } from "./notifications.js";
 
 const router = Router();
@@ -25,12 +25,15 @@ const ITEM_COLUMNS_FALLBACK = "id, name, description, price, image_url, options"
 // Items are scoped to the player's own region (fulfillment/shipping differ a
 // lot by where they live) — pass `region` to filter, or omit it to get every
 // region (not currently used, but keeps this function generally useful).
+// Restoration reward trophies (unlock_xp > 0) are the exception: they're
+// earned, not shipped, so every player sees the same trophies at the same
+// XP requirement regardless of region — never scope them to a region.
 async function fetchItems(filterIds?: number[], region?: string) {
   const build = (cols: string, withRegion: boolean) => {
     let q = supabase.from("shop_items").select(cols);
     if (filterIds) q = q.in("id", filterIds);
     else q = q.eq("active", true);
-    if (withRegion && region) q = q.eq("region", region);
+    if (withRegion && region) q = q.or(`region.eq.${region},unlock_xp.gt.0`);
     return q.order("position", { ascending: true }).order("id", { ascending: true });
   };
   const first = await build(ITEM_COLUMNS, true);
@@ -47,6 +50,30 @@ async function fetchItems(filterIds?: number[], region?: string) {
     };
   }
   return { error: null, data: (first.data ?? []) as unknown as Record<string, unknown>[] };
+}
+
+// Per-choice stock pools (e.g. 15 "Ridit" Signed Org Photos) for whichever of
+// the given item ids have any — attached to the item as `stock: [{choice,
+// remaining, total}]` so the client can show live counts and grey out
+// sold-out choices. Items with no pool just don't get a `stock` key.
+async function attachStock(items: Record<string, unknown>[]): Promise<void> {
+  const ids = items.map((i) => Number(i.id)).filter((id) => Number.isFinite(id));
+  if (!ids.length) return;
+  const { data } = await supabase
+    .from("shop_option_stock")
+    .select("item_id, choice, total, remaining")
+    .in("item_id", ids);
+  if (!data?.length) return;
+  const byItem = new Map<number, { choice: string; total: number; remaining: number }[]>();
+  for (const row of data as { item_id: number; choice: string; total: number; remaining: number }[]) {
+    const list = byItem.get(row.item_id) ?? [];
+    list.push({ choice: row.choice, total: row.total, remaining: row.remaining });
+    byItem.set(row.item_id, list);
+  }
+  for (const item of items) {
+    const stock = byItem.get(Number(item.id));
+    if (stock) item.stock = stock;
+  }
 }
 
 // Active catalog, plus mystery-merchant items while their event runs — those
@@ -79,16 +106,20 @@ router.get("/api/shop/items", async (req, res) => {
     for (const i of limited ?? []) items.unshift({ ...i, limited: true, limited_until: endsAt });
   }
 
-  // The player's own trophy progress: current XP and which trophies they've claimed.
+  await attachStock(items);
+
+  // The player's own trophy progress. Trophies gate on the player's level
+  // (1-100, derived from lifetime RE), not raw hours - `unlock_xp` holds the
+  // level required. The field name predates levels and isn't worth a migration.
   const hasTrophies = items.some((i) => Number(i.unlock_xp) > 0);
   let xp = 0;
   let claimed: number[] = [];
   if (hasTrophies) {
-    const [hours, { data: claims }] = await Promise.all([
-      approvedHoursFor(session.userId),
+    const [level, { data: claims }] = await Promise.all([
+      levelFor(session.userId),
       supabase.from("shop_claims").select("item_id").eq("user_id", session.userId),
     ]);
-    xp = hours;
+    xp = level;
     claimed = ((claims ?? []) as { item_id: number }[]).map((c) => c.item_id);
   }
 
@@ -113,6 +144,28 @@ router.post("/api/shop/region", async (req, res) => {
   res.json({ ok: true, region });
 });
 
+// Live remaining counts for a stock-limited item's choices (e.g. how many
+// "Ridit" Signed Org Photos are left) — polled from the item detail page so
+// counts stay current as other players buy without a full page reload.
+router.get("/api/shop/stock/:id", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const session = token ? verifySessionToken(token) : null;
+  if (!session) return res.status(401).json({ ok: false });
+
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ ok: false });
+
+  const { data, error } = await supabase
+    .from("shop_option_stock")
+    .select("choice, total, remaining")
+    .eq("item_id", id);
+  if (error) {
+    console.error("[shop] stock failed", error);
+    return res.status(500).json({ ok: false });
+  }
+  res.json({ ok: true, stock: data ?? [] });
+});
+
 // Claim a trophy the player has earned. Server-authoritative: it re-checks the
 // XP requirement, so a client can't claim early. Idempotent via the unique
 // (user_id, item_id) constraint.
@@ -133,7 +186,7 @@ router.post("/api/shop/claim/:id", async (req, res) => {
   if (!item || !item.active || unlockXp <= 0)
     return res.status(404).json({ ok: false, error: "not_a_trophy" });
 
-  const xp = await approvedHoursFor(session.userId);
+  const xp = await levelFor(session.userId);
   if (xp < unlockXp)
     return res.status(400).json({ ok: false, error: "not_eligible", xp, need: unlockXp });
 
@@ -159,7 +212,7 @@ router.post("/api/shop/claim/:id", async (req, res) => {
 // the fulfillment-pipeline columns (status/tracking/stage stamps) but falls back
 // to the base columns so it keeps working before migration 0052 is applied.
 const ORDER_COLUMNS =
-  "id, item_name, option, price, quantity, status, note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
+  "id, item_name, option, price, quantity, status, note, buyer_note, created_at, ordered_at, credited_at, shipped_at, done_at, tracking";
 const ORDER_COLUMNS_FALLBACK =
   "id, item_name, option, price, status, note, created_at, fulfilled_at";
 
@@ -221,14 +274,32 @@ router.post("/api/shop/buy/:id", async (req, res) => {
   // inside buy_shop_item — this is just so a garbage value doesn't even reach it.
   const rawQty = Number(req.body?.quantity);
   const quantity = Number.isFinite(rawQty) ? Math.max(1, Math.min(999, Math.round(rawQty))) : 1;
+  // Free-text note to whoever fulfils the order, and (for items with a
+  // per-choice stock pool, e.g. Signed Org Photo) the raw picked choice.
+  const note = typeof req.body?.note === "string" ? req.body.note.slice(0, 300) : "";
+  const stockChoice =
+    typeof req.body?.stockChoice === "string" ? req.body.stockChoice.slice(0, 80) : "";
 
-  const { data, error } = await supabase.rpc("buy_shop_item", {
+  let { data, error } = await supabase.rpc("buy_shop_item", {
     p_user_id: session.userId,
     p_item_id: id,
     p_option: option,
     p_config: config,
     p_quantity: quantity,
+    p_note: note,
+    p_stock_choice: stockChoice,
   });
+  if (error) {
+    // Migration 0093 (note + stock choice) may not be applied yet — retry
+    // against the older 5-arg signature so purchases keep working either way.
+    ({ data, error } = await supabase.rpc("buy_shop_item", {
+      p_user_id: session.userId,
+      p_item_id: id,
+      p_option: option,
+      p_config: config,
+      p_quantity: quantity,
+    }));
+  }
   if (error) {
     console.error("[shop] buy failed", error);
     return res.status(500).json({ ok: false });
