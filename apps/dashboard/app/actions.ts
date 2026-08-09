@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { pxPerHourFor, reForHours } from "./_generated/config";
+import { pxPerHourFor } from "./_generated/config";
 import {
   db,
   getAdmin,
@@ -12,6 +12,7 @@ import {
   creditProjectPixels,
   revokeProjectPixels,
   projectPixelTotal,
+  lifetimeRe,
   creditReviewerPixels,
   activeDashEvents,
   communityGoalShipCount,
@@ -101,26 +102,6 @@ async function nextReviewPath(
 //
 // Note: the DB column is `projects.level` but holds the tier (1-4). It predates
 // the player-facing 1-100 level and isn't worth a migration to rename.
-async function lifetimeRe(userId: string, excludeProjectId: number): Promise<number> {
-  const { data } = await db
-    .from("projects")
-    .select("id, approved_hours, hackatime_seconds, level")
-    .eq("user_id", userId)
-    .eq("status", "approved")
-    .is("banned_at", null)
-    .neq("id", excludeProjectId);
-  return (
-    Math.round(
-      (data ?? []).reduce((s, p) => {
-        const h =
-          p.approved_hours != null
-            ? Number(p.approved_hours)
-            : (Number(p.hackatime_seconds) || 0) / 3600;
-        return s + (Number.isFinite(h) ? reForHours(h, Number(p.level) || 1) : 0);
-      }, 0) * 10,
-    ) / 10
-  );
-}
 
 // A reviewer may never act on their own submission (self-review = cheating).
 async function isOwnProject(access: AdminAccess, userId: string): Promise<boolean> {
@@ -623,6 +604,35 @@ export async function reviewProject(formData: FormData): Promise<void> {
     if (!Number.isFinite(n) || n < 0)
       redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
     approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
+  }
+
+  // The tier rides along with the verdict so a reviewer sets hours and tier in
+  // one place and sees the resulting RE before submitting, instead of using the
+  // separate re-grade form and guessing. Absent (older form, or a non-approve
+  // verdict) means leave whatever is stored alone.
+  const tierRaw = String(formData.get("tier") ?? "").trim();
+  if (tierRaw !== "") {
+    const t = Number(tierRaw);
+    if (!Number.isInteger(t) || t < 1 || t > 4)
+      redirect(`${back}?error=${encodeURIComponent("Tier must be between 1 and 4.")}`);
+    const { data: cur } = await db
+      .from("projects")
+      .select("user_id, level")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (cur && Number(cur.level) !== t) {
+      if (await isOwnProject(access, cur.user_id as string))
+        redirect(
+          `${back}?error=${encodeURIComponent("You can't change the tier of your own project.")}`,
+        );
+      await db.from("projects").update({ level: t }).eq("id", projectId);
+      await logModAction(
+        cur.user_id as string,
+        "project_level_changed",
+        `tier set to T${t} (was T${cur.level ?? 1}) with the verdict`,
+        by,
+      );
+    }
   }
 
   // Structured internal audit note (Hack Club's YSWS "override hours spent

@@ -3,6 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
+import {
+  config,
+  levelForRe,
+  payoutUsdPerHour,
+  pxPerHourFor,
+  reForHours,
+  rePerHour,
+} from "@/app/_generated/config";
 import { TECHNICAL_FEATURES_MIN } from "@/lib/auditNote";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +80,108 @@ export interface CollaboratorHours {
   claimedHours: number;
 }
 
+const TIERS = [
+  { value: 1, label: "T1 Spark", blurb: "A simple site, script, or tiny tool" },
+  { value: 2, label: "T2 Signal", blurb: "A focused app, CLI, or game with clean polish" },
+  { value: 3, label: "T3 Grid", blurb: "Multiple systems together: backend, state, infra" },
+  { value: 4, label: "T4 Beacon", blurb: "Deep systems work, serious scope" },
+];
+
+/**
+ * The tier picker plus every conversion it implies, worked out live so a
+ * reviewer never has to do the arithmetic: hours at this tier become RE, the
+ * player's RE *before* this ship sets their rate, and that rate times the hours
+ * is the payout. Numbers come from packages/config, so they follow the config.
+ */
+function TierAndPayout({
+  hours,
+  tier,
+  onTier,
+  playerReBefore,
+}: {
+  hours: number;
+  tier: number;
+  onTier: (t: number) => void;
+  playerReBefore: number;
+}) {
+  const perHour = rePerHour(tier);
+  const projectRe = reForHours(hours, tier);
+  const reAfter = playerReBefore + projectRe;
+  // The rate is set by RE held *before* this ship - a project never raises its
+  // own rate - which is exactly the subtlety reviewers shouldn't have to know.
+  const rate = pxPerHourFor(playerReBefore);
+  const usdRate = payoutUsdPerHour(playerReBefore);
+  const px = Math.round(hours * rate);
+  const usd = px * config.economy.pixelValueUsd;
+  const levelBefore = levelForRe(playerReBefore);
+  const levelAfter = levelForRe(reAfter);
+
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+      <Label className="flex items-center justify-between gap-2 font-normal text-muted-foreground">
+        Tier
+        <select
+          name="tier"
+          value={tier}
+          onChange={(e) => onTier(Number(e.target.value))}
+          className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+        >
+          {TIERS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label} · {rePerHour(t.value)} RE/h
+            </option>
+          ))}
+        </select>
+      </Label>
+      <div className="text-xs text-muted-foreground">
+        {TIERS[Math.min(Math.max(tier, 1), 4) - 1].blurb}
+      </div>
+
+      <div className="border-t border-border pt-2 space-y-1 text-sm tabular-nums">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">
+            This project · {hours}h × {perHour} RE/h
+          </span>
+          <span className="font-medium">{round1(projectRe).toLocaleString()} RE</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Their RE before → after</span>
+          <span className="font-medium">
+            {round1(playerReBefore).toLocaleString()} → {round1(reAfter).toLocaleString()}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Their level before → after</span>
+          <span className="font-medium">
+            {levelBefore} → {levelAfter}
+            {levelAfter > levelBefore && (
+              <span className="text-[color:var(--color-hc-green,green)]"> ▲</span>
+            )}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Rate (from RE before this ship)</span>
+          <span className="font-medium">
+            {Math.round(rate)} px/h · ${usdRate.toFixed(2)}/h
+          </span>
+        </div>
+        <div className="flex justify-between border-t border-border pt-1">
+          <span className="font-medium">Payout</span>
+          <span className="font-bold">
+            {px.toLocaleString()} px · ${usd.toFixed(2)}
+          </span>
+        </div>
+      </div>
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        Changing the tier here saves it with your verdict. Community-goal bonuses and any
+        referral boost apply on top and aren&apos;t shown.
+      </p>
+    </div>
+  );
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
 function CollaboratorHoursInput({ c }: { c: CollaboratorHours }) {
   const [value, setValue] = useState(c.claimedHours);
   return (
@@ -106,6 +216,8 @@ export function ReviewForm({
   hackatimeSeconds = 0,
   ageFlag = false,
   collaborators = [],
+  tier = 1,
+  playerReBefore = 0,
 }: {
   projectId: number;
   repoUrl: string | null;
@@ -119,6 +231,10 @@ export function ReviewForm({
   hackatimeSeconds?: number;
   ageFlag?: boolean;
   collaborators?: CollaboratorHours[];
+  /** The project's current tier (1-4). Submitted with the verdict. */
+  tier?: number;
+  /** The player's lifetime RE excluding this project - what sets their rate. */
+  playerReBefore?: number;
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -130,6 +246,7 @@ export function ReviewForm({
 
   const baseHours = defaultHours ?? claimedHours;
   const [hours, setHours] = useState(baseHours);
+  const [tierState, setTierState] = useState(tier);
   const deflated = hours < claimedHours;
 
   const hackatimeDefault = useMemo(() => {
@@ -226,6 +343,12 @@ export function ReviewForm({
       {collaborators.map((c) => (
         <CollaboratorHoursInput key={c.id} c={c} />
       ))}
+      <TierAndPayout
+        hours={hours}
+        tier={tierState}
+        onTier={setTierState}
+        playerReBefore={playerReBefore}
+      />
       {trial?.minHours != null && (
         <div
           className={`text-xs font-medium ${

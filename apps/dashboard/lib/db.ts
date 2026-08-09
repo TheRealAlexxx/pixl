@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decryptPII } from "./crypto";
+import { reForHours } from "@/app/_generated/config";
 
 function required(name: string): string {
   const v = process.env[name];
@@ -2546,4 +2547,36 @@ export async function getShopSalesSeries(days = 30): Promise<ShopSalesPoint[]> {
     const key = new Date(startMs + i * 86400_000).toISOString().slice(0, 10);
     return { date: key, count: counts.get(key) ?? 0 };
   });
+}
+
+/**
+ * A player's lifetime Restoration Energy: every approved project's hours
+ * weighted by the tier it was shipped at. This is what sets their payout rate
+ * and their level, so both the review UI and the payout path read it from here
+ * rather than keeping their own copies - a duplicated rate table drifted once
+ * already (40/60 vs the real 50/79, fixed 2026-08-01).
+ *
+ * The DB column is `projects.level` but holds the tier (1-4); it predates the
+ * player-facing 1-100 level and isn't worth a rename migration.
+ */
+export async function lifetimeRe(userId: string, excludeProjectId?: number): Promise<number> {
+  let q = db
+    .from("projects")
+    .select("id, approved_hours, hackatime_seconds, level")
+    .eq("user_id", userId)
+    .eq("status", "approved")
+    .is("banned_at", null);
+  if (excludeProjectId) q = q.neq("id", excludeProjectId);
+  const { data } = await q;
+  return (
+    Math.round(
+      (data ?? []).reduce((s, p) => {
+        const h =
+          p.approved_hours != null
+            ? Number(p.approved_hours)
+            : (Number(p.hackatime_seconds) || 0) / 3600;
+        return s + (Number.isFinite(h) ? reForHours(h, Number(p.level) || 1) : 0);
+      }, 0) * 10,
+    ) / 10
+  );
 }

@@ -8,6 +8,7 @@ import {
   claimReview,
   turnedNineteenSinceShipping,
   listCollaboratorsForProject,
+  lifetimeRe,
 } from "@/lib/db";
 import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor, fetchHackatimeReport } from "@/lib/hackatime";
@@ -102,6 +103,10 @@ export default async function ReviewDetail({
   const hackatimeHours = Math.round(((p.hackatime_seconds ?? 0) / 3600) * 10) / 10;
   const hours = Math.round((hackatimeHours + journalHours) * 10) / 10;
   const htPct = hours > 0 ? Math.round((hackatimeHours / hours) * 100) : 0;
+
+  // The RE the player already holds, excluding this project — this is what sets
+  // the rate they'll be paid at, so the reviewer sees it before deciding.
+  const playerReBefore = await lifetimeRe(p.user_id, projectId);
 
   // Same "hackatime if tracked, else journal" source-of-truth as
   // claimedHoursFor() in actions.ts uses for the owner — kept consistent so
@@ -525,6 +530,8 @@ export default async function ReviewDetail({
                     hackatimeSeconds={p.hackatime_seconds ?? 0}
                     ageFlag={ageFlag}
                     collaborators={collaboratorHours}
+                    tier={Number(p.level) || 1}
+                    playerReBefore={playerReBefore}
                   />
                 </Card>
 
