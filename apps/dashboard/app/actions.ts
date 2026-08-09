@@ -7,6 +7,7 @@ import {
   levelForRe,
   pxPerHourOver,
   reForHours,
+  tierKickerUsd,
 } from "./_generated/config";
 import {
   db,
@@ -404,6 +405,10 @@ interface BeneficiaryPayout {
   goalNote: string;
   referralNote: string;
   alreadyPx: number;
+  /** Flat tier bonus in pixels, on top of the hourly rate. */
+  kickerPx: number;
+  /** RE this ship earned, for the "you're now level N" line. */
+  projectRe: number;
 }
 
 // Credits one beneficiary (the project owner, or an accepted collaborator)
@@ -443,13 +448,15 @@ async function creditBeneficiary(
     }
   }
 
-  // The project's own RE counts toward its own payout - a tier-4 ship paid at a
-  // tier-1 rate would defeat the point of tiers. The rate is averaged across the
-  // RE this ship earns rather than read off either end, so it can't jump to the
-  // cap in one go and bundling work into one submission pays the same as
-  // splitting it. See averageUsdPerHourOver in packages/config.
+  // Two parts, both in packages/config: the RE-driven rate averaged across the
+  // RE this ship earns (so a project's own tier counts toward its own payout
+  // without letting one long ship jump straight to the cap), plus a flat tier
+  // kicker on its first hours (so tier is felt on short projects, where the RE
+  // ramp alone is worth cents). pxRate below is the *effective* rate including
+  // the kicker, since that is what the player is told.
   const xpBefore = await lifetimeRe(userId, projectId);
   const projectRe = reForHours(creditHours, tier);
+  const kickerPx = tierKickerUsd(creditHours, tier) / config.economy.pixelValueUsd;
   let pxRate = pxPerHourOver(xpBefore, xpBefore + projectRe);
   const alreadyPx = await projectPixelTotal(projectId, userId);
   // A project only counts as a "new ship" for referral purposes the first
@@ -483,7 +490,7 @@ async function creditBeneficiary(
     }
   }
 
-  const totalPx = Math.round(creditHours * pxRate * goalMult);
+  const totalPx = Math.round((creditHours * pxRate + kickerPx) * goalMult);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(userId, projectId, totalPx, creditHours, by);
 
@@ -513,7 +520,7 @@ async function creditBeneficiary(
         .is("rewarded_at", null)
         .select("id")
         .maybeSingle();
-      if (!claimed) return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx };
+      if (!claimed) return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx, kickerPx, projectRe };
       await db.rpc("adjust_user_pixels", {
         p_user_id: referral.referrer_id,
         p_amount: tier.px,
@@ -547,7 +554,7 @@ async function creditBeneficiary(
     }
   }
 
-  return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx };
+  return { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx, kickerPx, projectRe };
 }
 
 // Two-pass review. A shipped project always gets a first pass from *some*
@@ -896,7 +903,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (deltaPx > 0)
-    credited += ` Your rate: ${Math.round(pxRate)} px/h ($${(pxRate * config.economy.pixelValueUsd).toFixed(2)}/hr) , this ship earned ${Math.round(reForHours(creditHours, tierUsed))} RE, putting you at level ${levelForRe(xpBefore + reForHours(creditHours, tierUsed))}.`;
+    credited +=
+      ` Your rate: ${Math.round(pxRate)} px/h ($${(pxRate * config.economy.pixelValueUsd).toFixed(2)}/hr)` +
+      (ownerPayout.kickerPx > 0
+        ? ` plus a T${tierUsed} bonus of ${Math.round(ownerPayout.kickerPx)} px`
+        : "") +
+      ` , this ship earned ${Math.round(ownerPayout.projectRe)} RE, putting you at level ${levelForRe(xpBefore + ownerPayout.projectRe)}.`;
   if (goalNote && deltaPx > 0) credited += goalNote;
   if (referralNote && deltaPx > 0) credited += referralNote;
 

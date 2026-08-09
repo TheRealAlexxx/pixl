@@ -10,6 +10,7 @@ import {
   pxPerHourOver,
   reForHours,
   rePerHour,
+  tierKickerUsd,
 } from "@/app/_generated/config";
 import { TECHNICAL_FEATURES_MIN } from "@/lib/auditNote";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,11 @@ function TierAndPayout({
   // the rate climbs as the RE is earned rather than being read off either end.
   const rate = pxPerHourOver(playerReBefore, reAfter);
   const usdRate = averageUsdPerHourOver(playerReBefore, reAfter);
-  const px = Math.round(hours * rate);
+  // Flat tier bonus on the project's first hours - the thing that makes tier
+  // visible on a short project, where the RE ramp alone is worth cents.
+  const kickerUsd = tierKickerUsd(hours, tier);
+  const kickerPx = kickerUsd / config.economy.pixelValueUsd;
+  const px = Math.round(hours * rate + kickerPx);
   const usd = px * config.economy.pixelValueUsd;
   const levelBefore = levelForRe(playerReBefore);
   const levelAfter = levelForRe(reAfter);
@@ -167,6 +172,16 @@ function TierAndPayout({
             {Math.round(rate)} px/h · ${usdRate.toFixed(2)}/h
           </span>
         </div>
+        {kickerPx > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              T{tier} bonus · first {config.economy.tierKickerHours}h
+            </span>
+            <span className="font-medium">
+              +{Math.round(kickerPx).toLocaleString()} px · ${kickerUsd.toFixed(2)}
+            </span>
+          </div>
+        )}
         <div className="flex justify-between border-t border-border pt-1">
           <span className="font-medium">Payout</span>
           <span className="font-bold">

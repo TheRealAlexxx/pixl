@@ -16,6 +16,8 @@
     "maxPayoutUsd": 6.0,
     "reForMaxPayout": 5000,
     "tierRePerHour": [5, 10, 15, 25],
+    "tierKickerUsdPerStep": 0.5,
+    "tierKickerHours": 40,
     "levelBands": [
       { "throughLevel": 10, "rePerLevel": 10 },
       { "throughLevel": 50, "rePerLevel": 35 },

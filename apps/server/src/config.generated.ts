@@ -23,6 +23,8 @@ export const config = {
       15,
       25
     ],
+    "tierKickerUsdPerStep": 0.5,
+    "tierKickerHours": 40,
     "levelBands": [
       {
         "throughLevel": 10,
@@ -142,6 +144,43 @@ export function averageUsdPerHourOver(reBefore: number, reAfter: number): number
 /** The same averaged rate in pixels. */
 export function pxPerHourOver(reBefore: number, reAfter: number): number {
   return averageUsdPerHourOver(reBefore, reAfter) / E.pixelValueUsd;
+}
+
+/**
+ * Extra dollars a project earns for its tier, on top of the RE-driven rate.
+ *
+ * The RE ramp alone can't make tier *felt* on a short project: 5 hours moves you
+ * a few dozen RE out of the 5000 needed to cap, so a tier-4 5h project paid
+ * within a few cents of a tier-1 one. This kicker fixes that - +$0.50/hour per
+ * tier step above T1.
+ *
+ * It only applies to the first `tierKickerHours` of a project, because a long
+ * tier-4 project is *already* rewarded: it builds RE five times faster, which
+ * permanently lifts the rate on everything shipped afterwards. Without the cap a
+ * 150h project's tier gap more than doubles and the margin on exactly the most
+ * expensive projects sags. With it, the margin stays flat across project sizes.
+ *
+ * Known trade-off: this makes splitting one long project into several
+ * kicker-length submissions worth something. Reviewers see the submissions, so
+ * it is visible rather than silent, but it is a real hole - the pure-RE version
+ * had none.
+ */
+export function tierKickerUsd(hours: number, tier: number): number {
+  const t = Math.min(Math.max(Math.trunc(tier) || 1, 1), E.tierRePerHour.length);
+  const h = Number.isFinite(hours) ? Math.max(hours, 0) : 0;
+  return E.tierKickerUsdPerStep * (t - 1) * Math.min(h, E.tierKickerHours);
+}
+
+/** Everything a project pays, in dollars: the RE-driven rate plus the tier kicker. */
+export function projectPayoutUsd(hours: number, tier: number, reBefore: number): number {
+  const h = Number.isFinite(hours) ? Math.max(hours, 0) : 0;
+  const reAfter = reBefore + reForHours(h, tier);
+  return h * averageUsdPerHourOver(reBefore, reAfter) + tierKickerUsd(h, tier);
+}
+
+/** The same total in pixels - what actually gets credited. */
+export function projectPayoutPx(hours: number, tier: number, reBefore: number): number {
+  return projectPayoutUsd(hours, tier, reBefore) / E.pixelValueUsd;
 }
 
 export const launchDate = new Date(config.launchDate);
