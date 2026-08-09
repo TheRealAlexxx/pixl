@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
 import {
+  averageUsdPerHourOver,
   config,
   levelForRe,
-  payoutUsdPerHour,
-  pxPerHourFor,
+  pxPerHourOver,
   reForHours,
   rePerHour,
 } from "@/app/_generated/config";
@@ -89,9 +89,11 @@ const TIERS = [
 
 /**
  * The tier picker plus every conversion it implies, worked out live so a
- * reviewer never has to do the arithmetic: hours at this tier become RE, the
- * player's RE *before* this ship sets their rate, and that rate times the hours
- * is the payout. Numbers come from packages/config, so they follow the config.
+ * reviewer never has to do the arithmetic: hours at this tier become RE, that RE
+ * moves the player along the payout ramp, and the rate averaged across that move
+ * times the hours is the payout. Numbers come from packages/config, and the
+ * maths mirrors creditBeneficiary exactly - if these two ever disagree, the
+ * reviewer is being shown a number the player won't receive.
  */
 function TierAndPayout({
   hours,
@@ -107,10 +109,10 @@ function TierAndPayout({
   const perHour = rePerHour(tier);
   const projectRe = reForHours(hours, tier);
   const reAfter = playerReBefore + projectRe;
-  // The rate is set by RE held *before* this ship - a project never raises its
-  // own rate - which is exactly the subtlety reviewers shouldn't have to know.
-  const rate = pxPerHourFor(playerReBefore);
-  const usdRate = payoutUsdPerHour(playerReBefore);
+  // Averaged across the RE this ship earns, matching creditBeneficiary exactly -
+  // the rate climbs as the RE is earned rather than being read off either end.
+  const rate = pxPerHourOver(playerReBefore, reAfter);
+  const usdRate = averageUsdPerHourOver(playerReBefore, reAfter);
   const px = Math.round(hours * rate);
   const usd = px * config.economy.pixelValueUsd;
   const levelBefore = levelForRe(playerReBefore);
@@ -160,7 +162,7 @@ function TierAndPayout({
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Rate (from RE before this ship)</span>
+          <span className="text-muted-foreground">Rate (averaged over this ship)</span>
           <span className="font-medium">
             {Math.round(rate)} px/h · ${usdRate.toFixed(2)}/h
           </span>

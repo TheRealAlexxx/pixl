@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { pxPerHourFor } from "./_generated/config";
+import {
+  config,
+  levelForRe,
+  pxPerHourOver,
+  reForHours,
+} from "./_generated/config";
 import {
   db,
   getAdmin,
@@ -414,6 +419,7 @@ async function creditBeneficiary(
   shippedAt: string | null,
   by: string,
   otherBeneficiaryIds: string[] = [],
+  tier = 1,
 ): Promise<BeneficiaryPayout> {
   let goalMult = 1;
   let goalNote = "";
@@ -437,10 +443,14 @@ async function creditBeneficiary(
     }
   }
 
-  // Rate is set by the RE the player held *before* this ship, so a project can
-  // never raise its own payout rate.
+  // The project's own RE counts toward its own payout - a tier-4 ship paid at a
+  // tier-1 rate would defeat the point of tiers. The rate is averaged across the
+  // RE this ship earns rather than read off either end, so it can't jump to the
+  // cap in one go and bundling work into one submission pays the same as
+  // splitting it. See averageUsdPerHourOver in packages/config.
   const xpBefore = await lifetimeRe(userId, projectId);
-  let pxRate = pxPerHourFor(xpBefore);
+  const projectRe = reForHours(creditHours, tier);
+  let pxRate = pxPerHourOver(xpBefore, xpBefore + projectRe);
   const alreadyPx = await projectPixelTotal(projectId, userId);
   // A project only counts as a "new ship" for referral purposes the first
   // time it earns any pixels , re-approvals of an already-credited project
@@ -852,6 +862,16 @@ export async function reviewProject(formData: FormData): Promise<void> {
   const collaborators = (collabRows ?? []) as { id: number; user_id: string; hackatime_seconds: number | null }[];
   const allBeneficiaryIds = [project.user_id, ...collaborators.map((c) => c.user_id)];
 
+  // One tier per project, applied to everyone credited on it. Re-read rather
+  // than trusting the form value, since the tier update above is what actually
+  // decides it.
+  const { data: tierRow } = await db
+    .from("projects")
+    .select("level")
+    .eq("id", projectId)
+    .maybeSingle();
+  const tierUsed = Math.min(Math.max(Number(tierRow?.level) || 1, 1), 4);
+
   const ownerPayout = await creditBeneficiary(
     project.user_id,
     project.id,
@@ -860,6 +880,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     current.shipped_at,
     by,
     collaborators.map((c) => c.user_id),
+    tierUsed,
   );
   const { totalPx, deltaPx, pxRate, xpBefore, goalNote, referralNote, alreadyPx } = ownerPayout;
 
@@ -875,7 +896,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (deltaPx > 0)
-    credited += ` Your rate: ${pxRate} px/h ($${(pxRate * 0.07).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
+    credited += ` Your rate: ${Math.round(pxRate)} px/h ($${(pxRate * config.economy.pixelValueUsd).toFixed(2)}/hr) , this ship earned ${Math.round(reForHours(creditHours, tierUsed))} RE, putting you at level ${levelForRe(xpBefore + reForHours(creditHours, tierUsed))}.`;
   if (goalNote && deltaPx > 0) credited += goalNote;
   if (referralNote && deltaPx > 0) credited += referralNote;
 
@@ -897,6 +918,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       current.shipped_at,
       by,
       allBeneficiaryIds.filter((id) => id !== c.user_id),
+      tierUsed,
     );
     let cCredited: string;
     if (cPayout.alreadyPx > 0 && cPayout.deltaPx > 0) {

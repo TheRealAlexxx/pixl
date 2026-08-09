@@ -130,6 +130,40 @@ export function pxPerHourFor(re: number): number {
   return payoutUsdPerHour(re) / E.pixelValueUsd;
 }
 
+/** Total payout dollars accrued from 0 RE up to \`re\` - the area under the ramp. */
+function payoutArea(re: number): number {
+  const cap = E.reForMaxPayout;
+  const span = E.maxPayoutUsd - E.basePayoutUsd;
+  const r = Math.max(re, 0);
+  if (r <= cap) return E.basePayoutUsd * r + (span * r * r) / (2 * cap);
+  return E.basePayoutUsd * cap + (span * cap) / 2 + E.maxPayoutUsd * (r - cap);
+}
+
+/**
+ * The rate for a single project, averaged across the RE it earns.
+ *
+ * A project's own RE has to count toward its own payout - shipping a tier-4
+ * project and getting paid a tier-1 rate is the whole point of tiers. But using
+ * the RE *after* the ship would let one 200h project jump straight to the cap,
+ * and would pay more for bundling everything into a single submission.
+ *
+ * Integrating over the span instead means your rate climbs *as* you earn the RE.
+ * That gives tier an immediate effect, and because it is an area under the same
+ * curve, splitting work across projects or bundling it into one pays exactly the
+ * same total - there is nothing to game either way.
+ */
+export function averageUsdPerHourOver(reBefore: number, reAfter: number): number {
+  const r0 = Math.max(reBefore, 0);
+  const r1 = Math.max(reAfter, r0);
+  if (r1 === r0) return payoutUsdPerHour(r0);
+  return (payoutArea(r1) - payoutArea(r0)) / (r1 - r0);
+}
+
+/** The same averaged rate in pixels. */
+export function pxPerHourOver(reBefore: number, reAfter: number): number {
+  return averageUsdPerHourOver(reBefore, reAfter) / E.pixelValueUsd;
+}
+
 export const launchDate = new Date(config.launchDate);
 export const hackatimeCutoff = new Date(config.hackatimeCutoff);
 
