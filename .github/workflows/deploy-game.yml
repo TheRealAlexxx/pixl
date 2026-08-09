@@ -5,6 +5,7 @@ on:
     paths:
       - "apps/game/**"
       - "packages/**"
+      - "docs/**"
   workflow_dispatch:
 
 permissions:
@@ -55,6 +56,19 @@ jobs:
 
       - name: Add Vercel config (cross-origin isolation headers for threads)
         run: cp apps/game/vercel.json build/vercel.json
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Runs before the copy below, so the generated pages and preview cards
+      # land in apps/game/web/docs/ and get picked up with everything else.
+      - name: Build docs from docs/*.md
+        run: |
+          set -euo pipefail
+          bun run docs:build
+          test -f apps/game/web/docs/index.html
 
       - name: Add web pages (quests / hackatime / vault / timeline)
         run: |
