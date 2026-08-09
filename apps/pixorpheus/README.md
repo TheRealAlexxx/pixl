@@ -1,315 +1,398 @@
 # Pixorpheus
 
-Slack bot for the [Pixl](https://hackclub.slack.com/archives/C0B5P4N0WHH) YSWS program. Built by Gabin and Alexxx. Handles tickets, talks in threads, remembers stuff about people, roasts on command. Basically acts like a teenager with admin access.
+The official Slack bot of the [Pixl](https://hackclub.slack.com/archives/C0B5P4N0WHH) YSWS program, built by Gabin. Part entertainer, part support system, part AI with too much personality.
+
+Pixorpheus handles the full help/ticket workflow for Pixl, talks to people in threads, remembers things about everyone, roasts people on demand, and generally acts like a teenager.
 
 ---
 
-## Contents
+## Table of Contents
 
 - [Architecture](#architecture)
 - [Slash Commands](#slash-commands)
+  - [Fun & Utility](#fun--utility)
+  - [Pixl Program](#pixl-program)
+  - [Memory & Knowledge](#memory--knowledge)
+  - [Support Team Only](#support-team-only)
 - [Inline Commands (pixo:)](#inline-commands-pixo)
 - [Thread Controls](#thread-controls)
 - [AI System](#ai-system)
 - [Smart FAQ](#smart-faq)
 - [Auto-Close](#auto-close)
-- [Ticket System](#ticket-system)
-- [Style Listening](#style-listening)
+- [Help & Ticket System](#help--ticket-system)
+- [Style Listening System](#style-listening-system)
 - [Training Mode](#training-mode)
 - [Dashboard](#dashboard)
 - [Database](#database)
-- [Env Vars](#env-vars)
+- [Environment Variables](#environment-variables)
 - [Deployment](#deployment)
 
 ---
 
 ## Architecture
 
-- `index.js`: the bot itself. Commands, events, AI, tickets, all of it.
-- `dashboard.js`: separate Express server for the helper dashboard, has Slack OAuth login.
-- `public/`: dashboard frontend, plain HTML/CSS/JS.
-- `models.json`: OpenRouter model list.
+| File | Role |
+|---|---|
+| `index.js` | Main Slack bot - all commands, events, AI, ticket system |
+| `dashboard.js` | Express web server - helper dashboard with Slack OAuth |
+| `public/` | Dashboard frontend (HTML/CSS/JS) |
+| `models.json` | OpenRouter model list |
 
-Two separate processes, one shared Postgres DB. Bot runs on Bolt v4, dashboard runs on Express. Both need to be up for everything to work.
+Both `index.js` and `dashboard.js` are separate processes sharing the same PostgreSQL database. The bot runs on Slack's Bolt v4 framework. The dashboard runs on Express.
 
 ---
 
 ## Slash Commands
 
-### Fun / utility
+### Fun & Utility
 
-- `/pixl-ping`: latency check
-- `/pixl-help`: command list
-- `/pixl-joke`: random joke (JokeAPI)
-- `/pixl-coinflip`
-- `/pixl-fact`: random AI-generated fact
-- `/pixl-urban [word]`: Urban Dictionary, AI-filtered so it doesn't post the truly awful ones
-- `/pixl-ask [question]`: ask Pixorpheus something, publicly
-- `/pixl-roast [@user]`: roast someone (or yourself), pulls from memory so it's personal
-- `/pixl-remind [time] [message]`: reminder, supports `s`/`min`/`h`, max 24h
-- `/pixl-countdown [time] [label]`: countdown that posts when it hits zero
-- `/pixl-poll Question; Option1, Option2 [, 10min]`: emoji-reaction poll, optional auto-close time
-- `/pixl-ship [description]`: announce something you shipped
-- `/pixl-stats`: bot stats since last restart (pixelizations, replies, roasts, reminders)
+| Command | Description |
+|---|---|
+| `/pixl-ping` | Check bot latency |
+| `/pixl-help` | List all available commands |
+| `/pixl-joke` | Get a random joke (via JokeAPI) |
+| `/pixl-coinflip` | Flip a coin |
+| `/pixl-fact` | Get a random surprising fact (AI-generated) |
+| `/pixl-urban [word]` | Urban Dictionary definition - AI-filtered to remove the worst ones |
+| `/pixl-ask [question]` | Ask Pixorpheus anything publicly |
+| `/pixl-roast [@user]` | Roast someone (or yourself) - pulls from memory for extra precision |
+| `/pixl-remind [time] [message]` | Set a reminder - supports `s`, `min`, `h` (e.g. `/pixl-remind 10min grab lunch`) - max 24h |
+| `/pixl-countdown [time] [label]` | Countdown timer that posts to channel when it hits zero |
+| `/pixl-poll Question; Option1, Option2 [, 10min]` | Create a poll with emoji reactions - add a time at the end to auto-close it |
+| `/pixl-ship [description]` | Announce a project you shipped |
+| `/pixl-stats` | Bot activity stats (pixelizations, AI replies, roasts, reminders - since last restart) |
 
-### Pixl program
+### Pixl Program
 
-- `/pixl [@user] [size]`: pixelate a profile pic, only in Pixl channels, size 2-64 (default 8), react `:pixl-delete:` to remove it
-- `/pixl-lastship [github_username]`: last approved Hack Club Ship for that GitHub user
-- `/pixl-leaderboard`: who Pixorpheus knows the most about (most engaged people)
+| Command | Description |
+|---|---|
+| `/pixl [@user] [size]` | Pixelate a Slack profile picture - only works in the Pixl channels. Optional pixel size 2–64 (default 8). Reacts with `:pixl-delete:` to remove. |
+| `/pixl-lastship [github_username]` | Show the last approved Hack Club Ship for a GitHub user (defaults to yours if known) |
+| `/pixl-leaderboard` | Show who Pixorpheus knows the most facts about - the most engaged members |
 
-### Memory / knowledge
+### Memory & Knowledge
 
-- `/pixl-mymemory [@user]`: see what's remembered about you (ephemeral), or mention someone to show it publicly
-- `/pixl-helpstats`: ticket totals, open/resolved/etc
+| Command | Description |
+|---|---|
+| `/pixl-mymemory [@user]` | See what Pixorpheus remembers about you (ephemeral) - or mention someone to show their profile publicly |
+| `/pixl-helpstats` | Ticket stats - total, open, resolved counts |
 
-### Support team only
+### Support Team Only
 
-Needs to be a helper, an admin (`SLACK_ADMIN_USER_IDS`), or in the ticket channel.
+These commands require being a helper, an admin (`SLACK_ADMIN_USER_IDS`), or a member of the ticket channel.
 
-- `/pixl-addhelper @user`
-- `/pixl-removehelper @user`
-- `/pixl-helpers`: list current helpers
-- `/pixl-remember [fact]`: teach it a fact about the program, gets injected into every reply (Gabin can use this too)
-- `/pixl-forget [number]`: delete a stored memory by number
-- `/pixl-memories`: list stored server memories
-
----
-
-## Inline commands (pixo:)
-
-Typed inline, not slash commands. Only work where Pixorpheus is actually present (private channels or ones it's added to).
-
-- `pixo:kawaii`: start listening mode, it starts collecting messages to learn how people write
-- `pixo:notkawaii`: stop listening, processes what it collected and saves the style
-- `pixo:kawaii?`: check if it's currently listening, shows channel + message count (ephemeral)
-- `pixo:recap`: summarize the last 6 hours in the channel, ephemeral. `pixo:recap today` for since midnight, `pixo:recap 2h` for custom (min/h/d). In a thread, it recaps the thread instead.
-
-Only one listening session at a time, starting a new one kills the old one.
-
-Also: react `:pixl-delete:` to any Pixorpheus message and it deletes itself.
+| Command | Description |
+|---|---|
+| `/pixl-addhelper @user` | Add someone to the helpers list |
+| `/pixl-removehelper @user` | Remove someone from the helpers list |
+| `/pixl-helpers` | List all current helpers |
+| `/pixl-remember [fact]` | Teach Pixorpheus a fact about the server - injected into every AI reply (Gabin can also use this) |
+| `/pixl-forget [number]` | Remove a stored memory entry by number |
+| `/pixl-memories` | List all stored server memories |
 
 ---
 
-## Thread controls
+## Inline Commands (pixo:)
 
-Type anywhere in a thread:
+These are typed directly in a message (not slash commands). They only work in channels where Pixorpheus has access - **private channels or channels it's been added to**.
 
-- `PIXOSTOP`: mutes Pixorpheus in that thread until directly mentioned
-- `PIXOSTART`: unmutes it
+| Command | Where | Description |
+|---|---|---|
+| `pixo:kawaii` | Any channel Pixorpheus is in | Start listening mode - Pixorpheus begins collecting messages in that channel to learn the writing style |
+| `pixo:notkawaii` | Same channel | Stop listening mode - processes the collected messages and saves the speaking style |
+| `pixo:kawaii?` | Anywhere | Check if listening mode is active - shows the channel and how many messages have been collected (ephemeral) |
+| `pixo:recap` | Any channel | Summarize the last 6 hours of messages in the channel, shown only to you (ephemeral). Use `pixo:recap today` to summarize since midnight, `pixo:recap 2h` for a custom timeframe (supports `min`, `h`, `d`). In a thread, it summarizes the thread instead. |
+
+> Only one listening session can be active at a time. Starting a new one in a different channel resets the previous one.
+
+There's also a special delete feature: react with `:pixl-delete:` to any Pixorpheus message and it will delete itself.
 
 ---
 
-## AI system
+## Thread Controls
 
-### When it replies
+Type these anywhere in a thread to control Pixorpheus's behavior:
 
-- Someone says its name (`pixorpheus`, `pixo`, `pix`)
-- Someone @mentions it directly
-- It decides to jump in uninvited (~45% chance when there's a good opening, "chime mode")
-- Someone DMs it
+| Command | Effect |
+|---|---|
+| `PIXOSTOP` | Mute Pixorpheus in the current thread - it will stop replying unless directly mentioned |
+| `PIXOSTART` | Unmute Pixorpheus in the current thread |
 
-Messages get batched, 1.5s if mentioned, 8s if chiming, so it's not replying to every message in a fast-moving conversation.
+---
+
+## AI System
+
+### How It Works
+
+Pixorpheus replies to messages when:
+1. Someone mentions it by name (`pixorpheus`, `pixo`, `pix`)
+2. Someone directly @mentions it (`@pixorpheus`)
+3. It decides to jump in uninvited if there's a genuinely good opening (chime mode - ~45% chance it acts on it)
+4. Someone DMs it
+
+Messages are batched for 1.5 seconds (if mentioned) or 8 seconds (if chiming) to avoid replying to every single message in a fast conversation.
 
 ### Models
 
-- Main channel replies: `claude-sonnet-4-5` via OpenRouter
-- DMs: `claude-haiku-4-5` via Anthropic SDK, with web search
-- Utility stuff (chime decisions, memory extraction, search queries): `deepseek/deepseek-v4-pro` via OpenRouter
-- Urban Dictionary filtering: same deepseek model
+| Use case | Model |
+|---|---|
+| Main channel replies | `claude-sonnet-4-5` via OpenRouter |
+| DMs | `claude-haiku-4-5` via Anthropic SDK (with web search) |
+| Utility tasks (chime decision, memory extraction, search query) | `deepseek/deepseek-v4-pro` via OpenRouter |
+| Urban Dictionary filtering | `deepseek/deepseek-v4-pro` via OpenRouter |
 
-### Memory
+### Memory System
 
-It picks up on people over time:
+Pixorpheus automatically learns about people over time:
 
-- **Facts**: pulled from every conversation (name, projects, skills, interests, whatever). Up to 100 per person, stored in Postgres.
-- **Personality traits**: extracted ~20% of the time (blunt, chaotic, enthusiastic, etc.)
-- **Server memory**: facts set via `/pixl-remember`, injected into every reply
-- **Style notes**: from the listening/training system below, also injected into every reply
+- **Facts** - extracted from every conversation (name, projects, skills, interests, etc.). Stored per user in PostgreSQL. Up to 100 facts per person.
+- **Personality traits** - extracted 20% of the time, capturing communication style (blunt, enthusiastic, chaotic, etc.)
+- **Server memory** - facts about the Pixl program added via `/pixl-remember` - injected into every AI reply
+- **Style notes** - learned from the listening/training system (see below) - also injected into every reply
 
-All of this gets fed into the system prompt before every reply.
+All of this is fed into the system prompt before every reply, so Pixorpheus always has context on who it's talking to.
 
-### Web search
+### Web Search
 
-Searches via Brave when a message needs current info, news, prices, recent releases, whatever. It decides on its own whether to search.
+Pixorpheus automatically searches the web (via Brave Search API) when a message seems to need up-to-date info - current events, news, prices, recent releases, etc. It decides whether to search before replying.
 
-### Emojis
+### Custom Emojis
 
-It knows and uses a big list of custom emojis where they fit contextually: `:wiltedrose:` `:yay:` `:loll:` `:sad-pf:` `:skulk:` `:noooovanish:` `:angy:` `:yesyes:` `:blobhaj_party:` `:shocked:` `:upvote:` `:lets-fucking-gooo:` `:huh3d:` `:thumbs-up:` `:3c:` `:byee:` `:hii:` `:nono:` `:hehehe:` `:awww:` `:alibaba-admire:` `:alibaba-grin:` `:cryign:` `:heavysob:` `:brokenheart:` `:nyan:` `:cat-gun:` `:isob:` `:sob-pray:` `:agadance:` `:cat-woah:` `:cat-heart:` `:communist:` `:eyes_wtf:` `:eyes_shaking:` `:eyes-out-of-head:` `:orpheus-love:` `:orpheus-baguette:` `:orphanage:` `:orpheus-explode:` `:hyper-dino-wave:` `:pepedyingoflaughter:` `:pet-gabin:` `:pet-ridit:` `:pet-maxx:` `:yapa:` `:yay-gay:` `:wagay:` `:gay-flag:` `:bhjflag_gay:` `:spinny_cat_gay:` `:1984:`
+Pixorpheus has a full list of custom Slack emojis it knows about and uses in messages when contextually appropriate:
 
-Can also react with these, it decides when it makes sense.
+`:wiltedrose:` `:yay:` `:loll:` `:sad-pf:` `:skulk:` `:noooovanish:` `:angy:` `:yesyes:` `:blobhaj_party:` `:shocked:` `:upvote:` `:lets-fucking-gooo:` `:huh3d:` `:thumbs-up:` `:3c:` `:byee:` `:hii:` `:nono:` `:hehehe:` `:awww:` `:alibaba-admire:` `:alibaba-grin:` `:cryign:` `:heavysob:` `:brokenheart:` `:nyan:` `:cat-gun:` `:isob:` `:sob-pray:` `:agadance:` `:cat-woah:` `:cat-heart:` `:communist:` `:eyes_wtf:` `:eyes_shaking:` `:eyes-out-of-head:` `:orpheus-love:` `:orpheus-baguette:` `:orphanage:` `:orpheus-explode:` `:hyper-dino-wave:` `:pepedyingoflaughter:` `:pet-gabin:` `:pet-ridit:` `:pet-maxx:` `:yapa:` `:yay-gay:` `:wagay:` `:gay-flag:` `:bhjflag_gay:` `:spinny_cat_gay:` `:1984:`
 
-### Other stuff it does
+It can also react to messages with these emojis (the AI decides when it's appropriate).
 
-- Auto-replies "thx orphan" whenever Orpheus bot posts in the same channel
-- Posts a random welcome when someone joins `#pixl`, pings Gabin in the thread
-- Trained to text like an actual person: 2-8 words, most of the time
+### Special Behaviors
+
+- **Orpheus bot** - automatically replies "thx orphan" immediately whenever Orpheus posts in the same channel
+- **New members** - posts a random welcome message when someone joins the Pixl channel (`#pixl`) and pings Gabin in the thread
+- **Short replies** - the bot is trained to reply like someone actually texting: 2–8 words most of the time
 
 ---
 
 ## Smart FAQ
 
-When someone posts in the help channel, it checks if the question's already been answered before a ticket even gets made.
+When a user posts in the help channel, Pixorpheus automatically checks whether the question was already answered before creating a ticket.
 
-1. Pulls the last 60 resolved tickets (title + description)
-2. Uses DeepSeek to check for a semantic match against the new question
-3. If it finds one, the user gets an ephemeral message with a link and a "View FAQ" button, before anyone even has to reply
-4. Ticket still gets created either way, so a helper can follow up
+### How it works
 
-Runs in parallel with ticket creation, doesn't slow anything down. English only for now (bot will ask you to switch if needed). Only surfaces high-confidence matches, vague similarity gets ignored.
+1. As soon as a message lands in the help channel, Pixorpheus queries the last 60 resolved tickets (by description and title)
+2. It uses DeepSeek to compare the new question against all of them and look for a semantic match
+3. If a similar resolved ticket is found, the user gets an **ephemeral** message with a link to that ticket and a "View FAQ" button - before they even have to wait for a reply
+4. The ticket is still created normally so a helper can follow up if needed
 
----
+The FAQ check runs in parallel with the ticket creation flow - it never slows anything down.
 
-## Auto-close
-
-Tickets open 5+ days with no activity get closed automatically. Runs at startup and then every 24h.
-
-Rule: ticket's been open 5+ days AND the last thread message is also 5+ days old. On close, it posts in the thread explaining why and tells the user to open a new one if it's still relevant. Ticket channel message updates to reflect resolved status.
+- **Language:** English only (the bot reminds users to post in English if needed)
+- **Threshold:** Only high-confidence matches are surfaced - vague similarity is ignored
 
 ---
 
-## Ticket system
+## Auto-Close
+
+Tickets that have been open for more than **5 days** with no activity are automatically closed.
+
+### Rules
+
+- A ticket qualifies if: it has been open for 5+ days AND the last message in the thread is also 5+ days old
+- At closure, Pixorpheus posts a message in the thread explaining the ticket was auto-closed due to inactivity, and tells the user to open a new ticket if the issue is still relevant
+- The ticket channel message is updated to show the resolved status
+
+Auto-close runs once at startup and once every 24 hours.
+
+---
+
+## Help & Ticket System
+
+This is the core support system for the Pixl program.
 
 ### Flow
 
-1. User posts in the help channel, gets a 🤔 reaction, a "someone will be here soon!" thread reply with a Resolve button, and an ephemeral prompt asking for a title (Set title / Skip)
-2. Title modal (optional): text input, max 100 chars. Skip or ignore for 3 minutes and it just creates the ticket without one.
-3. Ticket shows up in the private ticket channel:
-   - Status: `🔴 Open - not claimed` / `🟡 Claimed by @X` / `✅ Resolved by @X`
-   - Buttons: Claim/Unclaim, Mark Resolved (or Reopen if closed)
-   - Title (or first 80 chars of the message)
-   - Author, quoted description, "View in Slack" link, ticket number
+1. **User posts in the help channel** →
+   - Pixorpheus adds a 🤔 reaction to the message
+   - Posts a thread reply: "Someone will be here soon!" + a "Mark as resolved" button
+   - Sends the user an ephemeral message asking them to set a title for their ticket ("Set title" / "Skip" buttons)
 
-### Who can do what
+2. **Title modal** (optional) →
+   - If the user clicks "Set title", a modal opens with a text input (max 100 chars)
+   - Submit → ticket created with the title
+   - Close/Skip → ticket created without a title
+   - If the user ignores the ephemeral for **3 minutes**, the ticket is created automatically without a title
 
-| Where | Action | Who |
+3. **Ticket appears in the private ticket channel** with:
+   - Status line: `🔴 Open - not claimed` / `🟡 Claimed by @X` / `✅ Resolved by @X`
+   - Buttons: **Claim** (or Unclaim) + **Mark Resolved** - or **Reopen** if closed
+   - The ticket title (or the first 80 characters of the message if no title)
+   - Author mention
+   - Quoted description
+   - **View in Slack** button (direct link to the thread)
+   - Ticket number at the bottom
+
+### Actions Available
+
+| Where | Action | Who can do it |
 |---|---|---|
-| Help thread | Mark resolved (button) | author, helpers, support team |
-| Help thread | `?resolve` / `?close` | helpers |
-| Help thread | `?faq` | helpers, posts FAQ link + resolves |
-| Help thread | `?reopen` | helpers |
-| Ticket channel | Claim/Unclaim | helpers, support |
-| Ticket channel | Mark Resolved | helpers, support |
-| Ticket channel | Reopen | helpers, support |
-| Dashboard | Reply | helpers (shows as their name) |
-| Dashboard | Mark Resolved | helpers |
+| Help channel thread | Mark as resolved (button) | Ticket author, helpers, support team |
+| Help channel thread | `?resolve` or `?close` macro | Helpers only |
+| Help channel thread | `?faq` macro | Helpers only - posts FAQ link and resolves |
+| Help channel thread | `?reopen` macro | Helpers only |
+| Ticket channel | Claim / Unclaim | Helpers and support team |
+| Ticket channel | Mark Resolved | Helpers and support team |
+| Ticket channel | Reopen | Helpers and support team |
+| Dashboard | Reply to thread | Helpers (appears as their name) |
+| Dashboard | Mark Resolved | Helpers |
 
-Macros go as the first word in a thread reply (e.g. `?resolve`), the message auto-deletes after running.
+Thread macros are typed as the **first word** in a thread reply (e.g. `?resolve` - the message is automatically deleted after running).
 
-Status changes update the ticket channel message and post a notification in the help thread. Reactions: 🤔 = open, ✅ = resolved.
+### Status Updates
 
----
+When a ticket is resolved or reopened, the message in the ticket channel is automatically updated with the new status and buttons. The help channel thread always gets a notification message.
 
-## Style listening
-
-Lets you train how Pixorpheus talks based on real conversation. Only works in channels it's already in.
-
-1. `pixo:kawaii`: it confirms it's watching
-2. Talk normally, it collects messages
-3. `pixo:notkawaii`: processes and saves the style
-4. From then on, style notes get injected into every reply
-
-One session at a time, needs at least 5 messages to process. Check status anytime with `pixo:kawaii?`.
+Reactions on the original message: 🤔 = open, ✅ = resolved.
 
 ---
 
-## Training mode
+## Style Listening System
 
-More explicit version of the above, only in the designated training channel (`TRAINING_CHANNEL`, hardcoded `C0BD7JSTQNM`).
+> ⚠️ Only works in channels where Pixorpheus has been added (private channels or channels it's a member of).
 
-- `pixo:child labor training`: start, watches every message
-- `pixo:stop child labor training`: stop, processes and saves
+This system lets you train Pixorpheus's speaking style from real conversations.
 
-Needs 5+ messages. Overwrites the previous style (same table as the listening system).
+### How to use
+
+1. Type `pixo:kawaii` in a channel - Pixorpheus confirms it's watching
+2. Talk normally in that channel - it collects all messages
+3. Type `pixo:notkawaii` when done - Pixorpheus processes the messages and saves the style
+4. From now on, the style notes are injected into every AI reply
+
+Only one listening session can be active at a time. Minimum 5 messages needed to process.
+
+### Check status
+
+Type `pixo:kawaii?` anywhere - you'll get an ephemeral showing whether listening mode is on, which channel, and how many messages collected.
+
+---
+
+## Training Mode
+
+A more explicit style training flow, available only in the designated training channel (`TRAINING_CHANNEL` env var, hardcoded as `C0BD7JSTQNM`).
+
+| Command | Effect |
+|---|---|
+| `pixo:child labor training` | Start training mode - Pixorpheus watches every message in the channel |
+| `pixo:stop child labor training` | Stop training - processes all collected messages and saves the style |
+
+Requires at least 5 messages. The extracted style overwrites the previous style notes (same DB table as the listening system).
 
 ---
 
 ## Dashboard
 
-Runs separately from the bot (`dashboard.js`). Live at https://dashboard.gabintavernier.com, DM Gabin on Slack for access.
+A web dashboard for helpers and admins, running separately from the bot (`dashboard.js`). Available at https://dashboard.gabintavernier.com and if you need access, please DM me on Slack.
 
-Slack OAuth login, restricted to helpers (`helpers` table) and admins (`SLACK_ADMIN_USER_IDS`).
+### Access
 
-What's there:
-- Stats: totals, open/resolved counts, longest open ticket
-- Activity chart: created vs resolved over 30 days
-- Leaderboard: top resolvers, all-time / this week / today
-- Ticket list: search, filter by status, click into threads
-- Thread view: read the full thread inline
-- Reply: post to a ticket thread (shows under your name in Slack)
-- Resolve: mark resolved right from the dashboard
+Login via Slack OAuth - only helpers (in the `helpers` DB table) and admins (`SLACK_ADMIN_USER_IDS`) can log in.
 
-Same Postgres DB as the bot. Resolving from the dashboard posts to the thread and updates the ticket channel message like normal.
+### Features
+
+| Feature | Description |
+|---|---|
+| **Stats** | Total tickets, open count, resolved count, longest currently open ticket |
+| **Activity chart** | Created vs resolved tickets over the last 30 days |
+| **Leaderboard** | Top resolvers all-time, this week, and today |
+| **Ticket list** | All tickets with search and status filter - click to open the thread |
+| **Thread view** | Read the full Slack thread inline |
+| **Reply** | Post a reply to any ticket thread (appears in Slack under your name) |
+| **Resolve** | Mark a ticket as resolved directly from the dashboard |
+
+The dashboard talks to the same PostgreSQL DB as the bot. Resolving from the dashboard posts a message in the Slack thread and updates the ticket channel message.
 
 ---
 
 ## Database
 
-Everything's created automatically on startup via `initMemoryTables()`, except `tickets` and `helpers`, those need to be made manually.
+All tables are created automatically at startup via `initMemoryTables()` (except `tickets` and `helpers` which must be created manually).
 
-- `user_memory`: per-user facts (JSONB), up to 100 per person
-- `user_personality`: per-user traits (JSONB)
-- `program_memory`: server-wide facts injected into replies
-- `polls`: active timed polls
-- `style_memory`: speaking style notes (single active row)
-- `helpers`: Slack IDs of support team
-- `tickets`: all ticket records
+| Table | Purpose |
+|---|---|
+| `user_memory` | Per-user fact arrays (JSONB) - up to 100 facts per person |
+| `user_personality` | Per-user personality trait arrays (JSONB) |
+| `program_memory` | Server-wide facts injected into every AI reply |
+| `polls` | Active timed polls |
+| `style_memory` | Speaking style notes (one active row) |
+| `helpers` | Slack user IDs of support team members |
+| `tickets` | All ticket records |
 
-### `tickets` columns
+### `tickets` table columns
 
-| Column | Type | Notes |
+| Column | Type | Description |
 |---|---|---|
-| `msg_ts` | TEXT (PK) | timestamp of original message |
-| `ticket_msg_ts` | TEXT | timestamp of the ticket channel message |
-| `description` | TEXT | full original message text |
-| `title` | TEXT | optional |
-| `status` | TEXT | `open` / `closed` |
-| `opened_by_slack_id` | TEXT | |
-| `claimed_by_slack_id` | TEXT | |
-| `closed_by_slack_id` | TEXT | |
-| `closed_at` | TIMESTAMP | |
-| `last_msg_at` | TIMESTAMP | |
-| `permalink` | TEXT | direct Slack link |
-| `ticket_number` | INTEGER | auto-increment |
+| `msg_ts` | TEXT (PK) | Slack timestamp of the original help message |
+| `ticket_msg_ts` | TEXT | Slack timestamp of the ticket channel message |
+| `description` | TEXT | Full text of the original message |
+| `title` | TEXT | Optional title set by the user |
+| `status` | TEXT | `open` or `closed` |
+| `opened_by_slack_id` | TEXT | Author of the original message |
+| `claimed_by_slack_id` | TEXT | Helper who claimed the ticket |
+| `closed_by_slack_id` | TEXT | Who resolved it |
+| `closed_at` | TIMESTAMP | When it was resolved |
+| `last_msg_at` | TIMESTAMP | Last activity in the thread |
+| `permalink` | TEXT | Direct Slack link to the original message |
+| `ticket_number` | INTEGER | Auto-incremented ticket number |
 
 ---
 
-## Env vars
+## Environment Variables
 
 ### Bot (`index.js`)
 
-- `SLACK_BOT_TOKEN`: `xoxb-...`
-- `SLACK_SIGNING_SECRET`
-- `SLACK_HELP_CHANNEL`: where users post questions
-- `SLACK_TICKET_CHANNEL`: private support channel
-- `SLACK_FAQ_URL`
-- `SLACK_ADMIN_USER_IDS`: comma-separated, bypasses helper checks
-- `SLACK_USER_TOKEN`: `xoxp-...`, needed to delete macro messages
-- `DATABASE_URL`
-- `OPENROUTER_API_KEY`
-- `ANTHROPIC_API_KEY`: for DM replies via Haiku + web search
-- `BRAVE_SEARCH_KEY`
-- `PORT`: default 3000
+| Variable | Description |
+|---|---|
+| `SLACK_BOT_TOKEN` | Slack bot OAuth token (`xoxb-...`) |
+| `SLACK_SIGNING_SECRET` | Slack app signing secret |
+| `SLACK_HELP_CHANNEL` | Channel ID of the help channel where users post questions |
+| `SLACK_TICKET_CHANNEL` | Channel ID of the private ticket channel for the support team |
+| `SLACK_FAQ_URL` | URL to the FAQ (linked in the "Someone will be here soon!" message) |
+| `SLACK_ADMIN_USER_IDS` | Comma-separated Slack user IDs of admins (bypass helper checks) |
+| `SLACK_USER_TOKEN` | User token (`xoxp-...`) for deleting macro messages in threads |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `OPENROUTER_API_KEY` | OpenRouter API key (main AI + utility models) |
+| `ANTHROPIC_API_KEY` | Anthropic API key (DM replies via Haiku with web search) |
+| `BRAVE_SEARCH_KEY` | Brave Search API key (auto web search in replies) |
+| `PORT` | Port for the Bolt HTTP receiver (default 3000) |
 
 ### Dashboard (`dashboard.js`)
 
-- `SLACK_CLIENT_ID`
-- `SLACK_CLIENT_SECRET`
-- `DASHBOARD_URL`
-- `SESSION_SECRET`
-- `DASHBOARD_PORT`: default 4000
+| Variable | Description |
+|---|---|
+| `SLACK_CLIENT_ID` | Slack app client ID (OAuth) |
+| `SLACK_CLIENT_SECRET` | Slack app client secret (OAuth) |
+| `DASHBOARD_URL` | Public URL of the dashboard (e.g. `https://dashboard.pixl.app`) |
+| `SESSION_SECRET` | Secret for Express session cookies |
+| `DASHBOARD_PORT` | Port for the dashboard server (default 4000) |
 
-Also needs `DATABASE_URL`, `SLACK_BOT_TOKEN`, `SLACK_ADMIN_USER_IDS`.
+> The dashboard also uses `DATABASE_URL`, `SLACK_BOT_TOKEN`, and `SLACK_ADMIN_USER_IDS`.
 
 ---
 
 ## Deployment
 
-Runs on Railway, two services sharing one Postgres DB:
+Pixorpheus is deployed on **Railway** with two services sharing one PostgreSQL database:
 
-- **Bot**: `node index.js`, auto-deploys on push to `main`
-- **Dashboard**: `node dashboard.js`, same repo, different start command
+- **Bot service** - runs `node index.js` - auto-deploys from GitHub pushes to `main`
+- **Dashboard service** - runs `node dashboard.js` - same repo, different start command
 
-Slack app needs these event subscriptions: `message.channels`, `message.groups`, `message.im`, `message.mpim`, `reaction_added`, `member_joined_channel`.
+The Slack app must have the following **event subscriptions** enabled:
+- `message.channels`
+- `message.groups`
+- `message.im`
+- `message.mpim`
+- `reaction_added`
+- `member_joined_channel`
 
-Plus the slash commands registered and pointed at the bot's URL. Both services need to be running for everything to actually work.
+And the following **slash commands** registered pointing to the bot's URL.
+
+Both `index.js` and `dashboard.js` need to be running simultaneously for the full system to work.
